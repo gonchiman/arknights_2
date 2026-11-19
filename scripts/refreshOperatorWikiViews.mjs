@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseOperatorWikiViewSnapshot } from '../src/lib/operatorWikiViews.ts'
+import { parseOperatorWikiRosterSnapshot } from '../src/lib/operatorWikiRoster.ts'
 import { loadOperatorWikiViewHistory, saveOperatorWikiViewHistory } from './archiveOperatorWikiViews.mjs'
 
 const SNAPSHOT_PATH = fileURLToPath(new URL('../public/data/operator-wiki-views.json', import.meta.url))
@@ -133,6 +134,7 @@ export async function refreshOperatorWikiViews({
   mappingPath,
   mode = 'refresh',
   snapshotPath = SNAPSHOT_PATH,
+  rosterPath = join(dirname(snapshotPath), 'operator-wiki-roster.json'),
   historyDirectory,
   stagingDirectory = STAGING_DIRECTORY,
   collect = collectOperatorWikiViewSnapshot,
@@ -145,11 +147,33 @@ export async function refreshOperatorWikiViews({
   let mapping = mappingPath
     ? await readJson(mappingPath)
     : previous.entries
+  if (!mappingPath) {
+    const roster = await readJson(rosterPath).then(parseOperatorWikiRosterSnapshot).catch(error => {
+      if (error.code === 'ENOENT') return null
+      throw error
+    })
+    const knownPages = new Set(mapping.map(entry => entry.wikiUrl))
+    const knownIds = new Set(mapping.map(entry => entry.operatorId))
+    const currentPages = new Map(roster?.entries.map(entry => [entry.operatorId, entry.wikiUrl]))
+    const additions = (roster?.entries ?? []).filter(entry => !knownIds.has(entry.operatorId) && !knownPages.has(entry.wikiUrl))
+    mapping = [...mapping.map(entry => ({ ...entry, wikiUrl: currentPages.get(entry.operatorId) ?? entry.wikiUrl })), ...additions]
+  }
+  const allMapping = parseOperatorWikiViewSnapshot({
+    ...snapshotTimes(now()),
+    entries: mapping.map(({ operatorId, wikiUrl }) => ({ operatorId, wikiUrl, yesterday: null, today: null, total: null })),
+  }).entries
+  mapping = allMapping
   const historyOptions = { directory: historyDirectory, stagingDirectory }
   const targetDate = mode === 'recover-yesterday' ? snapshotTimes(now()).yesterdayDate : null
   const history = targetDate && await loadOperatorWikiViewHistory(targetDate, historyOptions)
   if (history) {
-    mapping = mapping.filter(({ operatorId }) => !Number.isSafeInteger(history.counts[operatorId]))
+    const published = new Map(previous.yesterdayDate === targetDate
+      ? previous.entries.map(entry => [entry.operatorId, entry]) : [])
+    mapping = mapping.filter(({ operatorId, wikiUrl }) => {
+      const prior = published.get(operatorId)
+      return !Number.isSafeInteger(history.counts[operatorId]) || prior?.wikiUrl !== wikiUrl
+        || prior.today === null || prior.total === null
+    })
     if (!mapping.length) {
       console.log(`Wiki 閲覧数は ${targetDate} 分をすべて保存済みです。`)
       return
@@ -165,14 +189,33 @@ export async function refreshOperatorWikiViews({
   let snapshot = collected
   if (history) {
     await saveOperatorWikiViewHistory(collected, historyOptions)
-    if (previous.yesterdayDate !== targetDate) return
-    const recovered = new Map(collected.entries.map(({ operatorId, yesterday }) => [operatorId, yesterday]))
-    const entries = previous.entries.map(entry => {
-      const yesterday = recovered.get(entry.operatorId)
-      return yesterday != null && entry.yesterday === null ? { ...entry, yesterday } : entry
-    })
-    if (entries.every((entry, index) => entry === previous.entries[index])) return
-    snapshot = { ...previous, entries }
+    if (previous.yesterdayDate === targetDate) {
+      const recovered = new Map(collected.entries.map(entry => [entry.operatorId, entry]))
+      const published = new Map(previous.entries.map(entry => [entry.operatorId, entry]))
+      const entries = allMapping.map(({ operatorId, wikiUrl }) => {
+        const prior = published.get(operatorId)
+        const fresh = recovered.get(operatorId)
+        if (!prior || prior.wikiUrl !== wikiUrl) {
+          return fresh ?? { operatorId, wikiUrl, yesterday: null, today: null, total: null }
+        }
+        const yesterday = fresh?.yesterday ?? history.counts[operatorId]
+        const restored = {
+          ...prior,
+          yesterday: prior.yesterday ?? yesterday ?? null,
+          today: prior.today ?? fresh?.today ?? null,
+          total: prior.total ?? fresh?.total ?? null,
+        }
+        return restored.yesterday === prior.yesterday && restored.today === prior.today && restored.total === prior.total
+          ? prior : restored
+      })
+      if (entries.length === previous.entries.length && entries.every((entry, index) => entry === previous.entries[index])) return
+      snapshot = {
+        ...previous,
+        observedAt: entries.some(entry => published.get(entry.operatorId)?.wikiUrl !== entry.wikiUrl)
+          ? collected.observedAt : previous.observedAt,
+        entries,
+      }
+    }
   }
   // Keep completed acquisitions outside Vite's public directory until publication.
   await mkdir(stagingDirectory, { recursive: true })

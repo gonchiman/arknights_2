@@ -1,0 +1,2945 @@
+{
+  "observedAt": "2026-11-19T00:56:27.395Z",
+  "entries": [
+    {
+      "operatorId": "char_4087_ines",
+      "name": "イネス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%8D%E3%82%B9",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_427_vigil",
+      "name": "ヴィジェル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%B8%E3%82%A7%E3%83%AB",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4026_vulpis",
+      "name": "ウルピスフォリア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%94%E3%82%B9%E3%83%95%E3%82%A9%E3%83%AA%E3%82%A2",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4228_closur",
+      "name": "クロージャ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AD%E3%83%BC%E3%82%B8%E3%83%A3",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_479_sleach",
+      "name": "サイラッハ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%A4%E3%83%A9%E3%83%83%E3%83%8F",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_362_saga",
+      "name": "サガ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%AC",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_112_siege",
+      "name": "シージ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC%E3%82%B8",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_222_bpipe",
+      "name": "バグパイプ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%B0%E3%83%91%E3%82%A4%E3%83%97",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_420_flamtl",
+      "name": "フレイムテイル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AC%E3%82%A4%E3%83%A0%E3%83%86%E3%82%A4%E3%83%AB",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_249_mlyss",
+      "name": "ミュルジス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%A5%E3%83%AB%E3%82%B8%E3%82%B9",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1045_svash2",
+      "name": "凛御シルバーアッシュ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%87%9B%E5%BE%A1%E3%82%B7%E3%83%AB%E3%83%90%E3%83%BC%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5",
+      "profession": "PIONEER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4009_irene",
+      "name": "アイリーニ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%A4%E3%83%AA%E3%83%BC%E3%83%8B",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1019_siege2",
+      "name": "ヴィーナ・ヴィクトリア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%BC%E3%83%8A%E3%83%BB%E3%83%B4%E3%82%A3%E3%82%AF%E3%83%88%E3%83%AA%E3%82%A2",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4098_vvana",
+      "name": "ヴィヴィアナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%B4%E3%82%A3%E3%82%A2%E3%83%8A",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4145_ulpia",
+      "name": "ウルピアヌス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%94%E3%82%A2%E3%83%8C%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4010_etlchi",
+      "name": "エンテレケイア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%83%86%E3%83%AC%E3%82%B1%E3%82%A4%E3%82%A2",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_172_svrash",
+      "name": "シルバーアッシュ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%AB%E3%83%90%E3%83%BC%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4121_zuole",
+      "name": "ズオ・ラウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BA%E3%82%AA%E3%83%BB%E3%83%A9%E3%82%A6",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_263_skadi",
+      "name": "スカジ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%B8",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_350_surtr",
+      "name": "スルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%AB%E3%83%88",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_293_thorns",
+      "name": "ソーンズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BD%E3%83%BC%E3%83%B3%E3%82%BA",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_010_chen",
+      "name": "チェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%82%A7%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4082_qiubai",
+      "name": "チューバイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%A5%E3%83%BC%E3%83%90%E3%82%A4",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2024_chyue",
+      "name": "チョンユエ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%A7%E3%83%B3%E3%83%A6%E3%82%A8",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4116_blkkgt",
+      "name": "デーゲンブレヒャー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%83%BC%E3%82%B2%E3%83%B3%E3%83%96%E3%83%AC%E3%83%92%E3%83%A3%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_485_pallas",
+      "name": "パラス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%A9%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_017_huang",
+      "name": "ブレイズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AC%E3%82%A4%E3%82%BA",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4037_demetr",
+      "name": "ベッローネ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%83%E3%83%AD%E3%83%BC%E3%83%8D",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4088_hodrer",
+      "name": "ヘドリー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%89%E3%83%AA%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4058_pepe",
+      "name": "ペペ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9A%E3%83%9A",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_188_helage",
+      "name": "ヘラグ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%A9%E3%82%B0",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_264_f12yin",
+      "name": "マウンテン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%86%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4064_mlynar",
+      "name": "ムリナール",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A0%E3%83%AA%E3%83%8A%E3%83%BC%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4011_lessng",
+      "name": "レッシング",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%83%E3%82%B7%E3%83%B3%E3%82%B0",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1043_leizi2",
+      "name": "司霆レイズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%8F%B8%E9%9C%86%E3%83%AC%E3%82%A4%E3%82%BA",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1032_excu2",
+      "name": "聖約イグゼキュター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%81%96%E7%B4%84%E3%82%A4%E3%82%B0%E3%82%BC%E3%82%AD%E3%83%A5%E3%82%BF%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1050_chen3",
+      "name": "赤刃明霄チェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%B5%A4%E5%88%83%E6%98%8E%E9%9C%84%E3%83%81%E3%82%A7%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4182_oblvns",
+      "name": "豊川祥子",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%B1%8A%E5%B7%9D%E7%A5%A5%E5%AD%90",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1051_headb2",
+      "name": "怒潮ズィマー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%80%92%E6%BD%AE%E3%82%BA%E3%82%A3%E3%83%9E%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1026_gvial2",
+      "name": "百錬ガヴィル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%99%BE%E9%8C%AC%E3%82%AC%E3%83%B4%E3%82%A3%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1014_nearl2",
+      "name": "耀騎士ニアール",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%80%80%E9%A8%8E%E5%A3%AB%E3%83%8B%E3%82%A2%E3%83%BC%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_202_demkni",
+      "name": "サリア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%AA%E3%82%A2",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4194_rmixer",
+      "name": "サンクタ・ミキサー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%82%AF%E3%82%BF%E3%83%BB%E3%83%9F%E3%82%AD%E3%82%B5%E3%83%BC",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2025_shu",
+      "name": "シュウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A5%E3%82%A6",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2014_nian",
+      "name": "ニェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%82%A7%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_423_blemsh",
+      "name": "ブレミシャイン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AC%E3%83%9F%E3%82%B7%E3%83%A3%E3%82%A4%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4065_judge",
+      "name": "ペナンス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9A%E3%83%8A%E3%83%B3%E3%82%B9",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_136_hsguma",
+      "name": "ホシグマ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%82%B7%E3%82%B0%E3%83%9E",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4039_horn",
+      "name": "ホルン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%83%AB%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_311_mudrok",
+      "name": "マドロック",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%89%E3%83%AD%E3%83%83%E3%82%AF",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2026_yu",
+      "name": "ユー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A6%E3%83%BC",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_416_zumama",
+      "name": "ユーネクテス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A6%E3%83%BC%E3%83%8D%E3%82%AF%E3%83%86%E3%82%B9",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1044_hsgma2",
+      "name": "斬業ホシグマ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%96%AC%E6%A5%AD%E3%83%9B%E3%82%B7%E3%82%B0%E3%83%9E",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1034_jesca2",
+      "name": "滌火ジェシカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%BB%8C%E7%81%AB%E3%82%B8%E3%82%A7%E3%82%B7%E3%82%AB",
+      "profession": "TANK",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_456_ash",
+      "name": "Ash",
+      "wikiUrl": "https://arknights.wikiru.jp/?Ash",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_113_cqbw",
+      "name": "W",
+      "wikiUrl": "https://arknights.wikiru.jp/?W(%E3%83%97%E3%83%AC%E3%82%A4%E3%82%A2%E3%83%96%E3%83%AB)",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_332_archet",
+      "name": "アルケット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AB%E3%82%B1%E3%83%83%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1035_wisdel",
+      "name": "ウィシャデル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B7%E3%83%A3%E3%83%87%E3%83%AB",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_103_angel",
+      "name": "エクシア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%AF%E3%82%B7%E3%82%A2",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_340_shwaz",
+      "name": "シュヴァルツ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A5%E3%83%B4%E3%82%A1%E3%83%AB%E3%83%84",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2012_typhon",
+      "name": "ティフォン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%95%E3%82%A9%E3%83%B3",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4138_narant",
+      "name": "ナラントゥヤ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%83%A9%E3%83%B3%E3%83%88%E3%82%A5%E3%83%A4",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4055_bgsnow",
+      "name": "パゼオンカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%BC%E3%82%AA%E3%83%B3%E3%82%AB",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_430_fartth",
+      "name": "ファートゥース",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%83%BC%E3%83%88%E3%82%A5%E3%83%BC%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_300_phenxi",
+      "name": "フィアメッタ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%82%A2%E3%83%A1%E3%83%83%E3%82%BF",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4117_ray",
+      "name": "レイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4193_lemuen",
+      "name": "レミュアン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%9F%E3%83%A5%E3%82%A2%E3%83%B3",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_197_poca",
+      "name": "ロサ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B5",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_391_rosmon",
+      "name": "ロスモンティス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B9%E3%83%A2%E3%83%B3%E3%83%86%E3%82%A3%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "wiki:%E7%84%94%E7%8B%90%E7%AB%9C%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
+      "name": "焔狐竜オーキッド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%84%94%E7%8B%90%E7%AB%9C%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1013_chen2",
+      "name": "遊龍チェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E9%81%8A%E9%BE%8D%E3%83%81%E3%82%A7%E3%83%B3",
+      "profession": "SNIPER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_134_ifrit",
+      "name": "イフリータ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%95%E3%83%AA%E3%83%BC%E3%82%BF",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4226_veen",
+      "name": "ヴィイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%A4",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_180_amgoat",
+      "name": "エイヤフィヤトラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A4%E3%83%A4%E3%83%95%E3%82%A3%E3%83%A4%E3%83%88%E3%83%A9",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4046_ebnhlz",
+      "name": "エーベンホルツ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%BC%E3%83%99%E3%83%B3%E3%83%9B%E3%83%AB%E3%83%84",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_426_billro",
+      "name": "カーネリアン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%BC%E3%83%8D%E3%83%AA%E3%82%A2%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2013_cerber",
+      "name": "ケオベ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%AA%E3%83%99",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_377_gdglow",
+      "name": "ゴールデングロー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B4%E3%83%BC%E3%83%AB%E3%83%87%E3%83%B3%E3%82%B0%E3%83%AD%E3%83%BC",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2015_dusk",
+      "name": "シー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4146_nymph",
+      "name": "ニンフ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%83%B3%E3%83%95",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_450_necras",
+      "name": "ネクラス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8D%E3%82%AF%E3%83%A9%E3%82%B9",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_472_pasngr",
+      "name": "パッセンジャー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%83%E3%82%BB%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4027_heyak",
+      "name": "ホルハイヤ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%83%AB%E3%83%8F%E3%82%A4%E3%83%A4",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4141_marcil",
+      "name": "マルシル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%AB%E3%82%B7%E3%83%AB",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4204_mantra",
+      "name": "マントラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%B3%E3%83%88%E3%83%A9",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_213_mostma",
+      "name": "モスティマ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A2%E3%82%B9%E3%83%86%E3%82%A3%E3%83%9E",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4080_lin",
+      "name": "リン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4133_logos",
+      "name": "ロゴス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B4%E3%82%B9",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1038_whitw2",
+      "name": "荒蕪ラップランド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%8D%92%E8%95%AA%E3%83%A9%E3%83%83%E3%83%97%E3%83%A9%E3%83%B3%E3%83%89",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1040_blaze2",
+      "name": "熾炎ブレイズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%86%BE%E7%82%8E%E3%83%96%E3%83%AC%E3%82%A4%E3%82%BA",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1046_sbell2",
+      "name": "聖聆プラマニクス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%81%96%E8%81%86%E3%83%97%E3%83%A9%E3%83%9E%E3%83%8B%E3%82%AF%E3%82%B9",
+      "profession": "CASTER",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4179_monstr",
+      "name": "Mon3tr",
+      "wikiUrl": "https://arknights.wikiru.jp/?Mon3tr",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_003_kalts",
+      "name": "ケルシー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1052_kalts2",
+      "name": "ケルシー・エスペランタ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC%E3%83%BB%E3%82%A8%E3%82%B9%E3%83%9A%E3%83%A9%E3%83%B3%E3%82%BF",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_147_shining",
+      "name": "シャイニング",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%82%A4%E3%83%8B%E3%83%B3%E3%82%B0",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4056_titi",
+      "name": "ティティ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%86%E3%82%A3",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_179_cgbird",
+      "name": "ナイチンゲール",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%A4%E3%83%81%E3%83%B3%E3%82%B2%E3%83%BC%E3%83%AB",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4042_lumen",
+      "name": "ルーメン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%BC%E3%83%A1%E3%83%B3",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1020_reed2",
+      "name": "焔影リード",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%84%94%E5%BD%B1%E3%83%AA%E3%83%BC%E3%83%89",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1016_agoat2",
+      "name": "純燼エイヤフィヤトラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%B4%94%E7%87%BC%E3%82%A8%E3%82%A4%E3%83%A4%E3%83%95%E3%82%A3%E3%83%A4%E3%83%88%E3%83%A9",
+      "profession": "MEDIC",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_291_aglina",
+      "name": "アンジェリーナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%82%B8%E3%82%A7%E3%83%AA%E3%83%BC%E3%83%8A",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_245_cello",
+      "name": "ヴィルトゥオーサ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%AB%E3%83%88%E3%82%A5%E3%82%AA%E3%83%BC%E3%82%B5",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4134_cetsyr",
+      "name": "シヴィライト・エテルナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%B4%E3%82%A3%E3%83%A9%E3%82%A4%E3%83%88%E3%83%BB%E3%82%A8%E3%83%86%E3%83%AB%E3%83%8A",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_358_lisa",
+      "name": "スズラン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%BA%E3%83%A9%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4072_ironmn",
+      "name": "ステインレス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%86%E3%82%A4%E3%83%B3%E3%83%AC%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1042_phatm2",
+      "name": "トラゴーディア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%83%A9%E3%82%B4%E3%83%BC%E3%83%87%E3%82%A3%E3%82%A2",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4212_nasti",
+      "name": "ナスティ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%B9%E3%83%86%E3%82%A3",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_206_gnosis",
+      "name": "ノーシス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%83%BC%E3%82%B7%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4202_haruka",
+      "name": "ハルカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%AB%E3%82%AB",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_248_mgllan",
+      "name": "マゼラン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%82%BC%E3%83%A9%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2023_ling",
+      "name": "リィン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%A3%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4195_radian",
+      "name": "レイディアン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4%E3%83%87%E3%82%A3%E3%82%A2%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1031_slent2",
+      "name": "淬羽サイレンス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%B7%AC%E7%BE%BD%E3%82%B5%E3%82%A4%E3%83%AC%E3%83%B3%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1047_halo2",
+      "name": "溯光アステジーニ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%BA%AF%E5%85%89%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B8%E3%83%BC%E3%83%8B",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1012_skadi2",
+      "name": "濁心スカジ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%BF%81%E5%BF%83%E3%82%B9%E3%82%AB%E3%82%B8",
+      "profession": "SUPPORT",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4123_ela",
+      "name": "Ela",
+      "wikiUrl": "https://arknights.wikiru.jp/?Ela",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_225_haak",
+      "name": "ア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4132_ascln",
+      "name": "アスカロン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%82%AB%E3%83%AD%E3%83%B3",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_2027_wang",
+      "name": "ウァン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A1%E3%83%B3",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_400_weedy",
+      "name": "ウィーディ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%BC%E3%83%87%E3%82%A3",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1029_yato2",
+      "name": "キリンRヤトウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%AA%E3%83%B3R%E3%83%A4%E3%83%88%E3%82%A6",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1502_crosly",
+      "name": "クラウンスレイヤー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%B3%E3%82%B9%E3%83%AC%E3%82%A4%E3%83%A4%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_474_glady",
+      "name": "グレイディーア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4%E3%83%87%E3%82%A3%E3%83%BC%E3%82%A2",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_4048_doroth",
+      "name": "ドロシー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%83%AD%E3%82%B7%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_250_phatom",
+      "name": "ファントム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%83%B3%E3%83%88%E3%83%A0",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_437_mizuki",
+      "name": "ミヅキ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%85%E3%82%AD",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_322_lmlee",
+      "name": "リー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1039_thorn2",
+      "name": "引星ソーンズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%BC%95%E6%98%9F%E3%82%BD%E3%83%BC%E3%83%B3%E3%82%BA",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1023_ghost2",
+      "name": "帰溟スペクター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%B8%B0%E6%BA%9F%E3%82%B9%E3%83%9A%E3%82%AF%E3%82%BF%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1028_texas2",
+      "name": "血掟テキサス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%A1%80%E6%8E%9F%E3%83%86%E3%82%AD%E3%82%B5%E3%82%B9",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1041_angel2",
+      "name": "新約エクシア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%96%B0%E7%B4%84%E3%82%A8%E3%82%AF%E3%82%B7%E3%82%A2",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_1033_swire2",
+      "name": "琳琅スワイヤー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%90%B3%E7%90%85%E3%82%B9%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 6
+    },
+    {
+      "operatorId": "char_401_elysm",
+      "name": "エリジウム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%AA%E3%82%B8%E3%82%A6%E3%83%A0",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_497_ctable",
+      "name": "カンタービレ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%93%E3%83%AC",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_349_chiave",
+      "name": "キアーベ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%82%A2%E3%83%BC%E3%83%99",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_220_grani",
+      "name": "グラニ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%83%8B",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4023_rfalcn",
+      "name": "ケストレル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%B9%E3%83%88%E3%83%AC%E3%83%AB",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4052_surfer",
+      "name": "サーファー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%BC%E3%83%95%E3%82%A1%E3%83%BC",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_115_headbr",
+      "name": "ズィマー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BA%E3%82%A3%E3%83%9E%E3%83%BC",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4144_chilc",
+      "name": "チルチャック",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%AB%E3%83%81%E3%83%A3%E3%83%83%E3%82%AF",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_102_texas",
+      "name": "テキサス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AD%E3%82%B5%E3%82%B9",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4017_puzzle",
+      "name": "パズル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%BA%E3%83%AB",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_476_blkngt",
+      "name": "ブラックナイト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%A9%E3%83%83%E3%82%AF%E3%83%8A%E3%82%A4%E3%83%88",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_488_buildr",
+      "name": "ポンシラス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%B3%E3%82%B7%E3%83%A9%E3%82%B9",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4199_makiri",
+      "name": "マツキリ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%84%E3%82%AD%E3%83%AA",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4147_mitm",
+      "name": "ミトム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%88%E3%83%A0",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_261_sddrag",
+      "name": "リード",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%BC%E3%83%89",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_496_wildmn",
+      "name": "ワイルドメイン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%82%A4%E3%83%AB%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4119_wanqin",
+      "name": "ワンチィン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%83%B3%E3%83%81%E3%82%A3%E3%83%B3",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1036_fang2",
+      "name": "歴陣鋭槍フェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%AD%B4%E9%99%A3%E9%8B%AD%E6%A7%8D%E3%83%95%E3%82%A7%E3%83%B3",
+      "profession": "PIONEER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4125_rdoc",
+      "name": "Doc",
+      "wikiUrl": "https://arknights.wikiru.jp/?Doc",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4126_fuze",
+      "name": "Fuze",
+      "wikiUrl": "https://arknights.wikiru.jp/?Fuze",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_459_tachak",
+      "name": "Tachanka",
+      "wikiUrl": "https://arknights.wikiru.jp/?Tachanka",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
+      "name": "アーミヤ(前衛)",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_475_akafyu",
+      "name": "アカフユ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%AB%E3%83%95%E3%83%A6",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_274_astesi",
+      "name": "アステシア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B7%E3%82%A2",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_155_tiger",
+      "name": "インドラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%83%89%E3%83%A9",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4166_varkis",
+      "name": "ヴァルカリス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%AB%E3%82%AB%E3%83%AA%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_265_sophia",
+      "name": "ウィスラッシュ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B9%E3%83%A9%E3%83%83%E3%82%B7%E3%83%A5",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4083_chimes",
+      "name": "ウィンドチャイム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%83%81%E3%83%A3%E3%82%A4%E3%83%A0",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_294_ayer",
+      "name": "エアースカーペ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%AB%E3%83%BC%E3%83%9A",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_131_flameb",
+      "name": "エンカク",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%82%AB%E3%82%AF",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4131_odda",
+      "name": "オッダ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%83%E3%83%80",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4187_graceb",
+      "name": "グレースベアラー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%83%BC%E3%82%B9%E3%83%99%E3%82%A2%E3%83%A9%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_230_savage",
+      "name": "サベージ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%99%E3%83%BC%E3%82%B8",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_333_sidero",
+      "name": "シデロカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%87%E3%83%AD%E3%82%AB",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "wiki:%E3%82%B8%E3%83%B3%E3%82%AA%E3%82%A6S%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
+      "name": "ジンオウSカタパルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%B3%E3%82%AA%E3%82%A6S%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_143_ghost",
+      "name": "スペクター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%9A%E3%82%AF%E3%82%BF%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_308_swire",
+      "name": "スワイヤー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_157_dagda",
+      "name": "ダグザ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%80%E3%82%B0%E3%82%B6",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_486_takila",
+      "name": "テキーラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AD%E3%83%BC%E3%83%A9",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_252_bibeak",
+      "name": "バイビーク",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%A4%E3%83%93%E3%83%BC%E3%82%AF",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4066_highmo",
+      "name": "ハイモア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%A2%E3%82%A2",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_394_hadiya",
+      "name": "ハディヤ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%87%E3%82%A3%E3%83%A4",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4106_bryota",
+      "name": "ブライオファイタ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%A9%E3%82%A4%E3%82%AA%E3%83%95%E3%82%A1%E3%82%A4%E3%82%BF",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_106_franka",
+      "name": "フランカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%A9%E3%83%B3%E3%82%AB",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_415_flint",
+      "name": "フリント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AA%E3%83%B3%E3%83%88",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_356_broca",
+      "name": "ブローカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AD%E3%83%BC%E3%82%AB",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_154_morgan",
+      "name": "モーガン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A2%E3%83%BC%E3%82%AC%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_421_crow",
+      "name": "ラ・プルマ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%BB%E3%83%97%E3%83%AB%E3%83%9E",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4142_laios",
+      "name": "ライオス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%82%A4%E3%82%AA%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_140_whitew",
+      "name": "ラップランド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%83%E3%83%97%E3%83%A9%E3%83%B3%E3%83%89",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_194_leto",
+      "name": "リェータ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%A7%E3%83%BC%E3%82%BF",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1030_noirc2",
+      "name": "レウスSノイルホーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A6%E3%82%B9S%E3%83%8E%E3%82%A4%E3%83%AB%E3%83%9B%E3%83%BC%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4185_amoris",
+      "name": "祐天寺にゃむ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%A5%90%E5%A4%A9%E5%AF%BA%E3%81%AB%E3%82%83%E3%82%80",
+      "profession": "WARRIOR",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_457_blitz",
+      "name": "Blitz",
+      "wikiUrl": "https://arknights.wikiru.jp/?Blitz",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_378_asbest",
+      "name": "アスベストス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%99%E3%82%B9%E3%83%88%E3%82%B9",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_431_ashlok",
+      "name": "アッシュロック",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5%E3%83%AD%E3%83%83%E3%82%AF",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4137_udflow",
+      "name": "アンダーフロー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%80%E3%83%BC%E3%83%95%E3%83%AD%E3%83%BC",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_163_hpsts",
+      "name": "ヴァルカン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%AB%E3%82%AB%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4207_branch",
+      "name": "ヴェトチキ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A7%E3%83%88%E3%83%81%E3%82%AD",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_226_hmau",
+      "name": "ウン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_422_aurora",
+      "name": "オーロラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%BC%E3%83%AD%E3%83%A9",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4225_tanya",
+      "name": "クラックボーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%A9%E3%83%83%E3%82%AF%E3%83%9C%E3%83%BC%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_201_moeshd",
+      "name": "クロワッサン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AD%E3%83%AF%E3%83%83%E3%82%B5%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4214_cairn",
+      "name": "ケルン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4025_aprot2",
+      "name": "シャレム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%83%AC%E3%83%A0",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_464_cement",
+      "name": "セメント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%83%A1%E3%83%B3%E3%83%88",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4143_sensi",
+      "name": "センシ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%83%B3%E3%82%B7",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4047_pianst",
+      "name": "ツェルニー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%84%E3%82%A7%E3%83%AB%E3%83%8B%E3%83%BC",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_148_nearl",
+      "name": "ニアール",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%82%A2%E3%83%BC%E3%83%AB",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_325_bison",
+      "name": "バイソン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%A4%E3%82%BD%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_493_firwhl",
+      "name": "ファイヤーホイッスル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%82%A4%E3%83%A4%E3%83%BC%E3%83%9B%E3%82%A4%E3%83%83%E3%82%B9%E3%83%AB",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4148_philae",
+      "name": "フィラエ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%83%A9%E3%82%A8",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4109_baslin",
+      "name": "ベースライン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%BC%E3%82%B9%E3%83%A9%E3%82%A4%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_304_zebra",
+      "name": "ヘビーレイン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%93%E3%83%BC%E3%83%AC%E3%82%A4%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_107_liskam",
+      "name": "リスカム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%B9%E3%82%AB%E3%83%A0",
+      "profession": "TANK",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_346_aosta",
+      "name": "アオスタ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%AA%E3%82%B9%E3%82%BF",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_129_bluep",
+      "name": "アズリウス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%BA%E3%83%AA%E3%82%A6%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_218_cuttle",
+      "name": "アンドレアナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%89%E3%83%AC%E3%82%A2%E3%83%8A",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_279_excu",
+      "name": "イグゼキュター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%82%B0%E3%82%BC%E3%82%AD%E3%83%A5%E3%82%BF%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_498_inside",
+      "name": "インサイダー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%82%B5%E3%82%A4%E3%83%80%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_365_aprl",
+      "name": "エイプリル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A4%E3%83%97%E3%83%AA%E3%83%AB",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4043_erato",
+      "name": "エラト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%A9%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4203_kichi",
+      "name": "キチセイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%81%E3%82%BB%E3%82%A4",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_367_swllow",
+      "name": "グレースロート",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%83%BC%E3%82%B9%E3%83%AD%E3%83%BC%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4104_coldst",
+      "name": "コールドショット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%89%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_379_sesa",
+      "name": "シェーシャ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%82%A7%E3%83%BC%E3%82%B7%E3%83%A3",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4078_bdhkgt",
+      "name": "ジエユン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A8%E3%83%A6%E3%83%B3",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4221_ju",
+      "name": "ジュー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A5%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4213_skybx",
+      "name": "スカイボックス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%9C%E3%83%83%E3%82%AF%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4211_snhunt",
+      "name": "スノーハンター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8E%E3%83%BC%E3%83%8F%E3%83%B3%E3%82%BF%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_363_toddi",
+      "name": "トギフォンス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%AE%E3%83%95%E3%82%A9%E3%83%B3%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_158_milu",
+      "name": "ファイヤーウォッチ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%82%A4%E3%83%A4%E3%83%BC%E3%82%A6%E3%82%A9%E3%83%83%E3%83%81",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_204_platnm",
+      "name": "プラチナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%A9%E3%83%81%E3%83%8A",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4177_brigid",
+      "name": "ブリギッド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%82%AE%E3%83%83%E3%83%89",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_145_prove",
+      "name": "プロヴァンス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AD%E3%83%B4%E3%82%A1%E3%83%B3%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_219_meteo",
+      "name": "メテオリーテ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%86%E3%82%AA%E3%83%AA%E3%83%BC%E3%83%86",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4006_melnte",
+      "name": "メラナイト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%A9%E3%83%8A%E3%82%A4%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4014_lunacu",
+      "name": "ルナカブ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%8A%E3%82%AB%E3%83%96",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1021_kroos2",
+      "name": "寒芒クルース",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%AF%92%E8%8A%92%E3%82%AF%E3%83%AB%E3%83%BC%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1027_greyy2",
+      "name": "承曦グレイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%89%BF%E6%9B%A6%E3%82%B0%E3%83%AC%E3%82%A4",
+      "profession": "SNIPER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_002_amiya",
+      "name": "アーミヤ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_338_iris",
+      "name": "アイリス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%A4%E3%83%AA%E3%82%B9",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_135_halo",
+      "name": "アステジーニ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B8%E3%83%BC%E3%83%8B",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_405_absin",
+      "name": "アブサント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%96%E3%82%B5%E3%83%B3%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_446_aroma",
+      "name": "アロマ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AD%E3%83%9E",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4013_kjera",
+      "name": "イェラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%82%A7%E3%83%A9",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4081_warmy",
+      "name": "ウォーミー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A9%E3%83%BC%E3%83%9F%E3%83%BC",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_466_qanik",
+      "name": "カニパラート",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%8B%E3%83%91%E3%83%A9%E3%83%BC%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_489_serum",
+      "name": "コロセラム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%AD%E3%82%BB%E3%83%A9%E3%83%A0",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_341_sntlla",
+      "name": "サンタラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%82%BF%E3%83%A9",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_166_skfire",
+      "name": "スカイフレア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%95%E3%83%AC%E3%82%A2",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_499_kaitou",
+      "name": "ディアマンテ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%82%A3%E3%82%A2%E3%83%9E%E3%83%B3%E3%83%86",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4164_tecno",
+      "name": "テクノ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AF%E3%83%8E",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4110_delphn",
+      "name": "デルフィーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%83%AB%E3%83%95%E3%82%A3%E3%83%BC%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_411_tomimi",
+      "name": "トミミ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%83%9F%E3%83%9F",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_164_nightm",
+      "name": "ナイトメア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%A4%E3%83%88%E3%83%A1%E3%82%A2",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_297_hamoni",
+      "name": "ハーモニー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%BC%E3%83%A2%E3%83%8B%E3%83%BC",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_344_beewax",
+      "name": "ビーズワクス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%82%BA%E3%83%AF%E3%82%AF%E3%82%B9",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4198_christ",
+      "name": "ミス・クリスティーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%82%B9%E3%83%BB%E3%82%AF%E3%83%AA%E3%82%B9%E3%83%86%E3%82%A3%E3%83%BC%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4054_malist",
+      "name": "ミニマリスト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%8B%E3%83%9E%E3%83%AA%E3%82%B9%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_388_mint",
+      "name": "ミント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%B3%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4031_liesel",
+      "name": "リプレーザ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%97%E3%83%AC%E3%83%BC%E3%82%B6",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_306_leizi",
+      "name": "レイズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4%E3%82%BA",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_373_lionhd",
+      "name": "レオンハルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%AA%E3%83%B3%E3%83%8F%E3%83%AB%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4040_rockr",
+      "name": "ロックロック",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%83%E3%82%AF%E3%83%AD%E3%83%83%E3%82%AF",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1011_lava2",
+      "name": "炎獄ラヴァ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%82%8E%E7%8D%84%E3%83%A9%E3%83%B4%E3%82%A1",
+      "profession": "CASTER",
+      "rarity": 5
+    },
+    {
+      "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",
+      "name": "アーミヤ(医療)",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_494_vendla",
+      "name": "ヴァンデラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%B3%E3%83%87%E3%83%A9",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_436_whispr",
+      "name": "ウィスパーレイン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B9%E3%83%91%E3%83%BC%E3%83%AC%E3%82%A4%E3%83%B3",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4224_turdus",
+      "name": "ウクシク",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%AF%E3%82%B7%E3%82%AF",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_108_silent",
+      "name": "サイレンス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%A4%E3%83%AC%E3%83%B3%E3%82%B9",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_348_ceylon",
+      "name": "セイロン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%82%A4%E3%83%AD%E3%83%B3",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4222_taraxa",
+      "name": "タラクサカム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BF%E3%83%A9%E3%82%AF%E3%82%B5%E3%82%AB%E3%83%A0",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_402_tuye",
+      "name": "トゥイエ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%A5%E3%82%A4%E3%82%A8",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4173_nowell",
+      "name": "ノウエル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%82%A6%E3%82%A8%E3%83%AB",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_449_glider",
+      "name": "ハニーベリー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%8B%E3%83%BC%E3%83%99%E3%83%AA%E3%83%BC",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4139_papyrs",
+      "name": "パピルス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%94%E3%83%AB%E3%82%B9",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4071_peper",
+      "name": "パプリカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%97%E3%83%AA%E3%82%AB",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4114_harold",
+      "name": "ハロルド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%AD%E3%83%AB%E3%83%89",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_128_plosis",
+      "name": "フィリオプシス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%83%AA%E3%82%AA%E3%83%97%E3%82%B7%E3%82%B9",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_345_folnic",
+      "name": "フォリニック",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A9%E3%83%AA%E3%83%8B%E3%83%83%E3%82%AF",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_275_breeze",
+      "name": "ブリーズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%83%BC%E3%82%BA",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_473_mberry",
+      "name": "マルベリー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%AB%E3%83%99%E3%83%AA%E3%83%BC",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4196_reckpr",
+      "name": "レコードキーパー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%B3%E3%83%BC%E3%83%89%E3%82%AD%E3%83%BC%E3%83%91%E3%83%BC",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4163_rosesa",
+      "name": "ローズソルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%BC%E3%82%BA%E3%82%BD%E3%83%AB%E3%83%88",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_171_bldsk",
+      "name": "ワルファリン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%83%AB%E3%83%95%E3%82%A1%E3%83%AA%E3%83%B3",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1024_hbisc2",
+      "name": "濯塵ハイビスカス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E6%BF%AF%E5%A1%B5%E3%83%8F%E3%82%A4%E3%83%93%E3%82%B9%E3%82%AB%E3%82%B9",
+      "profession": "MEDIC",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4178_alanna",
+      "name": "アランナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%A9%E3%83%B3%E3%83%8A",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_195_glassb",
+      "name": "イースチナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%BC%E3%82%B9%E3%83%81%E3%83%8A",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4102_threye",
+      "name": "ヴァラルクビン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%A9%E3%83%AB%E3%82%AF%E3%83%93%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_433_windft",
+      "name": "ウインドフリット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A4%E3%83%B3%E3%83%89%E3%83%95%E3%83%AA%E3%83%83%E3%83%88",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4162_cathy",
+      "name": "キャサリン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%A3%E3%82%B5%E3%83%AA%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_492_quercu",
+      "name": "クエルクス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%A8%E3%83%AB%E3%82%AF%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_326_glacus",
+      "name": "グラウコス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%82%A6%E3%82%B3%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4122_grabds",
+      "name": "グレインバッズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4%E3%83%B3%E3%83%90%E3%83%83%E3%82%BA",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4140_lasher",
+      "name": "サンドレコナー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%83%89%E3%83%AC%E3%82%B3%E3%83%8A%E3%83%BC",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_336_folivo",
+      "name": "シーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC%E3%83%B3",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4172_xingzh",
+      "name": "シィンズゥ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%82%A3%E3%83%B3%E3%82%BA%E3%82%A5",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_254_vodfox",
+      "name": "シャマレ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%83%9E%E3%83%AC",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_101_sora",
+      "name": "ソラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BD%E3%83%A9",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_343_tknogi",
+      "name": "ツキノギ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%84%E3%82%AD%E3%83%8E%E3%82%AE",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4045_heidi",
+      "name": "ハイディ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%87%E3%82%A3",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_174_slbell",
+      "name": "プラマニクス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%A9%E3%83%9E%E3%83%8B%E3%82%AF%E3%82%B9",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4032_provs",
+      "name": "プロヴァイゾ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AD%E3%83%B4%E3%82%A1%E3%82%A4%E3%82%BE",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4223_botany",
+      "name": "ボタニ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9C%E3%82%BF%E3%83%8B",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_487_bobb",
+      "name": "ボビング",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9C%E3%83%93%E3%83%B3%E3%82%B0",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_242_otter",
+      "name": "メイヤー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%82%A4%E3%83%A4%E3%83%BC",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4079_haini",
+      "name": "ルシーラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%82%B7%E3%83%BC%E3%83%A9",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4019_ncdeer",
+      "name": "九色鹿",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E4%B9%9D%E8%89%B2%E9%B9%BF",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_1022_flwr2",
+      "name": "萃香パフューマー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%90%83%E9%A6%99%E3%83%91%E3%83%95%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4184_dolris",
+      "name": "三角初華",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E4%B8%89%E8%A7%92%E5%88%9D%E8%8F%AF",
+      "profession": "SUPPORT",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_458_rfrost",
+      "name": "Frost",
+      "wikiUrl": "https://arknights.wikiru.jp/?Frost",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4124_iana",
+      "name": "Iana",
+      "wikiUrl": "https://arknights.wikiru.jp/?Iana",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4105_almond",
+      "name": "アーモンド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%A2%E3%83%B3%E3%83%89",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_455_nothin",
+      "name": "ウユウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%A6%E3%82%A6",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4171_wulfen",
+      "name": "ウルフェナイト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%95%E3%82%A7%E3%83%8A%E3%82%A4%E3%83%88",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_241_panda",
+      "name": "エフイーター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%95%E3%82%A4%E3%83%BC%E3%82%BF%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4036_forcer",
+      "name": "エンフォーサー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B5%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4016_kazema",
+      "name": "カゼマル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%BC%E3%83%9E%E3%83%AB",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_214_kafka",
+      "name": "カフカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%95%E3%82%AB",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_478_kirara",
+      "name": "キララ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%A9%E3%83%A9",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_173_slchan",
+      "name": "クリフハート",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AA%E3%83%95%E3%83%8F%E3%83%BC%E3%83%88",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_383_snsant",
+      "name": "スノーズント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8E%E3%83%BC%E3%82%BA%E3%83%B3%E3%83%88",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4015_spuria",
+      "name": "スプリア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%97%E3%83%AA%E3%82%A2",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4191_tippi",
+      "name": "ティッピ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%83%E3%83%94",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4155_talr",
+      "name": "フィグリーノ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%82%B0%E3%83%AA%E3%83%BC%E3%83%8E",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4151_tinman",
+      "name": "ブリキ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%82%AD",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_369_bena",
+      "name": "ベナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%8A",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_215_mantic",
+      "name": "マンティコア",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%B3%E3%83%86%E3%82%A3%E3%82%B3%E3%82%A2",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_144_red",
+      "name": "レッド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%83%E3%83%89",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_451_robin",
+      "name": "ロビン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%93%E3%83%B3",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_243_waaifu",
+      "name": "ワイフー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%82%A4%E3%83%95%E3%83%BC",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4186_tmoris",
+      "name": "八幡海鈴",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E5%85%AB%E5%B9%A1%E6%B5%B7%E9%88%B4",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_4183_mortis",
+      "name": "若葉睦",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E8%8B%A5%E8%91%89%E7%9D%A6",
+      "profession": "SPECIAL",
+      "rarity": 5
+    },
+    {
+      "operatorId": "char_290_vigna",
+      "name": "ヴィグナ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%B0%E3%83%8A",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_198_blackd",
+      "name": "クーリエ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%BC%E3%83%AA%E3%82%A8",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_149_scave",
+      "name": "スカベンジャー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%83%99%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4208_wintim",
+      "name": "スネグーラチカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8D%E3%82%B0%E3%83%BC%E3%83%A9%E3%83%81%E3%82%AB",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_151_myrtle",
+      "name": "テンニンカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%83%B3%E3%83%8B%E3%83%B3%E3%82%AB",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_452_bstalk",
+      "name": "ビーンストーク",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF",
+      "profession": "PIONEER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_271_spikes",
+      "name": "アレーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AC%E3%83%BC%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_445_wscoot",
+      "name": "ウィンドスクート",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%82%B9%E3%82%AF%E3%83%BC%E3%83%88",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_337_utage",
+      "name": "ウタゲ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%BF%E3%82%B2",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_127_estell",
+      "name": "エステル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%B9%E3%83%86%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_301_cutter",
+      "name": "カッター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%83%E3%82%BF%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4063_quartz",
+      "name": "クォーツ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%A9%E3%83%BC%E3%83%84",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_159_peacok",
+      "name": "コンビクション",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%B3%E3%83%93%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_347_jaksel",
+      "name": "ジャッキー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A3%E3%83%83%E3%82%AD%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_130_doberm",
+      "name": "ドーベルマン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%83%BC%E3%83%99%E3%83%AB%E3%83%9E%E3%83%B3",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_137_brownb",
+      "name": "ビーハンター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%83%8F%E3%83%B3%E3%82%BF%E3%83%BC",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_491_humus",
+      "name": "ヒューマス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%92%E3%83%A5%E3%83%BC%E3%83%9E%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_193_frostl",
+      "name": "フロストリーフ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AD%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%95",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_289_gyuki",
+      "name": "マトイマル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%88%E3%82%A4%E3%83%9E%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_185_frncat",
+      "name": "ムース",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A0%E3%83%BC%E3%82%B9",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4067_lolxh",
+      "name": "羅小黒",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E7%BE%85%E5%B0%8F%E9%BB%92",
+      "profession": "WARRIOR",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_150_snakek",
+      "name": "クオーラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%AA%E3%83%BC%E3%83%A9",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_196_sunbr",
+      "name": "グム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A0",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_260_durnar",
+      "name": "ジュナー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A5%E3%83%8A%E3%83%BC",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_381_bubble",
+      "name": "バブル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%83%96%E3%83%AB",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_199_yak",
+      "name": "マッターホルン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%83%E3%82%BF%E3%83%BC%E3%83%9B%E3%83%AB%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4130_luton",
+      "name": "ルトナダ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%88%E3%83%8A%E3%83%80",
+      "profession": "TANK",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_366_acdrop",
+      "name": "アシッドドロップ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B7%E3%83%83%E3%83%89%E3%83%89%E3%83%AD%E3%83%83%E3%83%97",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_302_glaze",
+      "name": "アンブリエル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%96%E3%83%AA%E3%82%A8%E3%83%AB",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_190_clour",
+      "name": "ヴァーミル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%BC%E3%83%9F%E3%83%AB",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4100_caper",
+      "name": "ケイパー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%A4%E3%83%91%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_235_jesica",
+      "name": "ジェシカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A7%E3%82%B7%E3%82%AB",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_118_yuki",
+      "name": "シラユキ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A9%E3%83%A6%E3%82%AD",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4062_totter",
+      "name": "トター",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%BF%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_440_pinecn",
+      "name": "パインコーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%A4%E3%83%B3%E3%82%B3%E3%83%BC%E3%83%B3",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_133_mm",
+      "name": "メイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%82%A4",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_126_shotst",
+      "name": "メテオ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%86%E3%82%AA",
+      "profession": "SNIPER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4051_akkord",
+      "name": "アコルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B3%E3%83%AB%E3%83%88",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_469_indigo",
+      "name": "インディゴ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%83%87%E3%82%A3%E3%82%B4",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_328_cammou",
+      "name": "カシャ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%B7%E3%83%A3",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_109_fmout",
+      "name": "ギターノ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AE%E3%82%BF%E3%83%BC%E3%83%8E",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_253_greyy",
+      "name": "グレイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4004_pudd",
+      "name": "プリン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AA%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_141_nights",
+      "name": "ヘイズ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%82%A4%E3%82%BA",
+      "profession": "CASTER",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_187_ccheal",
+      "name": "ガヴィル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AC%E3%83%B4%E3%82%A3%E3%83%AB",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_298_susuro",
+      "name": "ススーロ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%B9%E3%83%BC%E3%83%AD",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_385_finlpp",
+      "name": "セイリュウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%82%A4%E3%83%AA%E3%83%A5%E3%82%A6",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4041_chnut",
+      "name": "チェストナット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%82%A7%E3%82%B9%E3%83%88%E3%83%8A%E3%83%83%E3%83%88",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_181_flower",
+      "name": "パフューマー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%95%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_117_myrrh",
+      "name": "ミルラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%AB%E3%83%A9",
+      "profession": "MEDIC",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_183_skgoat",
+      "name": "アーススピリット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%B9%E3%83%94%E3%83%AA%E3%83%83%E3%83%88",
+      "profession": "SUPPORT",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_110_deepcl",
+      "name": "ディピカ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%82%A3%E3%83%94%E3%82%AB",
+      "profession": "SUPPORT",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_258_podego",
+      "name": "ポデンコ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%87%E3%83%B3%E3%82%B3",
+      "profession": "SUPPORT",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_484_robrta",
+      "name": "ロベルタ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%99%E3%83%AB%E3%82%BF",
+      "profession": "SUPPORT",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_355_ethan",
+      "name": "イーサン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%BC%E3%82%B5%E3%83%B3",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4107_vrdant",
+      "name": "ヴァーダント",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%BC%E3%83%80%E3%83%B3%E3%83%88",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_237_gravel",
+      "name": "グラベル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%83%99%E3%83%AB",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_4165_ctrail",
+      "name": "コントレイル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%B3%E3%83%88%E3%83%AC%E3%82%A4%E3%83%AB",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_272_strong",
+      "name": "ジェイ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A7%E3%82%A4",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_277_sqrrel",
+      "name": "ショウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A7%E3%82%A6",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_236_rope",
+      "name": "ロープ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%BC%E3%83%97",
+      "profession": "SPECIAL",
+      "rarity": 4
+    },
+    {
+      "operatorId": "char_240_wyvern",
+      "name": "バニラ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%83%8B%E3%83%A9",
+      "profession": "PIONEER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_123_fang",
+      "name": "フェン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A7%E3%83%B3",
+      "profession": "PIONEER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_192_falco",
+      "name": "プリュム",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AA%E3%83%A5%E3%83%A0",
+      "profession": "PIONEER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_281_popka",
+      "name": "ポプカル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%97%E3%82%AB%E3%83%AB",
+      "profession": "WARRIOR",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_283_midn",
+      "name": "ミッドナイト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%83%E3%83%89%E3%83%8A%E3%82%A4%E3%83%88",
+      "profession": "WARRIOR",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_208_melan",
+      "name": "メランサ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%A9%E3%83%B3%E3%82%B5",
+      "profession": "WARRIOR",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_209_ardign",
+      "name": "カーディ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%BC%E3%83%87%E3%82%A3",
+      "profession": "TANK",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_284_spot",
+      "name": "スポット",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%9D%E3%83%83%E3%83%88",
+      "profession": "TANK",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_122_beagle",
+      "name": "ビーグル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%82%B0%E3%83%AB",
+      "profession": "TANK",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_211_adnach",
+      "name": "アドナキエル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%89%E3%83%8A%E3%82%AD%E3%82%A8%E3%83%AB",
+      "profession": "SNIPER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_282_catap",
+      "name": "カタパルト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_124_kroos",
+      "name": "クルース",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AB%E3%83%BC%E3%82%B9",
+      "profession": "SNIPER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_210_stward",
+      "name": "スチュワード",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%81%E3%83%A5%E3%83%AF%E3%83%BC%E3%83%89",
+      "profession": "CASTER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_121_lava",
+      "name": "ラヴァ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%B4%E3%82%A1",
+      "profession": "CASTER",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_212_ansel",
+      "name": "アンセル",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%82%BB%E3%83%AB",
+      "profession": "MEDIC",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_120_hibisc",
+      "name": "ハイビスカス",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%93%E3%82%B9%E3%82%AB%E3%82%B9",
+      "profession": "MEDIC",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_278_orchid",
+      "name": "オーキッド",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
+      "profession": "SUPPORT",
+      "rarity": 3
+    },
+    {
+      "operatorId": "char_502_nblade",
+      "name": "ヤトウ",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A4%E3%83%88%E3%82%A6",
+      "profession": "PIONEER",
+      "rarity": 2
+    },
+    {
+      "operatorId": "char_500_noirc",
+      "name": "ノイルホーン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%82%A4%E3%83%AB%E3%83%9B%E3%83%BC%E3%83%B3",
+      "profession": "TANK",
+      "rarity": 2
+    },
+    {
+      "operatorId": "char_503_rang",
+      "name": "レンジャー",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
+      "profession": "SNIPER",
+      "rarity": 2
+    },
+    {
+      "operatorId": "char_009_12fce",
+      "name": "12F",
+      "wikiUrl": "https://arknights.wikiru.jp/?12F",
+      "profession": "CASTER",
+      "rarity": 2
+    },
+    {
+      "operatorId": "char_501_durin",
+      "name": "ドゥリン",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%82%A5%E3%83%AA%E3%83%B3",
+      "profession": "CASTER",
+      "rarity": 2
+    },
+    {
+      "operatorId": "char_4188_confes",
+      "name": "CONFESS-47",
+      "wikiUrl": "https://arknights.wikiru.jp/?CONFESS-47",
+      "profession": "PIONEER",
+      "rarity": 1
+    },
+    {
+      "operatorId": "wiki:%E3%83%AD%E3%83%89%E3%82%B9%E9%9A%A0%E5%AF%86%E9%9A%8A",
+      "name": "ロドス隠密隊",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%89%E3%82%B9%E9%9A%A0%E5%AF%86%E9%9A%8A",
+      "profession": "PIONEER",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_286_cast3",
+      "name": "Castle-3",
+      "wikiUrl": "https://arknights.wikiru.jp/?Castle-3",
+      "profession": "WARRIOR",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4093_frston",
+      "name": "Friston-3",
+      "wikiUrl": "https://arknights.wikiru.jp/?Friston-3",
+      "profession": "TANK",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4000_jnight",
+      "name": "ジャスティスナイト",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A3%E3%82%B9%E3%83%86%E3%82%A3%E3%82%B9%E3%83%8A%E3%82%A4%E3%83%88",
+      "profession": "SNIPER",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4077_palico",
+      "name": "テラ大陸調査団",
+      "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%83%A9%E5%A4%A7%E9%99%B8%E8%AA%BF%E6%9F%BB%E5%9B%A3",
+      "profession": "SNIPER",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4227_gallus",
+      "name": "GALLUS²",
+      "wikiUrl": "https://arknights.wikiru.jp/?GALLUS%C2%B2",
+      "profession": "CASTER",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_285_medic2",
+      "name": "Lancet-2",
+      "wikiUrl": "https://arknights.wikiru.jp/?Lancet-2",
+      "profession": "MEDIC",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4136_phonor",
+      "name": "PhonoR-0",
+      "wikiUrl": "https://arknights.wikiru.jp/?PhonoR-0",
+      "profession": "SUPPORT",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_4091_ulika",
+      "name": "U-Official",
+      "wikiUrl": "https://arknights.wikiru.jp/?U-Official",
+      "profession": "SUPPORT",
+      "rarity": 1
+    },
+    {
+      "operatorId": "char_376_therex",
+      "name": "THRM-EX",
+      "wikiUrl": "https://arknights.wikiru.jp/?THRM-EX",
+      "profession": "SPECIAL",
+      "rarity": 1
+    }
+  ]
+}

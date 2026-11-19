@@ -22,6 +22,35 @@ const post = date => '<li>投稿 <span class="comment_date">' + marker(date) + '
 const list = posts => '<ul class="list1 list-indent1">' + posts + '</ul>'
 const link = pageTitle => '<a href="./?' + pageTitle.split('/').map(encodeURIComponent).join('/') + '">リンク</a>'
 
+test('Wikiの正規URLは括弧のパーセント表記でも同じページとして検証する', () => {
+  for (const title of ['コメント/W(プレイアブル)', 'コメント/アーミヤ(前衛)', 'コメント/アーミヤ(医療)/1']) {
+    const source = page(title, list(post('2026-11-18T11:02:00+09:00')))
+    const html = source.replace(/href="[^"]*"/u, address => address.replaceAll('(', '%28').replaceAll(')', '%29'))
+    assert.deepEqual(parseCommentLog(html, title), ['2026-11-18'])
+  }
+})
+
+test('Wikiの正規URLは異なるホスト・パス・クエリや制御文字を受け付けない', () => {
+  const source = page(log, list(post('2026-11-18T11:02:00+09:00')))
+  const canonical = url(log)
+  for (const address of [
+    canonical.replace('arknights.wikiru.jp', 'example.com'),
+    canonical.replace('https://', 'https://name@'),
+    canonical.replace('/?', '/index.php?'),
+    canonical + '#section',
+    root + '/?page=' + encodeURIComponent(log),
+    canonical + '&other',
+    canonical + '%GG',
+  ]) {
+    const html = source.replace(/href="[^"]*"/u, 'href="' + address + '"')
+    assert.throws(() => parseCommentLog(html, log), /正規 URL/)
+  }
+  for (const title of ['コメント/a=b', 'コメント/a\u0000b', 'コメント/a\nb']) {
+    const html = page(title, list(post('2026-11-18T11:02:00+09:00')))
+    assert.throws(() => parseCommentLog(html, title), /正規 URL/)
+  }
+})
+
 function commentSnapshot(observedAt) {
   return {
     observedAt: observedAt.toISOString(),
@@ -200,4 +229,129 @@ test('敵ログだけで正しい個別ページへの戻りリンクだけを0�
     /ログを確認できません/)
   assert.throws(() => parseCommentLog(page(log, empty + '<p>投稿に見える記述</p>'), log, undefined, options),
     /ログを確認できません/)
+})
+
+
+function viewsForComments(entries, observedAt) {
+  const throughDate = commentWindow(observedAt).throughDate
+  return {
+    observedAt: observedAt.toISOString(),
+    todayDate: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', dateStyle: 'short' }).format(observedAt),
+    yesterdayDate: throughDate,
+    entries: entries.map(([operatorId, title]) => ({ operatorId, wikiUrl: url(title), yesterday: null, today: null, total: null })),
+  }
+}
+
+test('同日の新規オペレーターだけをコメント取得し、既存の0件と未取得を保持する', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-roster-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const observedAt = new Date('2026-11-13T06:37:00Z')
+  const snapshotPath = join(directory, 'comments.json')
+  const viewsPath = join(directory, 'views.json')
+  const current = commentSnapshot(new Date('2026-11-13T00:17:00Z'))
+  current.entries[0].coveredFrom = '2026-10-14'
+  const zero = { operatorId: 'zero', wikiUrl: url('コメント/ゼロ'), coveredFrom: '2026-10-14', counts: {}, total: 0 }
+  current.entries.push(zero)
+  await writeFile(snapshotPath, JSON.stringify(current))
+  const mapping = viewsForComments([['amiya', title], ['zero', 'ゼロ'], ['new', '新オペレーター']], observedAt)
+  await writeFile(viewsPath, JSON.stringify(mapping))
+  const added = { operatorId: 'new', wikiUrl: url('コメント/新オペレーター'), coveredFrom: '2026-10-14', counts: {}, total: 0 }
+  await refreshOperatorWikiComments({
+    ifStale: true, snapshotPath, viewsPath, stagingDirectory: join(directory, 'staging'), now: () => observedAt,
+    collect: async (actualMapping, { operatorIds, now }) => {
+      assert.deepEqual(actualMapping, mapping)
+      assert.deepEqual([...operatorIds], ['new'])
+      assert.equal(now().toISOString(), observedAt.toISOString())
+      return { observedAt: observedAt.toISOString(), throughDate: current.throughDate, entries: [added] }
+    },
+  })
+  const saved = JSON.parse(await readFile(snapshotPath, 'utf8'))
+  assert.deepEqual(saved.entries, [...current.entries, added])
+  const bytes = await readFile(snapshotPath, 'utf8')
+  await refreshOperatorWikiComments({
+    ifStale: true, snapshotPath, viewsPath, now: () => observedAt,
+    collect: () => assert.fail('新規オペレーターを保存済みのため再取得しない'),
+  })
+  assert.equal(await readFile(snapshotPath, 'utf8'), bytes)
+})
+
+test('同日の新規コメント取得に失敗した場合は保存済みデータを維持し、次回に再試行する', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-roster-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const observedAt = new Date('2026-11-13T06:37:00Z')
+  const snapshotPath = join(directory, 'comments.json')
+  const viewsPath = join(directory, 'views.json')
+  const current = commentSnapshot(new Date('2026-11-13T00:17:00Z'))
+  current.entries[0].coveredFrom = '2026-10-14'
+  const original = JSON.stringify(current)
+  await writeFile(snapshotPath, original)
+  await writeFile(viewsPath, JSON.stringify(viewsForComments([['amiya', title], ['new', '新オペレーター']], observedAt)))
+  const options = {
+    ifStale: true, snapshotPath, viewsPath, stagingDirectory: join(directory, 'staging'), now: () => observedAt,
+  }
+  await assert.rejects(refreshOperatorWikiComments({
+    ...options, collect: async () => { throw new Error('Wiki に接続できません') },
+  }), /接続できません/)
+  assert.equal(await readFile(snapshotPath, 'utf8'), original)
+
+  let attempts = 0
+  const failed = { operatorId: 'new', wikiUrl: url('コメント/新オペレーター'), coveredFrom: null, counts: {}, total: null }
+  for (let run = 0; run < 2; run += 1) {
+    await refreshOperatorWikiComments({
+      ...options, collect: async (_mapping, { operatorIds }) => {
+        attempts += 1
+        assert.deepEqual([...operatorIds], ['new'])
+        return { observedAt: observedAt.toISOString(), throughDate: current.throughDate, entries: [failed] }
+      },
+    })
+    assert.equal(await readFile(snapshotPath, 'utf8'), original)
+  }
+  assert.equal(attempts, 2)
+})
+
+test('同じIDのコメントページが変わった場合は新しいページを取得し、別日付を混ぜない', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-roster-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const observedAt = new Date('2026-11-13T06:37:00Z')
+  const snapshotPath = join(directory, 'comments.json')
+  const viewsPath = join(directory, 'views.json')
+  const current = commentSnapshot(new Date('2026-11-13T00:17:00Z'))
+  const original = JSON.stringify(current)
+  await writeFile(snapshotPath, original)
+  await writeFile(viewsPath, JSON.stringify(viewsForComments([['amiya', '新しいページ名']], observedAt)))
+  const options = { ifStale: true, snapshotPath, viewsPath, stagingDirectory: join(directory, 'staging'), now: () => observedAt }
+  const nextDay = new Date('2026-11-13T15:01:00Z')
+  await assert.rejects(refreshOperatorWikiComments({
+    ...options, collect: async () => ({ ...current, observedAt: nextDay.toISOString(), throughDate: '2026-11-13' }),
+  }), /日付が変わった/)
+  assert.equal(await readFile(snapshotPath, 'utf8'), original)
+
+  const replacement = { ...current.entries[0], wikiUrl: url('コメント/新しいページ名'), coveredFrom: '2026-10-14', total: 0 }
+  await refreshOperatorWikiComments({
+    ...options, collect: async (_mapping, { operatorIds }) => {
+      assert.deepEqual([...operatorIds], ['amiya'])
+      return { ...current, observedAt: observedAt.toISOString(), entries: [replacement] }
+    },
+  })
+  assert.deepEqual(JSON.parse(await readFile(snapshotPath, 'utf8')).entries, [replacement])
+})
+
+test('一覧にはあるが期間別と累計を両方取得できなかったOPを補完する', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'wiki-comments-missing-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  const observedAt = new Date('2026-11-13T06:37:00Z')
+  const snapshotPath = join(directory, 'comments.json')
+  const viewsPath = join(directory, 'views.json')
+  const current = commentSnapshot(observedAt)
+  await writeFile(snapshotPath, JSON.stringify(current))
+  await writeFile(viewsPath, JSON.stringify(viewsForComments([['amiya', title]], observedAt)))
+  const restored = { ...current.entries[0], coveredFrom: '2026-10-14', total: 0 }
+  await refreshOperatorWikiComments({
+    ifStale: true, snapshotPath, viewsPath, stagingDirectory: join(directory, 'staging'), now: () => observedAt,
+    collect: async (_mapping, { operatorIds }) => {
+      assert.deepEqual([...operatorIds], ['amiya'])
+      return { ...current, entries: [restored] }
+    },
+  })
+  assert.deepEqual(JSON.parse(await readFile(snapshotPath, 'utf8')).entries, [restored])
 })

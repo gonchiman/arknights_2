@@ -1,11 +1,13 @@
 import { useId, useMemo, useState } from 'react'
-import {
-  EMPTY_OPERATOR_DATABASE_FILTERS, filterOperatorDatabaseRecords,
-  type OperatorDatabaseFilters, type OperatorDatabaseRecord,
-} from '../lib/operatorDatabase'
+import { EMPTY_OPERATOR_DATABASE_FILTERS, type OperatorDatabaseFilters, type OperatorDatabaseRecord } from '../lib/operatorDatabase'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { getWikiCommentCount, getWikiCommentRange, loadOperatorWikiCommentSnapshot } from '../lib/operatorWikiComments'
-import { buildOperatorWikiViewRows, loadOperatorWikiViewSnapshot, rankOperatorWikiTotals } from '../lib/operatorWikiViews'
+import {
+  buildOperatorWikiDisplayRoster, filterOperatorWikiDisplayRoster, matchOperatorWikiDisplayEntries,
+  type OperatorWikiDisplayEntry,
+} from '../lib/operatorWikiDisplay'
+import { loadOperatorWikiRoster, type OperatorWikiRosterEntry } from '../lib/operatorWikiRoster'
+import { loadOperatorWikiViewSnapshot, rankOperatorWikiTotals } from '../lib/operatorWikiViews'
 import { AnalysisTabs } from './AnalysisTabs'
 import { Filters } from './Filters'
 import {
@@ -20,8 +22,10 @@ interface Props {
   loading: boolean
 }
 
-interface PanelProps extends Props {
-  allOperators: Props['operators']
+interface PanelProps {
+  operators: readonly OperatorWikiDisplayEntry[]
+  allOperators: readonly OperatorWikiDisplayEntry[]
+  loading: boolean
   page: number
   setPage: (page: number) => void
 }
@@ -31,15 +35,20 @@ type Tab = typeof TABS[number][0]
 const PROFESSION_OPTIONS = PROFESSION_ORDER.map(value => ({ value, label: getProfessionLabel(value) }))
 
 const COMMENT_COLUMNS = [{ key: 'comments', label: 'コメント件数' }] as const
+const EMPTY_WIKI_ROSTER: readonly OperatorWikiRosterEntry[] = []
 
 export function OperatorWikiViewsPage({ operators, loading }: Props) {
   const id = useId()
+  const rosterState = useWikiSnapshot(loadOperatorWikiRoster)
+  const wikiRoster = rosterState.status === 'ready' ? rosterState.snapshot.entries : EMPTY_WIKI_ROSTER
+  const allOperators = useMemo(() => buildOperatorWikiDisplayRoster(operators, wikiRoster), [operators, wikiRoster])
+  const waitingForOperators = allOperators.length === 0 && (rosterState.status === 'loading' || loading)
   const [tab, setTab] = useState<Tab>('views')
   const [commentsOpened, setCommentsOpened] = useState(false)
   const [filters, setFilters] = useState(EMPTY_OPERATOR_DATABASE_FILTERS)
   const [viewPage, setViewPage] = useState(0)
   const [commentPage, setCommentPage] = useState(0)
-  const filteredOperators = useMemo(() => filterOperatorDatabaseRecords(operators, filters, 'name'), [operators, filters])
+  const filteredOperators = useMemo(() => filterOperatorWikiDisplayRoster(allOperators, filters), [allOperators, filters])
 
   function changeFilters(next: OperatorDatabaseFilters) {
     setFilters(next)
@@ -60,13 +69,14 @@ export function OperatorWikiViewsPage({ operators, loading }: Props) {
         onReset={() => changeFilters(EMPTY_OPERATOR_DATABASE_FILTERS)} showNameInitial={false}
         searchFirst searchLabel="オペレーター名" searchPlaceholder="オペレーター名で検索" />
     </div>
+    {rosterState.status === 'error' && <p className="error-box" role="alert">Wiki オペレーター一覧を読み込めませんでした。</p>}
     <section id={`${id}-panel-views`} role="tabpanel" aria-labelledby={`${id}-tab-views`} hidden={tab !== 'views'}>
-      <WikiViewPanel operators={filteredOperators} allOperators={operators}
-        loading={loading} page={viewPage} setPage={setViewPage} />
+      <WikiViewPanel operators={filteredOperators} allOperators={allOperators}
+        loading={waitingForOperators} page={viewPage} setPage={setViewPage} />
     </section>
     <section id={`${id}-panel-comments`} role="tabpanel" aria-labelledby={`${id}-tab-comments`} hidden={tab !== 'comments'}>
-      {commentsOpened && <WikiCommentPanel operators={filteredOperators} allOperators={operators}
-        loading={loading} page={commentPage} setPage={setCommentPage} />}
+      {commentsOpened && <WikiCommentPanel operators={filteredOperators} allOperators={allOperators}
+        loading={waitingForOperators} page={commentPage} setPage={setCommentPage} />}
     </section>
   </section>
 }
@@ -74,8 +84,17 @@ export function OperatorWikiViewsPage({ operators, loading }: Props) {
 function WikiViewPanel({ operators, allOperators, loading, page, setPage }: PanelProps) {
   const state = useWikiSnapshot(loadOperatorWikiViewSnapshot)
   const snapshot = state.status === 'ready' ? state.snapshot : null
-  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
-  const rows = useMemo(() => buildOperatorWikiViewRows(operators, snapshot), [operators, snapshot])
+  const byId = useMemo(() => matchOperatorWikiDisplayEntries(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
+  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, allOperators.map(({ operatorId }) => ({
+    operatorId, total: byId.get(operatorId)?.total ?? null,
+  }))), [allOperators, byId])
+  const rows = useMemo(() => operators.map(({ operatorId, name, wikiUrl }) => {
+    const entry = byId.get(operatorId)
+    return {
+      operatorId, name, wikiUrl: entry?.wikiUrl ?? wikiUrl,
+      yesterday: entry?.yesterday ?? null, today: entry?.today ?? null, total: entry?.total ?? null,
+    }
+  }), [operators, byId])
   const columns = getWikiViewColumns(snapshot)
 
   if (loading || state.status === 'loading') return <p className="calculator-loading" role="status">読み込み中…</p>
@@ -96,12 +115,14 @@ function WikiCommentPanel({ operators, allOperators, loading, page, setPage }: P
   const state = useWikiSnapshot(loadOperatorWikiCommentSnapshot)
   const [period, setPeriod] = useState<WikiStatsPeriod>(30)
   const snapshot = state.status === 'ready' ? state.snapshot : null
-  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
+  const byId = useMemo(() => matchOperatorWikiDisplayEntries(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
+  const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, allOperators.map(({ operatorId }) => ({
+    operatorId, total: byId.get(operatorId)?.total ?? null,
+  }))), [allOperators, byId])
   const range = useMemo(() => snapshot && period !== 'total'
     ? getWikiCommentRange(snapshot.throughDate, period)
     : null, [snapshot, period])
   const rows = useMemo(() => {
-    const byId = new Map(snapshot?.entries.map(entry => [entry.operatorId, entry]))
     return operators.map(({ operatorId, name }) => {
       const entry = byId.get(operatorId)
       const comments = period === 'total' ? entry?.total ?? null : range && getWikiCommentCount(entry, range)
@@ -112,7 +133,7 @@ function WikiCommentPanel({ operators, allOperators, loading, page, setPage }: P
         comments,
       }
     })
-  }, [operators, snapshot, period, range])
+  }, [operators, byId, period, range])
 
   if (loading || state.status === 'loading') return <p className="calculator-loading" role="status">読み込み中…</p>
 
