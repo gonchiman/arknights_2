@@ -43,7 +43,7 @@ import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHisto
 import { buildHistogramCumulativeRows, getHistogramCumulativePoints, type HistogramCumulativeDisplay } from '../lib/histogramCumulative'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { HistogramCumulativeOverlay } from './HistogramCumulativeOverlay'
-import { HistogramCumulativeStrip, getHistogramCumulativeStripLayout } from './HistogramCumulativeStrip'
+import { HistogramCumulativeStrip, HistogramPercentageStrip, getHistogramCumulativeStripLayout, getHistogramPercentageStripLayout } from './HistogramCumulativeStrip'
 import { HistogramBinRangeStrip, useHistogramBinRangeStripLayout } from './HistogramBinRangeStrip'
 import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
@@ -272,6 +272,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const [ratingSideValue, setRatingSideValue] = useState<EnemyRatingComparisonSideValue>('cumulative')
   const [countMode, setCountMode] = useState<EnemyHistogramCountMode>(histogramEditor?.initialSnapshot?.countMode ?? 'SPAWNS')
   const activeCountMode = countMode === 'SPAWNS' && !spawnCountsAvailable ? 'MAPS' : countMode
+  const [showHistogramFrequencies, setShowHistogramFrequencies] = useState(histogramEditor?.initialSnapshot?.showFrequencies ?? true)
   const [showHistogramPercentages, setShowHistogramPercentages] = useState(histogramEditor?.initialSnapshot?.showPercentages ?? true)
   const [showHistogramBinRanges, setShowHistogramBinRanges] = useState(histogramEditor?.initialSnapshot?.showBinRanges ?? true)
   const [showHistogramStatRanks, setShowHistogramStatRanks] = useState(histogramEditor?.initialSnapshot?.showStatRanks ?? false)
@@ -463,7 +464,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           ...(aggregationVersion ? { aggregationVersion } : {}) },
         countMode: activeCountMode, coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
         scale: axisScale, statistics: histogramStatistics, ratingBins, customLinearUpperBound,
-        showPercentages: showHistogramPercentages, showBinRanges: showHistogramBinRanges, showCumulative: showHistogramCumulative,
+        showFrequencies: showHistogramFrequencies, showPercentages: showHistogramPercentages,
+        showBinRanges: showHistogramBinRanges, showCumulative: showHistogramCumulative,
         showStatRanks: showHistogramStatRanks && !ratingMode && ratingStat !== null,
         cumulativeDisplay: histogramCumulativeDisplay,
         referenceVisibility, percentileReference,
@@ -472,7 +474,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       })
     } catch { return null }
   }, [canCreateHistogramSnapshot, scopeLabel, rows, activeCountMode, countData.data, aggregationVersion, axisScale, histogramStatistics,
-    ratingBins, customLinearUpperBound, showHistogramPercentages, showHistogramBinRanges, showHistogramStatRanks, showHistogramCumulative, histogramCumulativeDisplay,
+    ratingBins, customLinearUpperBound, showHistogramFrequencies, showHistogramPercentages, showHistogramBinRanges, showHistogramStatRanks, showHistogramCumulative, histogramCumulativeDisplay,
     referenceVisibility, percentileReference, filterSettings, linearBinWidthInput, linearUpperBoundInput, ratingMode, ratingStat,
     linearBinWidthError, linearUpperBoundError, invalidUpperBound, requestedUpperBound, automaticBinWidth])
   const lastEditorSnapshotId = useRef<string | null | undefined>(undefined)
@@ -507,6 +509,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       countMode: activeCountMode, countCoverage: activeCountMode === 'TYPES' ? null : countData.data?.summary ?? null,
       ecdfPoints,
       jointDistribution, thresholdComparison, thresholdLabelLayout, thresholdBarLayout, heatmapColorScale, referenceVisibility: { ...referenceVisibility },
+      showHistogramFrequencies: selectedChart === 'HISTOGRAM' && showHistogramFrequencies,
       showHistogramPercentages: selectedChart === 'HISTOGRAM' && showHistogramPercentages,
       showHistogramBinRanges: selectedChart === 'HISTOGRAM' && showHistogramBinRanges,
       showHistogramStatRanks: selectedChart === 'HISTOGRAM' && showHistogramStatRanks && !ratingMode && ratingStat !== null,
@@ -530,7 +533,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         : await getWeightedEnemyHistogramImageFilename({ mode: snapshot.countMode,
           metric: selectedMetric.label, scope: scopeLabel, scale: axisScale, statistics: summaryStatistics,
           customLinearUpperBound: snapshot.customLinearUpperBound,
-          showPercentages: snapshot.showHistogramPercentages,
+          showFrequencies: snapshot.showHistogramFrequencies, showPercentages: snapshot.showHistogramPercentages,
           showBinRanges: snapshot.showHistogramBinRanges,
           showStatRanks: snapshot.showHistogramStatRanks,
           showCumulative: snapshot.showHistogramCumulative,
@@ -753,6 +756,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             canShowStatRanks={ratingStat !== null && !ratingMode}
             showStatRanks={showHistogramStatRanks} onShowStatRanksChange={setShowHistogramStatRanks}
             percentileControl={histogramPercentileControl}
+            showFrequencies={showHistogramFrequencies} onShowFrequenciesChange={setShowHistogramFrequencies}
             showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
             showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
             showCumulative={showHistogramCumulative} onShowCumulativeChange={setShowHistogramCumulative}
@@ -857,6 +861,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               metric={selectedMetric} scopeLabel={scopeLabel} scale={axisScale}
               percentileReference={percentileReference} percentileControl={histogramPercentileControl}
               ratingBins={ratingBins}
+              showFrequencies={showHistogramFrequencies} onShowFrequenciesChange={setShowHistogramFrequencies}
               showPercentages={showHistogramPercentages} onShowPercentagesChange={setShowHistogramPercentages}
               showBinRanges={showHistogramBinRanges} onShowBinRangesChange={setShowHistogramBinRanges}
               showStatRanks={showHistogramStatRanks} onShowStatRanksChange={setShowHistogramStatRanks}
@@ -950,6 +955,7 @@ interface EnemyChartImageData {
   thresholdLabelLayout: EnemyThresholdPieLabelLayout
   thresholdBarLayout: EnemyThresholdBarLayout
   ratingBins: EnemyRatingHistogramBin[] | null
+  showHistogramFrequencies: boolean
   showHistogramPercentages: boolean
   showHistogramBinRanges: boolean
   showHistogramStatRanks: boolean
@@ -1059,7 +1065,7 @@ function EnemyChartImage({ data, aspectRatio, onLayout }: {
         {kind === 'HISTOGRAM' && <HistogramSvg {...shared} countMode={data.countMode} referenceVisibility={data.referenceVisibility}
           percentileReference={data.percentileReference}
           ratingBins={data.ratingBins}
-          showPercentages={data.showHistogramPercentages} showBinRanges={data.showHistogramBinRanges}
+          showFrequencies={data.showHistogramFrequencies} showPercentages={data.showHistogramPercentages} showBinRanges={data.showHistogramBinRanges}
           showStatRanks={data.showHistogramStatRanks}
           showCumulative={data.showHistogramCumulative}
           cumulativeDisplay={data.histogramCumulativeDisplay}
@@ -1259,7 +1265,7 @@ function DistributionCountControls({ mode, onChange, counts, showMapCoverageLink
 }
 
 function HistogramDisplayControls({
-  ratingMode, hasData, showPercentages, onShowPercentagesChange, showBinRanges, onShowBinRangesChange,
+  ratingMode, hasData, showFrequencies, onShowFrequenciesChange, showPercentages, onShowPercentagesChange, showBinRanges, onShowBinRangesChange,
   canShowStatRanks, showStatRanks, onShowStatRanksChange,
   showCumulative, onShowCumulativeChange,
   cumulativeDisplay, onCumulativeDisplayChange,
@@ -1267,6 +1273,8 @@ function HistogramDisplayControls({
 }: {
   ratingMode: boolean
   hasData: boolean
+  showFrequencies: boolean
+  onShowFrequenciesChange: (show: boolean) => void
   showPercentages: boolean
   onShowPercentagesChange: (show: boolean) => void
   showBinRanges: boolean
@@ -1285,8 +1293,12 @@ function HistogramDisplayControls({
   const percentileErrorId = useId()
   return <div className="enemy-histogram-display-controls">
     <label className="enemy-histogram-display-toggle">
+      <input type="checkbox" checked={showFrequencies} onChange={(event) => onShowFrequenciesChange(event.target.checked)} />
+      度数を表示
+    </label>
+    <label className="enemy-histogram-display-toggle">
       <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
-      割合を表示
+      割合の帯
     </label>
     <label className="enemy-histogram-display-toggle">
       累積割合
@@ -1344,6 +1356,8 @@ function HistogramFigure({
   percentileReference,
   percentileControl,
   countMode,
+  showFrequencies,
+  onShowFrequenciesChange,
   showPercentages,
   onShowPercentagesChange,
   showBinRanges,
@@ -1366,6 +1380,8 @@ function HistogramFigure({
   percentileReference?: EnemyHistogramPercentileReference
   percentileControl: HistogramPercentileControl
   countMode: EnemyHistogramCountMode
+  showFrequencies: boolean
+  onShowFrequenciesChange: (show: boolean) => void
   showPercentages: boolean
   onShowPercentagesChange: (show: boolean) => void
   showBinRanges: boolean
@@ -1406,6 +1422,7 @@ function HistogramFigure({
           canShowStatRanks={!ratingBins && isEnemyRatingStat(metric.key)}
           showStatRanks={showStatRanks} onShowStatRanksChange={onShowStatRanksChange}
           percentileControl={percentileControl}
+          showFrequencies={showFrequencies} onShowFrequenciesChange={onShowFrequenciesChange}
           showPercentages={showPercentages} onShowPercentagesChange={onShowPercentagesChange}
           showBinRanges={showBinRanges} onShowBinRangesChange={onShowBinRangesChange}
           showCumulative={showCumulative} onShowCumulativeChange={onShowCumulativeChange}
@@ -1418,6 +1435,7 @@ function HistogramFigure({
         ) : (
           <HistogramSvg
             ratingBins={ratingBins}
+            showFrequencies={showFrequencies}
             showPercentages={showPercentages}
             showBinRanges={showBinRanges}
             showStatRanks={showStatRanks}
@@ -1525,13 +1543,13 @@ interface HistogramBarGeometry {
   y: number
   width: number
   height: number
-  percentage: string | null
+  valueLabel: string
 }
 
-function useHistogramPercentageLayout(bars: HistogramBarGeometry[], width: number, height: number, enabled: boolean, referenceXs: number[], cumulativeLine: readonly { x: number; y: number }[] = []) {
+function useHistogramValueLabelLayout(bars: HistogramBarGeometry[], width: number, height: number, enabled: boolean, referenceXs: number[], cumulativeLine: readonly { x: number; y: number }[] = []) {
   const labelsRef = useRef<SVGGElement>(null)
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({})
-  const textKey = JSON.stringify(enabled ? bars.map((bar) => bar.percentage) : [])
+  const textKey = JSON.stringify(enabled ? bars.map((bar) => bar.valueLabel) : [])
   useLayoutEffect(() => {
     if (!enabled) return
     let active = true
@@ -1540,11 +1558,11 @@ function useHistogramPercentageLayout(bars: HistogramBarGeometry[], width: numbe
       const context = document.createElement('canvas').getContext('2d')
       if (!context) return
       const next: typeof sizes = {}
-      labelsRef.current?.querySelectorAll<SVGTextElement>('text[data-percentage-index]').forEach((text) => {
+      labelsRef.current?.querySelectorAll<SVGTextElement>('text[data-frequency-index]').forEach((text) => {
         // The image preview is scaled; measure in the export's CSS pixels.
         const style = getComputedStyle(text)
         context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
-        next[text.dataset.percentageIndex!] = {
+        next[text.dataset.frequencyIndex!] = {
           width: Math.ceil(context.measureText(text.textContent ?? '').width) + 6,
           height: Math.ceil(Number.parseFloat(style.fontSize) * 1.3) + 4,
         }
@@ -1558,11 +1576,11 @@ function useHistogramPercentageLayout(bars: HistogramBarGeometry[], width: numbe
   }, [enabled, textKey])
   const placement = placeGroupedBarValueLabels({
     width, height, gap: 4,
-    labels: enabled ? bars.flatMap((bar, index) => bar.percentage === null ? [] : [{
+    labels: enabled ? bars.map((bar, index) => ({
       id: String(index), anchorX: bar.x + bar.width / 2, anchorY: bar.y,
-      width: sizes[index]?.width ?? bar.percentage.length * 8 + 6,
+      width: sizes[index]?.width ?? bar.valueLabel.length * 8 + 6,
       height: sizes[index]?.height ?? 19, direction: 'above' as const,
-    }]) : [],
+    })) : [],
     obstacles: bars.filter((bar) => bar.height > 0),
   })
   const withReferences = avoidHistogramReferenceLines({ layout: placement, referenceXs, width, height, bars })
@@ -1614,7 +1632,7 @@ export function EnemyHistogramSnapshotPlot({ snapshot, width, height, reservedLa
     referenceVisibility={snapshot.referenceVisibility} percentileReference={snapshot.percentileReference}
     metric={STAT_METRICS.find(({ key }) => key === 'magicResistance')!}
     width={width} height={height} titleId={titleId} descriptionId={descriptionId} description={snapshot.summary}
-    scale={snapshot.scale} image showPercentages={snapshot.showPercentages} showBinRanges={snapshot.showBinRanges}
+    scale={snapshot.scale} image showFrequencies={snapshot.showFrequencies} showPercentages={snapshot.showPercentages} showBinRanges={snapshot.showBinRanges}
     showStatRanks={snapshot.showStatRanks}
     showCumulative={snapshot.showCumulative}
     cumulativeDisplay={snapshot.cumulativeDisplay}
@@ -1635,6 +1653,7 @@ function HistogramSvg({
   scale,
   height = CHART_HEIGHT,
   image = false,
+  showFrequencies = true,
   showPercentages = false,
   showBinRanges = false,
   showStatRanks = false,
@@ -1656,6 +1675,7 @@ function HistogramSvg({
   scale: HistogramScale
   height?: number
   image?: boolean
+  showFrequencies?: boolean
   showPercentages?: boolean
   showBinRanges?: boolean
   showStatRanks?: boolean
@@ -1688,6 +1708,9 @@ function HistogramSvg({
   const cumulativeStripLayout = showCumulativeStrip
     ? getHistogramCumulativeStripLayout(bins, statistics.count, plotWidth) : null
   const cumulativeStripHeight = cumulativeStripLayout?.height ?? 0
+  const percentageStripLayout = showPercentages
+    ? getHistogramPercentageStripLayout(bins, statistics.count, plotWidth) : null
+  const informationStripHeight = cumulativeStripHeight + (percentageStripLayout?.height ?? 0)
   const valueScale = createValueScale(minimum, maximum, plotLeft, plotRight, isAdaptiveLinear ? 'LINEAR' : scale)
   const categoryScale = createHistogramCategoryScale(statistics.bins, plotLeft, plotRight, valueScale.effectiveScale)
   const statRankBands = showStatRanks && !ratingBins && isEnemyRatingStat(metric.key)
@@ -1703,14 +1726,14 @@ function HistogramSvg({
     }
     return categoryScale.position(value)
   }
-  const measureReferences = image || showPercentages || cumulativeStripHeight > 0 || !!percentileReference
+  const measureReferences = image || showFrequencies || informationStripHeight > 0 || !!percentileReference
   const referenceLabels = useImageReferenceLabels(statistics, metric, referencePosition, plotLeft, plotRight,
-    measureReferences, referenceVisibility, cumulativeStripHeight, percentileReference)
-  const referenceTop = referenceLabels.top - cumulativeStripHeight
+    measureReferences, referenceVisibility, informationStripHeight, percentileReference)
+  const referenceTop = referenceLabels.top - informationStripHeight
   const basePlotTop = image ? referenceTop : Math.max(CHART_MARGIN.top, referenceTop)
   // The strip replaces the old top margin; reserve a label row only while it is visible.
-  const plotTop = cumulativeStripLayout
-    ? referenceVisibility.mean || referenceVisibility.median || percentileReference ? referenceLabels.top : cumulativeStripHeight
+  const plotTop = informationStripHeight > 0
+    ? referenceVisibility.mean || referenceVisibility.median || percentileReference ? referenceLabels.top : informationStripHeight
     : basePlotTop
   const cumulativeStripOffset = plotTop - basePlotTop
   const plotHeight = basePlotBottom - basePlotTop
@@ -1726,7 +1749,7 @@ function HistogramSvg({
     const barHeight = bin.count / countMaximum * plotHeight
     return { x: startX - plotLeft + barGap / 2, y: plotHeight - barHeight,
       width: Math.max(1, plotWidth / bins.length - barGap), height: Math.max(0, barHeight),
-      percentage: formatHistogramPercentage(bin.count, statistics.count) }
+      valueLabel: formatFrequency(bin.count) }
   })
   const referenceXs = statistics.count > 0 ? [
     ...(referenceVisibility.mean ? [referencePosition(statistics.mean ?? minimum) - plotLeft] : []),
@@ -1737,7 +1760,7 @@ function HistogramSvg({
   const cumulativeLine = getHistogramCumulativePoints(cumulativeRows, {
     plotLeft: 0, plotRight: plotWidth, plotTop: 0, plotBottom: plotHeight,
   })
-  const percentageLayout = useHistogramPercentageLayout(bars, plotWidth, plotHeight, showPercentages, referenceXs, cumulativeLine)
+  const valueLabelLayout = useHistogramValueLabelLayout(bars, plotWidth, plotHeight, showFrequencies, referenceXs, cumulativeLine)
   const binRangeLabels = bars.map((bar, index) => ({
     center: plotLeft + bar.x + bar.width / 2,
     lines: ratingBins ? [ratingBins[index].rating, ...formatEnemyRatingHistogramRangeLines(ratingBins[index])]
@@ -1753,7 +1776,7 @@ function HistogramSvg({
   const statRankHeight = statRankBands.length ? STAT_RANK_STRIP_HEIGHT + (numericRangeStrip.layout ? 4 : 12) : 0
   const axisLabels = binRangeLayout.centers ? binRangeLabels.map((label, index) => ({ ...label, textCenter: binRangeLayout.centers![index] }))
     : ratingBins ? binRangeLabels.map((label, index) => ({ ...label, textCenter: label.center, lines: [ratingBins[index].rating] })) : null
-  const extraTop = Math.ceil(percentageLayout.extraTop)
+  const extraTop = Math.ceil(valueLabelLayout.extraTop)
   useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom + cumulativeStripOffset + statRankHeight) },
     [extraTop, extraBottom, cumulativeStripOffset, statRankHeight, onLabelOverflow])
   const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom + cumulativeStripOffset + statRankHeight)
@@ -1766,13 +1789,15 @@ function HistogramSvg({
   return (
     <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : numericRangeStrip.layout ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}${statRankBands.length ? ` ${descriptionId}-ranks` : ''}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
-      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。基準線はその値が属する評価の中央を示します。' : ''}{referenceLabels.percentile ? ` 縦線：${referenceLabels.percentile.text}。` : ''}{showPercentages && statistics.count > 0 ? ` 棒上に有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する割合を表示します。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 上部の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? numericRangeStrip.layout ? ' 各棒の下の帯に階級の数値範囲を表示します。' : binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。基準線はその値が属する評価の中央を示します。' : ''}{referenceLabels.percentile ? ` 縦線：${referenceLabels.percentile.text}。` : ''}{showFrequencies ? ` 棒上に${countOption.label}の度数を表示します。` : ''}{showPercentages && statistics.count > 0 ? ` 上部の割合帯は、有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する各階級の割合です。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showPercentages && showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯を上、各階級の割合帯を下に表示します。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? numericRangeStrip.layout ? ' 各棒の下の帯に階級の数値範囲を表示します。' : binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {statRankBands.length > 0 && <desc id={`${descriptionId}-ranks`}>横軸の下の帯は数値に対応するステータスランクです。超過階級は含み得る評価の範囲を示します。</desc>}
       {showBinRanges && (ratingBins
         ? <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>
         : <text ref={numericRangeStrip.measureRef} className="chart-strip-label" visibility="hidden" aria-hidden="true">0</text>)}
       {cumulativeStripLayout && <HistogramCumulativeStrip bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} top={0} layout={cumulativeStripLayout} />}
+      {percentageStripLayout && <HistogramPercentageStrip bins={bins} total={statistics.count}
+        plotLeft={plotLeft} plotRight={plotRight} top={cumulativeStripHeight} layout={percentageStripLayout} />}
 
       {countTicks.map((tick) => (
         <g key={tick}>
@@ -1786,9 +1811,10 @@ function HistogramSvg({
       {bins.map((bin, index) => {
         const bar = bars[index]
         const rangeLabel = formatHistogramClassLabel(bin, statistics, metric)
+        const percentage = showPercentages ? formatHistogramPercentage(bin.count, statistics.count) : null
         return (
           <rect data-chart-image-ink="" className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
-            <title>{`${rangeLabel}：${formatFrequency(bin.count)}${countOption.unit}${showPercentages && bar.percentage !== null ? `（${bar.percentage}）` : ''}`}</title>
+            <title>{`${rangeLabel}：${bar.valueLabel}${countOption.unit}${percentage !== null ? `（${percentage}）` : ''}`}</title>
           </rect>
         )
       })}
@@ -1805,14 +1831,14 @@ function HistogramSvg({
       {showCumulativeLine && <HistogramCumulativeOverlay bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop + extraTop} plotBottom={plotBottom}
         image={image} formatBoundary={(value) => formatHistogramSetting(value, metric.suffix)} countUnit={countOption.unit} />}
-      <g ref={percentageLayout.labelsRef} className="enemy-histogram-percentages" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
-        {percentageLayout.labels.filter((label) => label.shifted).map((label) => (
-          <line key={label.id} className="enemy-histogram-percentage-connector" data-chart-image-ink="" x1={label.anchorX} y1={label.anchorY - 2}
+      <g ref={valueLabelLayout.labelsRef} className="enemy-histogram-values" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
+        {valueLabelLayout.labels.filter((label) => label.shifted).map((label) => (
+          <line key={label.id} className="enemy-histogram-value-connector" data-chart-image-ink="" x1={label.anchorX} y1={label.anchorY - 2}
             x2={label.x + label.width / 2} y2={label.y + label.height} />
         ))}
-        {percentageLayout.labels.map((label) => <g key={label.id}>
-          <text className="enemy-histogram-percentage-label" data-chart-image-ink="" data-percentage-index={label.id}
-            x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].percentage}</text>
+        {valueLabelLayout.labels.map((label) => <g key={label.id}>
+          <text className="enemy-histogram-frequency-label" data-chart-image-ink="" data-frequency-index={label.id}
+            x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].valueLabel}</text>
         </g>)}
       </g>
       {numericRangeStrip.layout ? <>

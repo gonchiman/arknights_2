@@ -71,9 +71,9 @@
 .enemy-histogram-rating-control { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .enemy-histogram-rating-reference.button { min-height: 28px; padding: 4px 8px; font-size: 11px; }
 .enemy-stat-chart .enemy-histogram-range-label { font-size: 11px; }
-.enemy-histogram-percentages { pointer-events: none; }
-.enemy-histogram-percentage-connector { stroke: var(--border-strong); stroke-width: 1; }
-.enemy-stat-chart .enemy-histogram-percentage-label { fill: var(--text); font-family: inherit; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.enemy-histogram-values { pointer-events: none; }
+.enemy-histogram-value-connector { stroke: var(--border-strong); stroke-width: 1; }
+.enemy-stat-chart .enemy-histogram-frequency-label { fill: var(--text); font-family: inherit; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; }
 
 @media (pointer: coarse) {
   .enemy-histogram-display-toggle { min-height: 44px; }

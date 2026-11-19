@@ -193,6 +193,7 @@ export function getWeightedEnemyHistogramImageFilename(options: {
   statistics: NumericStatistics
   referenceVisibility: { mean: boolean; median: boolean }
   percentileReference?: EnemyHistogramPercentileReference
+  showFrequencies?: boolean
   showPercentages?: boolean
   showBinRanges?: boolean
   showStatRanks?: boolean
@@ -213,7 +214,8 @@ export function getWeightedEnemyHistogramImageFilename(options: {
     !options.useRatingBins && isLinear && histogram?.binWidth != null ? `幅${histogram.binWidth}` : null,
     !options.useRatingBins && isLinear && histogram ? `上限${options.customLinearUpperBound == null ? '自動' : ''}${histogram.normalRangeEnd}` : null,
     !options.useRatingBins && !isLinear && histogram ? `${histogram.normalBinCount}階級` : null,
-    options.showPercentages && '割合表示',
+    (options.showFrequencies ?? true) && '度数表示',
+    options.showPercentages && '割合帯',
     options.showCumulative && (options.cumulativeDisplay === 'both' ? '累積割合線＋帯'
       : options.cumulativeDisplay === 'strip' ? '累積割合帯' : '累積割合表示'),
     options.showBinRanges && '階級範囲表示',

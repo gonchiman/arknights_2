@@ -37,6 +37,8 @@ export interface EnemyHistogramSnapshotInput {
   statistics: NumericStatistics
   ratingBins: EnemyRatingHistogramBin[] | null
   customLinearUpperBound: number | null
+  /** Omitted in earlier v1 snapshots; treated as true. */
+  showFrequencies?: boolean
   showPercentages: boolean
   showBinRanges: boolean
   /** Omitted in earlier v1 snapshots; only active for numeric classes. */
@@ -130,6 +132,7 @@ function validInput(value: unknown): value is EnemyHistogramSnapshotInput {
     || (source.aggregationVersion !== undefined && !validAggregationVersion(source.aggregationVersion))
     || !ENEMY_HISTOGRAM_COUNT_MODES.some(({ key }) => key === input.countMode)
     || !['LINEAR', 'LOG'].includes(String(input.scale))
+    || (input.showFrequencies !== undefined && typeof input.showFrequencies !== 'boolean')
     || typeof input.showPercentages !== 'boolean' || typeof input.showBinRanges !== 'boolean'
     || (input.showStatRanks !== undefined && typeof input.showStatRanks !== 'boolean')
     || (input.showCumulative !== undefined && typeof input.showCumulative !== 'boolean')
@@ -215,6 +218,7 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     }, countMode: input.countMode,
     coverage: input.coverage, scale: input.scale, statistics: input.statistics,
     ratingBins: input.ratingBins, customLinearUpperBound: input.customLinearUpperBound,
+    showFrequencies: input.showFrequencies ?? true,
     showPercentages: input.showPercentages, showBinRanges: input.showBinRanges,
     showStatRanks: input.ratingBins === null && (input.showStatRanks ?? false),
     showCumulative: input.showCumulative ?? false,
@@ -235,8 +239,9 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     copy.statistics.missingCount > 0 ? `値なし ${format(copy.statistics.missingCount)}${count.unit}を除外` : null,
   ].filter(Boolean).join(' · ')
   return freezeDeep({ ...copy, schemaVersion: 1,
-    // Omitted/OFF additions preserve the identity of existing v1 snapshots.
+    // Default display additions preserve the identity of existing v1 snapshots.
     id: `resistance-histogram-${snapshotFingerprint(JSON.stringify({ ...copy,
+      showFrequencies: copy.showFrequencies === false ? false : undefined,
       showStatRanks: copy.showStatRanks || undefined,
       showCumulative: copy.showCumulative || undefined,
       cumulativeDisplay: copy.showCumulative && copy.cumulativeDisplay !== 'line' ? copy.cumulativeDisplay : undefined,
@@ -245,7 +250,8 @@ export function createEnemyHistogramSnapshot(input: EnemyHistogramSnapshotInput)
     conditions, summary,
     filename: getEnemyAggregationFilename(getWeightedEnemyHistogramImageFilename({ mode: copy.countMode, metric: '術耐性', scope: copy.source.scopeLabel,
       scale: copy.scale, statistics: copy.statistics, customLinearUpperBound: copy.customLinearUpperBound,
-      referenceVisibility: copy.referenceVisibility, percentileReference: copy.percentileReference, showPercentages: copy.showPercentages,
+      referenceVisibility: copy.referenceVisibility, percentileReference: copy.percentileReference,
+      showFrequencies: copy.showFrequencies, showPercentages: copy.showPercentages,
       showBinRanges: copy.showBinRanges, showStatRanks: copy.showStatRanks,
       showCumulative: copy.showCumulative, cumulativeDisplay: copy.cumulativeDisplay,
       useRatingBins: copy.ratingBins !== null, coverage: copy.coverage }), copy.source.aggregationVersion?.id),

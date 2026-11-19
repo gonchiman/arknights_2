@@ -92,7 +92,10 @@ test('旧スナップショットと初期OFFにはランク帯を追加しな�
     assert.doesNotMatch(markup, /stat-rank-strip-band|data-rank-point=/)
     assert.equal(bars(markup).length, source.statistics.bins.length)
     assert.ok(group(markup, 'data-histogram-range-strip="bottom"'))
-    assert.equal(svgHeight(markup), 352, '数値範囲の帯に必要な高さはランク帯OFFでも確保する')
+    const withoutRange = renderPlot({ ...source, showBinRanges: false })
+    assert.equal(svgHeight(markup) - svgHeight(withoutRange), 18,
+      '棒上の度数の余白に加えて、数値範囲の帯に必要な高さをランク帯OFFでも確保する')
+    assert.match(markup, /data-frequency-index=/, '既定ONの度数ラベルも残す')
   }
 })
 
