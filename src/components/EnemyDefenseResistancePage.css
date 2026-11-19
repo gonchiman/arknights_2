@@ -137,6 +137,23 @@
   content: '';
 }
 
+.enemy-resistance-threshold-scatter.is-bar .enemy-resistance-scatter-layout { min-width: 38rem; }
+.enemy-resistance-threshold-scatter.is-bar .enemy-resistance-scatter-y-title { margin-bottom: 18px; }
+
+.enemy-resistance-threshold-bar {
+  position: absolute;
+  bottom: 0;
+  max-width: 38px;
+  transform: translateX(-50%);
+  background: var(--link);
+}
+
+.enemy-resistance-threshold-bar-value {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  white-space: nowrap;
+}
+
 .enemy-resistance-scatter-x-ticks { grid-column: 2; color: var(--text-soft); }
 .enemy-resistance-scatter-x-ticks span { position: absolute; transform: translateX(-50%); }
 .enemy-resistance-threshold-scatter figcaption { padding: 0 16px 10px; text-align: right; color: var(--text-soft); }

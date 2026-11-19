@@ -21,7 +21,7 @@ import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
 const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
-const RESISTANCE_VIEWS = [['table', '表'], ['scatter', '散布図']] as const
+const RESISTANCE_VIEWS = [['table', '表'], ['scatter', '散布図'], ['bar', '棒グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
 
@@ -109,14 +109,18 @@ export function EnemyDefenseResistancePage() {
                 {RESISTANCE_VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={resistanceView === id}
                   className={resistanceView === id ? 'active' : ''} onClick={() => setResistanceView(id)}>{label}</button>)}
               </div>
-              {resistanceView === 'scatter' && <>
-                <button type="button" className="button secondary" aria-label="術耐性別の散布図をPNG画像で保存"
+              {resistanceView !== 'table' &&
+                <button type="button" className="button secondary"
+                  aria-label={`術耐性別の${resistanceView === 'bar' ? '棒グラフ' : '散布図'}をPNG画像で保存`}
                   aria-haspopup="dialog" onClick={openResistanceImage}>画像を保存</button>
+              }
+              {resistanceView === 'scatter' &&
                 <button type="button" className="button secondary" aria-label="術耐性別の散布図を動画で保存"
                   aria-haspopup="dialog" onClick={() => setResistanceVideo(getResistanceScatterSnapshot())}>動画を保存</button>
-              </>}
+              }
             </div>
-            {resistanceView === 'scatter' && <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} />}
+            {resistanceView !== 'table' &&
+              <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} chartType={resistanceView} />}
           </>}
           {resistanceTable && resistanceView === 'table' && <>
             <div className="enemy-defense-resistance-rank-controls">
