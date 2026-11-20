@@ -3,6 +3,11 @@ import './HomePage.css'
 
 const HOME_PANELS = [
   {
+    id: 'charts',
+    title: 'グラフ作成',
+    links: [{ label: '棒グラフ作成', href: '#/charts/bar' }],
+  },
+  {
     id: 'operators',
     title: 'オペレーター',
     links: [{ label: 'オペレーターデータベース', href: '#/operators' }],

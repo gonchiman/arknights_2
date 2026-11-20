@@ -113,6 +113,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
   assert.deepEqual(
     APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
     [
+      ['bar-chart-workbench', 'bar-chart-workbench'],
       ['operators', 'operators'],
       ['operator-pca', 'operator-pca'],
       ['operator-pca-two', 'operator-pca-two'],
