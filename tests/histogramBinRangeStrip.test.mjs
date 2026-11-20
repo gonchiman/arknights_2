@@ -24,6 +24,13 @@ test('all cells share a two-line height when the original range lines fit', () =
   assert.deepEqual(getHistogramBinRangeStripLayout(mixed, 52, measure), { labels: mixed, height: 40 })
 })
 
+test('rating ranges can keep their two-line arrangement even when the joined label fits', () => {
+  const labels = [['0〜', '10'], ['10〜', '20'], ['20超']]
+  assert.deepEqual(getHistogramBinRangeStripLayout(labels, 600, measure, true), { labels, height: 40 })
+  assert.equal(getHistogramBinRangeStripLayout(labels, 600, measure).height, 24,
+    'numeric classes retain their existing automatic one-line layout')
+})
+
 test('a single oversized cell keeps the entire strip on the existing tick fallback', () => {
   assert.equal(getHistogramBinRangeStripLayout([['0〜', '999,999'], ['超']], 60, measure), null)
   assert.equal(getHistogramBinRangeStripLayout([['0〜999,999'], ['超']], 60, measure), null)
@@ -46,6 +53,15 @@ test('the three-line estimate also splits a one-piece overflow label and retains
   const layout = getHistogramBinRangeStripLayout([['0〜', '10'], ['10〜', '20'], ['20超']], 78)
   assert.deepEqual(layout, { labels: [['0', '〜', '10'], ['10', '〜', '20'], ['20', '超']], height: 56 })
   assert.deepEqual(getHistogramBinRangeStripLayout([['10', '超']], 20), { labels: [['10', '超']], height: 40 })
+})
+
+test('the rating zero endpoint can wrap 以下 without changing its inclusive meaning', () => {
+  const labels = [['0以下'], ['0〜', '10'], ['10〜', '20']]
+  assert.deepEqual(getHistogramBinRangeStripLayout(labels, 84, undefined, true), {
+    labels: [['0', '以下'], ['0', '〜', '10'], ['10', '〜', '20']], height: 56,
+  })
+  assert.equal(getHistogramBinRangeStripLayout(labels, 83.9, undefined, true), null,
+    'preserve whole qualifiers and numbers when even the third-line candidate cannot fit')
 })
 
 test('empty labels, invalid geometry and invalid measurements do not create a strip', () => {

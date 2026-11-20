@@ -11,7 +11,7 @@ interface TextWidths {
 }
 
 /** The measureRef must be attached to a hidden SVG text with the chart-strip-label class. */
-export function useHistogramBinRangeStripLayout(labels: readonly (readonly string[])[], plotWidth: number, enabled: boolean) {
+export function useHistogramBinRangeStripLayout(labels: readonly (readonly string[])[], plotWidth: number, enabled: boolean, preferTwoLines = false) {
   const measureRef = useRef<SVGTextElement>(null)
   const labelKey = JSON.stringify(labels)
   const [measured, setMeasured] = useState<TextWidths | null>(null)
@@ -39,7 +39,7 @@ export function useHistogramBinRangeStripLayout(labels: readonly (readonly strin
   }, [enabled, labelKey])
 
   const layout = enabled ? getHistogramBinRangeStripLayout(labels, plotWidth,
-    measured?.key === labelKey ? text => measured.widths[text] : undefined) : null
+    measured?.key === labelKey ? text => measured.widths[text] : undefined, preferTwoLines) : null
   return { measureRef, layout }
 }
 
@@ -48,18 +48,19 @@ export interface HistogramBinRangeStripProps {
   plotLeft: number
   plotRight: number
   top: number
+  title?: string
 }
 
 /** Numeric range cells retain the same slots and pale fill as the other chart strips. */
-export function HistogramBinRangeStrip({ layout, plotLeft, plotRight, top }: HistogramBinRangeStripProps) {
+export function HistogramBinRangeStrip({ layout, plotLeft, plotRight, top, title = '階級' }: HistogramBinRangeStripProps) {
   const width = plotRight - plotLeft
   if (!layout.labels.length || ![plotLeft, plotRight, top, width].every(Number.isFinite) || width <= 0) return null
   const cellWidth = width / layout.labels.length
   const cellInset = Math.min(1.5, cellWidth * 0.2)
 
-  return <g data-histogram-range-strip="bottom" role="group" aria-label="階級">
+  return <g data-histogram-range-strip="bottom" role="group" aria-label={title}>
     <text className="chart-strip-title" data-chart-image-ink="true"
-      x={plotLeft - 8} y={top + layout.height / 2 + 4} textAnchor="end">階級</text>
+      x={plotLeft - 8} y={top + layout.height / 2 + 4} textAnchor="end">{title}</text>
     {layout.labels.map((lines, index) => {
       const left = plotLeft + index * cellWidth
       const labelY = top + Math.floor(layout.height / 2 + 4 - (lines.length - 1) * 15 / 2)

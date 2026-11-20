@@ -15,8 +15,8 @@ export function getHistogramBinRangeWrappedLines(lines: readonly string[]): stri
   const joined = lines.join('')
   const range = /^(.+?)([〜～])(.+)$/.exec(joined)
   if (range) return [range[1], range[2], range[3]]
-  const overflow = /^(.+)(超)$/.exec(joined)
-  return overflow ? [overflow[1], overflow[2]] : [...lines]
+  const bound = /^(.+)(超|以下)$/.exec(joined)
+  return bound ? [bound[1], bound[2]] : [...lines]
 }
 
 /** Adds a third horizontal line before falling back for a number wider than its slot. */
@@ -24,6 +24,7 @@ export function getHistogramBinRangeStripLayout(
   labels: readonly (readonly string[])[],
   plotWidth: number,
   measureText: (text: string) => number = estimateTextWidth,
+  preferTwoLines = false,
 ): HistogramBinRangeStripLayout | null {
   if (!labels.length || !Number.isFinite(plotWidth) || plotWidth <= 0
     || labels.some(lines => !lines.length || lines.length > 2 || lines.some(line => !line.trim()))) return null
@@ -34,7 +35,7 @@ export function getHistogramBinRangeStripLayout(
     return Number.isFinite(width) && width >= 0 && width <= availableWidth
   }
   const singleLines = labels.map(lines => [lines.join('')])
-  if (singleLines.every(([line]) => fits(line))) return { labels: singleLines, height: 24 }
+  if (!preferTwoLines && singleLines.every(([line]) => fits(line))) return { labels: singleLines, height: 24 }
   if (labels.every(lines => lines.every(fits))) return { labels: labels.map(lines => [...lines]), height: 40 }
   const wrappedLines = labels.map(getHistogramBinRangeWrappedLines)
   if (wrappedLines.every(lines => lines.every(fits))) {
