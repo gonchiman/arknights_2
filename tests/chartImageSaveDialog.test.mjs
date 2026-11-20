@@ -72,3 +72,31 @@ test('automatic filenames track the requested aspect without introducing visible
   assert.match(html, /class="visually-hidden">\.zip は省略できます。/)
   assert.doesNotMatch(html, /次の画面で保存先フォルダを選べます。|このブラウザーでは保存先フォルダ/)
 })
+
+test('folder saves hide filename controls and ignore invalid or empty names', () => {
+  for (const archive of [false, true]) {
+    for (const initialFilename of ['', '  ', '.png', '.zip', 'CON.png', '比較:不正名.zip']) {
+      const html = render({ initialFilename, archive, showFilename: false, helpMode: 'none',
+        saveLabel: 'フォルダに8枚保存', additionalSaveAction: { label: '別の保存', onSave() {} },
+      })
+      assert.doesNotMatch(html, /aria-label="ファイル名"|>ファイル名<|\.png は省略|\.zip は省略/)
+      assert.doesNotMatch(html, /ファイル名を入力してください。|ファイル名に使えない文字|予約名|role="alert"/)
+      assert.match(html, /type="submit"[^>]*>フォルダに8枚保存<\/button>/)
+      assert.doesNotMatch(html, /type="submit"[^>]*disabled=""/)
+      assert.match(html, /type="button"[^>]*>別の保存<\/button>/)
+    }
+  }
+})
+
+test('hiding a filename preserves aspect validation, caller-disabled state, errors and progress', () => {
+  const folder = { showFilename: false, initialFilename: '', saveLabel: 'フォルダに8枚保存' }
+  assert.match(render({ ...folder, saveDisabled: true }), /type="submit"[^>]*disabled=""/)
+  const invalidAspect = render({ ...folder,
+    aspect: { preset: 'custom', width: '0', height: '9' }, onAspectChange() {},
+  })
+  assert.match(invalidAspect, /幅と高さを1〜100の整数で入力してください。/)
+  assert.match(invalidAspect, /type="submit"[^>]*disabled=""/)
+  const failed = render({ ...folder, error: '3/8枚を保存しました。' })
+  assert.match(failed, /role="alert">3\/8枚を保存しました。/)
+  assert.match(render({ ...folder, progress: 'PNG 3/8を保存中…' }), /role="status">PNG 3\/8を保存中…/)
+})

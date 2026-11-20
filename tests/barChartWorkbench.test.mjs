@@ -4,24 +4,31 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
-import { createBarChartDocument } from '../src/lib/barChartDocument.ts'
+import { createBarChartDocument, DEFAULT_BAR_CHART_DISPLAY_SETTINGS } from '../src/lib/barChartDocument.ts'
 import { createBarChartFromProvider } from '../src/lib/barChartProviders.ts'
+import { ENEMY_STAT_METRICS } from '../src/lib/enemyStatMetrics.ts'
 import { getBarChartPresentationLabels } from '../src/lib/barChartPresentation.ts'
 import { parseHashRoute } from '../src/lib/routes.ts'
 import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
 import { getChartImageLayout } from '../src/lib/chartImageLayout.ts'
 import { getChartImageRasterSize } from '../src/lib/chartImageRasterSize.ts'
+import { getBarChartNaturalHeight } from '../src/lib/barChartLayout.ts'
 
 const version = { id: 'v12', label: '集計版 v12', sourceRevision: 'a'.repeat(40), ruleVersion: 'fixture' }
-const rows = [0, 20, 60, null].map((magicResistance, i) => ({ id: String(i), stats: { magicResistance, defense: i * 200 } }))
+const rows = [0, 20, 60, null].map((magicResistance, i) => ({ id: String(i), stats: {
+  magicResistance, defense: i * 200, maxHp: i * 5000, attack: i * 200,
+  moveSpeed: i * .2, baseAttackTime: i * .5, massLevel: i,
+} }))
 const counts = { schemaVersion: 1, generatedAt: 'fixture', sourceGeneratedAt: null,
   summary: { mapCount: 1, missingMapCount: 0, spawnMapCount: 1, spawnExcludedMapCount: 0 },
   enemies: Object.fromEntries(rows.map(({ id }, i) => [id, { mapCount: 1, spawnCount: [5, 3, 2, 8][i] }])) }
 const data = { rows, counts, mainStoryCounts: counts, maps: { maps: [] } }
 const context = { data, version, scope: 'main' }
-const frequency = createBarChartFromProvider('enemy-resistance-histogram', context)
+const frequency = createBarChartFromProvider('enemy-stat-histogram', context)
+const distributions = ENEMY_STAT_METRICS.map(metric => createBarChartFromProvider('enemy-stat-histogram', { ...context, statKey: metric.key }))
 const correspondence = createBarChartFromProvider('enemy-defense-resistance', context)
 const settings = { values: true, axisBand: true, percent: true, cumulative: true }
+const allBands = { ...settings, cumulativeBand: true, rankBand: true }
 let server, Plot, Figure, ImageFrame, ImageDialog, createSnapshot, imageFrame, Page
 
 before(async () => {
@@ -55,11 +62,22 @@ const rectangles = markup => [...markup.matchAll(/<rect\b[^>]*>/g)].map(([tag]) 
 const bars = markup => rectangles(markup).filter(tag => tag.class === 'bar-chart-bar')
 const markerCount = (markup, name) => [...markup.matchAll(new RegExp(`\\b${name}="`, 'g'))].length
 const finite = markup => assert.doesNotMatch(markup, /(?:x|y|width|height|points|transform)="[^"]*(?:NaN|Infinity|undefined)/)
+function group(markup, marker) {
+  const opening = [...markup.matchAll(/<g\b[^>]*>/g)].find(([tag]) => tag.includes(marker))
+  if (!opening) return null
+  const content = markup.slice(opening.index)
+  let depth = 0
+  for (const tag of content.matchAll(/<\/?g\b[^>]*>/g)) {
+    depth += tag[0].startsWith('</') ? -1 : 1
+    if (depth === 0) return content.slice(0, tag.index + tag[0].length)
+  }
+  assert.fail(`Unclosed group ${marker}`)
+}
 const inputOf = document => Object.fromEntries(['xKind', 'bins', 'filenameParts', 'fractionDigits', 'capabilities', 'semantics', 'source']
   .map(key => [key, document[key]]))
 
-test('同じ共通Plotを画面と画像に使い、タイトル・数値・階級・元データを保持する', () => {
-  for (const document of [frequency, correspondence]) {
+test('7ステータスと対応値が同じ共通Plotを画面と画像に使い、タイトル・数値・階級・元データを保持する', () => {
+  for (const document of [...distributions, correspondence]) {
     const original = JSON.stringify(document)
     const screen = render(Plot, { document, settings, width: 928, height: 334 })
     const snapshot = createSnapshot(document, settings)
@@ -148,6 +166,95 @@ test('割合と累積は度数の能力に従い、同じ設定を対応防御�
   assert.deepEqual(bins(disabled), bins(frequencyPlot))
 })
 
+test('累積割合線・累積割合帯は独立して切り替えられ、旧設定と新項目の初期OFFを維持する', () => {
+  assert.equal(DEFAULT_BAR_CHART_DISPLAY_SETTINGS.cumulativeBand, false)
+  assert.equal(DEFAULT_BAR_CHART_DISPLAY_SETTINGS.rankBand, false)
+  const legacy = render(Plot, { document: frequency, settings, width: 928 })
+  const explicitOff = render(Plot, { document: frequency, settings: { ...settings, cumulativeBand: false, rankBand: false }, width: 928 })
+  assert.deepEqual(bars(legacy), bars(explicitOff))
+  assert.equal(markerCount(legacy, 'data-bar-chart-cumulative-band'), 0)
+  assert.equal(markerCount(legacy, 'data-bar-chart-rank-band'), 0)
+  for (const cumulative of [false, true]) for (const cumulativeBand of [false, true]) {
+    const markup = render(Plot, { document: frequency, settings: { ...settings, cumulative, cumulativeBand }, width: 928 })
+    assert.equal(markerCount(markup, 'data-bar-chart-cumulative'), cumulative ? 1 : 0)
+    assert.equal(markerCount(markup, 'data-bar-chart-cumulative-band'), cumulativeBand ? 1 : 0)
+    assert.equal(markerCount(markup, 'data-bar-chart-percentage'), frequency.bins.length)
+    assert.deepEqual(bins(markup), bins(legacy))
+    if (cumulativeBand) {
+      const band = group(markup, 'data-bar-chart-cumulative-band="true"')
+      assert.match(band, /累積割合（%）/)
+      assert.match(band, />50<\/text>/)
+      assert.match(band, />80<\/text>/)
+      assert.match(band, />100<\/text>/)
+    }
+    finite(markup)
+  }
+})
+
+test('上は累積割合帯→割合帯、下は階級帯→評価帯の順で、評価の端点を同じ帯に収める', () => {
+  for (const width of [620, 928]) {
+    const markup = render(Plot, { document: frequency, settings: allBands, width })
+    const baseline = render(Plot, { document: frequency, settings, width })
+    assert.deepEqual(bars(markup), bars(baseline), '帯の行数に合わせて高さを増やし、元の棒を縦につぶさない')
+    const cumulative = group(markup, 'data-bar-chart-cumulative-band="true"')
+    const percentage = group(markup, 'data-bar-chart-percentage-band="true"')
+    const ranks = group(markup, 'data-bar-chart-rank-band="true"')
+    assert.ok(cumulative && percentage && ranks)
+    const cumFills = rectangles(cumulative).filter(tag => tag.class === 'chart-strip-fill')
+    const pctFills = rectangles(percentage).filter(tag => tag.class === 'chart-strip-fill')
+    const rankFills = rectangles(ranks).filter(tag => tag.class === 'stat-rank-strip-fill')
+    const axes = [...markup.matchAll(/<g\b[^>]*data-bar-chart-axis-band="[^"]*"[^>]*>(.*?)<\/g>/g)]
+      .flatMap(([, content]) => rectangles(content).filter(tag => tag.class === 'chart-strip-fill'))
+    assert.equal(cumFills.length, frequency.bins.length)
+    assert.equal(pctFills.length, frequency.bins.length)
+    assert.ok(rankFills.length > 0 && axes.length > 0)
+    assert.ok(Math.max(...cumFills.map(tag => Number(tag.y) + Number(tag.height))) < Math.min(...pctFills.map(tag => Number(tag.y))))
+    assert.ok(Math.max(...axes.map(tag => Number(tag.y) + Number(tag.height))) < Math.min(...rankFills.map(tag => Number(tag.y))))
+    assert.match(ranks, /data-rank="E・D"/)
+    assert.match(ranks, /data-rank="S\+・SS"/)
+    assert.doesNotMatch(ranks, /<title|data-rank-point|stat-rank-strip-point|tooltip|tabindex|role="button"|onClick/)
+    const svg = attributes(markup.match(/<svg\b[^>]*>/)[0])
+    assert.ok(rankFills.every(tag => Number(tag.y) + Number(tag.height) <= Number(svg.height)))
+    finite(markup)
+  }
+})
+
+test('帯の自然高を画面と画像で共有し、非対応の評価帯・対応値の割合帯は設定持越でも出さない', () => {
+  const off = { ...settings, cumulativeBand: false, rankBand: false }
+  assert.equal(getBarChartNaturalHeight(frequency, off), 334)
+  assert.equal(getBarChartNaturalHeight(frequency, { ...off, cumulativeBand: true }), 362)
+  assert.equal(getBarChartNaturalHeight(frequency, { ...off, rankBand: true }), 362)
+  assert.equal(getBarChartNaturalHeight(frequency, allBands), 390)
+  for (const document of [...distributions, correspondence]) {
+    const natural = getBarChartNaturalHeight(document, allBands)
+    const screen = render(Plot, { document, settings: allBands, width: 928 })
+    const snapshot = createSnapshot(document, allBands)
+    const frame = imageFrame(snapshot)
+    const image = renderToStaticMarkup(frame.children({ width: 928, height: natural }))
+    assert.equal(frame.naturalChartHeight, natural)
+    assert.deepEqual(bars(image), bars(screen))
+    assert.deepEqual(bins(image), bins(screen))
+    for (const marker of ['data-bar-chart-cumulative-band="true"', 'data-bar-chart-percentage-band="true"', 'data-bar-chart-rank-band="true"']) {
+      assert.equal(group(image, marker), group(screen, marker), '帯の位置・内容も画面と画像で一致する')
+    }
+    assert.equal(markerCount(screen, 'data-bar-chart-rank-band'), document.capabilities.rankBands ? 1 : 0)
+    assert.equal(markerCount(screen, 'data-bar-chart-cumulative-band'), document.capabilities.cumulative ? 1 : 0)
+    if (!document.capabilities.rankBands) assert.doesNotMatch(screen, /stat-rank-strip/)
+    if (!document.capabilities.cumulative) assert.equal(natural, 334)
+    const svg = attributes(screen.match(/<svg\b[^>]*>/)[0])
+    assert.equal(Number(svg.height), natural)
+    assert.doesNotMatch(screen, /onClick|tabindex|role="button"|data-tooltip|foreignObject/)
+    finite(screen)
+  }
+  const mutable = { ...allBands }
+  const snapshot = createSnapshot(frequency, mutable)
+  mutable.cumulativeBand = false
+  mutable.rankBand = false
+  assert.equal(snapshot.settings.cumulativeBand, true)
+  assert.equal(snapshot.settings.rankBand, true)
+  assert.equal(imageFrame(snapshot).naturalChartHeight, 390)
+})
+
 test('狭い幅・長い階級名・全値0・空データでも不正な座標や操作要素を出さない', () => {
   const input = inputOf(frequency)
   const documents = [frequency,
@@ -183,16 +290,34 @@ test('保存スナップショットは後続の表示変更を受けず、16:9�
 test('共通ページはデータを選ぶ入口を持ち、X/Y入力や説明を追加せず初期の共通描画を使う', () => {
   const markup = render(Page, {})
   assert.match(markup, /棒グラフ作成/)
-  assert.match(markup, /value="enemy-resistance-histogram" selected=""/)
+  assert.match(markup, /value="enemy-stat-histogram" selected=""/)
   assert.match(markup, /value="enemy-defense-resistance"/)
+  assert.match(markup, /敵のステータス分布/)
+  const statSelect = /<select\b[^>]*aria-label="ステータス"[^>]*>(.*?)<\/select>/.exec(markup)?.[1]
+  assert.ok(statSelect, '分布の提供元とは別にステータスを選べる')
+  for (const metric of ENEMY_STAT_METRICS) {
+    assert.ok(statSelect.includes(`value="${metric.key}"`), metric.label)
+    assert.ok(statSelect.includes(`>${metric.label}</option>`), metric.label)
+  }
+  assert.match(statSelect, /value="magicResistance" selected=""/)
+  assert.doesNotMatch(statSelect, /stageAppearanceCount/)
   assert.match(markup, /<input\b(?=[^>]*value="main")(?=[^>]*checked="")[^>]*>/)
   assert.match(markup, /出現回数（体）/)
   assert.match(markup, /描画方式<\/dt><dd><strong>区間型<\/strong>/)
   assert.match(markup, /棒幅<\/dt><dd><strong>1項目幅の96%<\/strong>/)
+  assert.match(markup, /階級幅<\/dt><dd><strong>10<\/strong>/)
+  assert.match(markup, /上限<\/dt><dd><strong>自動 100<\/strong>/)
   assert.doesNotMatch(markup, /上限48px/)
   assert.deepEqual(bins(markup), frequency.bins.map(bin => [bin.id, String(bin.value)]))
   assert.equal(markerCount(markup, 'data-bar-chart-percentage'), 0)
   assert.equal(markerCount(markup, 'data-bar-chart-cumulative'), 0)
+  assert.equal(markerCount(markup, 'data-bar-chart-cumulative-band'), 0)
+  assert.equal(markerCount(markup, 'data-bar-chart-rank-band'), 0)
+  for (const label of ['累積割合線', '累積割合帯', '評価帯']) {
+    const inputLabel = new RegExp(`<label><input[^>]*type="checkbox"[^>]*\\/>${label}<\\/label>`).exec(markup)?.[0]
+    assert.ok(inputLabel, label)
+    assert.doesNotMatch(inputLabel, /checked=""/, '新しい帯と累積線は初期OFF')
+  }
   assert.doesNotMatch(markup, /<textarea|type="number"|ツールチップ|X列|Y列/)
 })
 

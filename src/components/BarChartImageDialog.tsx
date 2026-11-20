@@ -3,6 +3,7 @@ import { getBarChartFilename, type BarChartDocument, type BarChartDisplaySetting
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { getChartImageRasterSize } from '../lib/chartImageRasterSize'
+import { getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
 import { BarChartPlot } from './BarChartPlot'
 import { ChartImageFrame, type ChartImageFrameProps } from './ChartImageFrame'
@@ -25,7 +26,7 @@ export function getBarChartImageFrame(snapshot: BarChartImageSnapshot, aspectRat
     title: snapshot.document.title,
     conditions: snapshot.document.conditions,
     axisTitle: snapshot.document.xAxisTitle,
-    naturalChartHeight: 334,
+    naturalChartHeight: getBarChartNaturalHeight(snapshot.document, snapshot.settings),
     aspectRatio,
     onLayout,
     children: size => <BarChartPlot document={snapshot.document} settings={snapshot.settings} {...size} imageMode />,

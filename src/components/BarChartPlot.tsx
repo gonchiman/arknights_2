@@ -1,10 +1,12 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { BarChartDisplaySettings, BarChartDocument } from '../lib/barChartDocument'
 import { getBarChartBarWidth } from '../lib/barChartPresentation'
+import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { avoidHistogramCumulativeLine, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { ChartStripCell } from './ChartStripCell'
+import { StatRankStrip } from './StatRankStrip'
 import './BarChartPlot.css'
 
 export interface BarChartPlotProps {
@@ -64,7 +66,7 @@ function percentage(share: number | null | undefined): string {
 }
 
 /** One read-only drawing is shared by the page and PNG output. */
-export function BarChartPlot({ document: data, settings, width, height = 334, imageMode = false }: BarChartPlotProps) {
+export function BarChartPlot({ document: data, settings, width, height, imageMode = false }: BarChartPlotProps) {
   const titleId = useId(), descriptionId = useId()
   const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: data.fractionDigits })
   const format = (value: number) => number.format(value)
@@ -74,19 +76,29 @@ export function BarChartPlot({ document: data, settings, width, height = 334, im
   const texts = bins.map(bin => bin.value === null ? '—' : format(bin.value))
   const maximum = Math.max(0, ...bins.flatMap(bin => bin.value === null ? [] : [bin.value]))
   const axis = createZeroBasedValueAxis(maximum * 1.12, 10 ** -data.fractionDigits)
-  const measure = useTextWidths([...texts, ...bins.map(bin => bin.label), ...axis.ticks.map(format)])
   const showPercent = settings.percent && data.capabilities.percentages
   const showCumulative = settings.cumulative && data.capabilities.cumulative
+  const showCumulativeBand = Boolean(settings.cumulativeBand && data.capabilities.cumulative)
+  const rankBands = settings.rankBand && data.capabilities.rankBands ? data.rankBands ?? [] : []
+  const proportionBands = [
+    ...(showCumulativeBand ? [{ key: 'cumulative' as const, title: '累積割合', labels: bins.map(bin => percentage(bin.cumulativeShare)) }] : []),
+    ...(showPercent ? [{ key: 'percentage' as const, title: '割合', labels: bins.map(bin => percentage(bin.share)) }] : []),
+  ]
+  const measure = useTextWidths([...texts, ...bins.map(bin => bin.label), ...axis.ticks.map(format),
+    ...proportionBands.flatMap(band => band.labels)])
   const svgWidth = Math.max(240, Number.isFinite(width) ? width : MINIMUM_WIDTH)
-  const svgHeight = Math.max(240, Number.isFinite(height) ? height : 334)
+  const svgHeight = Math.max(240, height !== undefined && Number.isFinite(height) ? height : getBarChartNaturalHeight(data, settings))
   const left = Math.max(62, ...axis.ticks.map(tick => measure(format(tick)) + 34))
   const right = Math.max(left + 1, svgWidth - (showCumulative ? 70 : 14))
   const plotWidth = right - left
   const slot = plotWidth / Math.max(1, bins.length)
   const axisLines = bins.map(bin => wrapLabel(bin.label, Math.max(11, slot - 8), measure))
   const axisHeight = Math.max(24, Math.max(1, ...axisLines.map(lines => lines.length)) * 14 + 10)
-  const top = showPercent ? 48 : 20
-  const bottom = Math.max(top + 80, svgHeight - axisHeight - 12)
+  const bandHeight = BAR_CHART_BAND_HEIGHT + BAR_CHART_BAND_GAP
+  const top = 20 + proportionBands.length * bandHeight
+  const rankHeight = rankBands.length ? bandHeight : 0
+  const bottom = Math.max(top + 80, svgHeight - axisHeight - 12 - rankHeight)
+  const rankTop = bottom + 8 + axisHeight + BAR_CHART_BAND_GAP
   const plotHeight = bottom - top
   const y = (value: number) => plotHeight * (1 - value / axis.maximum)
   const centerX = (index: number) => (index + .5) * slot
@@ -111,7 +123,7 @@ export function BarChartPlot({ document: data, settings, width, height = 334, im
   return <svg className={`bar-chart-plot${imageMode ? ' is-image' : ''}`} width={svgWidth} height={svgHeight}
     viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{data.title}</title>
-    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}`).join('。')}`}</desc>
+    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}</desc>
     <g transform={`translate(${left} ${top})`}>
       {axis.ticks.map(tick => <g key={tick} aria-hidden="true">
         <line className={`bar-chart-guide${tick === 0 ? ' is-zero' : ''}`} x1="0" x2={plotWidth} y1={y(tick)} y2={y(tick)} />
@@ -139,12 +151,24 @@ export function BarChartPlot({ document: data, settings, width, height = 334, im
       transform={`rotate(-90 14 ${(top + bottom) / 2})`}>{data.yAxisTitle}</text>
     {showCumulative && <text {...INK} className="bar-chart-axis-title is-cumulative" x={svgWidth - 12} y={(top + bottom) / 2}
       textAnchor="middle" transform={`rotate(-90 ${svgWidth - 12} ${(top + bottom) / 2})`}>累積割合（%）</text>}
-    {showPercent && <g data-bar-chart-percentage-band="true">
-      <text {...INK} className="chart-strip-title" x={left - 8} y="29" textAnchor="end">割合（%）</text>
-      {bins.map((bin, index) => <g key={bin.id} data-bar-chart-percentage={bin.id}>
-        <ChartStripCell left={left + index * slot} width={slot} top={12} leftInset={1.5} rightInset={1.5} label={percentage(bin.share)} />
-      </g>)}
-    </g>}
+    {proportionBands.map((band, row) => {
+      const bandTop = 12 + row * bandHeight
+      const labelStride = Math.max(1, Math.ceil(Math.max(...band.labels.map(measure)) / Math.max(1, slot - 6)))
+      return <g key={band.key} data-bar-chart-percentage-band={band.key === 'percentage' ? 'true' : undefined}
+        data-bar-chart-cumulative-band={band.key === 'cumulative' ? 'true' : undefined} role="group" aria-label={`${band.title}（%）`}>
+        <text {...INK} className="chart-strip-title" x={left - 8} y={bandTop + 10} textAnchor="end">
+          <tspan x={left - 8}>{band.title}</tspan><tspan x={left - 8} dy="11">（%）</tspan>
+        </text>
+        {bins.map((bin, index) => <g key={bin.id} data-bar-chart-percentage={band.key === 'percentage' ? bin.id : undefined}
+          data-bar-chart-cumulative-percentage={band.key === 'cumulative' ? bin.id : undefined} role="img"
+          aria-label={`${bin.label}：${band.title}${band.labels[index]}%`}>
+          <ChartStripCell left={left + index * slot} width={slot} top={bandTop} leftInset={1.5} rightInset={1.5}
+            label={band.labels[index]} showLabel={false} />
+          {(bins.length - 1 - index) % labelStride === 0 && <text {...INK} className="chart-strip-label"
+            x={left + centerX(index)} y={bandTop + 16} textAnchor="middle">{band.labels[index]}</text>}
+        </g>)}
+      </g>
+    })}
     {bins.map((bin, index) => <g key={bin.id} data-bar-chart-axis-band={settings.axisBand ? bin.id : undefined}>
       {settings.axisBand && <ChartStripCell left={left + index * slot} width={slot} top={bottom + 8}
         leftInset={1.5} rightInset={1.5} height={axisHeight} label={bin.label} showLabel={false} />}
@@ -153,6 +177,11 @@ export function BarChartPlot({ document: data, settings, width, height = 334, im
         {axisLines[index].map((line, row) => <tspan key={row} x={left + centerX(index)} dy={row ? 14 : 0}>{line}</tspan>)}
       </text>
     </g>)}
+    {settings.axisBand && <text {...INK} className="chart-strip-title" x={left - 8} y={bottom + 8 + axisHeight / 2 + 4} textAnchor="end">階級</text>}
+    {rankBands.length > 0 && <g data-bar-chart-rank-band="true" role="group" aria-label="評価">
+      <text {...INK} className="chart-strip-title" x={left - 8} y={rankTop + 16} textAnchor="end">評価</text>
+      <StatRankStrip bands={rankBands} left={left} right={right} top={rankTop} title="評価" showTooltips={false} />
+    </g>}
   </svg>
 }
 
@@ -177,7 +206,7 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
   return <figure className="bar-chart-figure" aria-label={data.title}>
     <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
     <div className="bar-chart-scroll" ref={ref}>
-      <BarChartPlot document={data} settings={settings} width={plotWidth} />
+      <BarChartPlot document={data} settings={settings} width={plotWidth} height={getBarChartNaturalHeight(data, settings)} />
     </div>
     <div className="bar-chart-x-title">{data.xAxisTitle}</div>
   </figure>

@@ -12,7 +12,12 @@ import {
   type NumericStatisticsWithDispersion,
   validateCustomLinearBinWidth,
 } from '../lib/enemyStatistics'
-import type { EnemyLevelType, EnemyRecord, EnemyStats } from '../types/enemy'
+import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
+import {
+  ENEMY_ANALYSIS_METRICS as STAT_METRICS,
+  type EnemyAnalyzedStatKey as AnalyzedStatKey,
+  type EnemyStatMetric as StatMetric,
+} from '../lib/enemyStatMetrics'
 import { CollapsibleCalculatorPanel } from './CollapsibleCalculatorPanel'
 import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
@@ -78,23 +83,6 @@ import './EnemyDistribution.css'
 import './EnemyStatisticsSummary.css'
 import './EnemyChartImage.css'
 
-type AnalyzedStatKey = keyof Pick<
-  EnemyStats,
-  'maxHp' | 'attack' | 'defense' | 'magicResistance' | 'moveSpeed' | 'baseAttackTime' | 'massLevel'
-> | 'stageAppearanceCount'
-
-interface StatMetric {
-  key: AnalyzedStatKey
-  label: string
-  axisLabel: string
-  suffix: string
-  valueDigits: number
-  summaryDigits: number
-  logBinCount: number
-  minimumLinearBinWidth: number
-  defaultScale: HistogramScale
-}
-
 interface MetricObservation {
   enemy: EnemyRecord
   value: number
@@ -120,17 +108,6 @@ interface IndividualGroup {
   observations: MetricObservation[]
   median: number
 }
-
-const STAT_METRICS: StatMetric[] = [
-  { key: 'maxHp', label: 'HP', axisLabel: 'HP', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-  { key: 'attack', label: '攻撃力', axisLabel: '攻撃力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-  { key: 'defense', label: '防御力', axisLabel: '防御力', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 12, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-  { key: 'magicResistance', label: '術耐性', axisLabel: '術耐性', suffix: '', valueDigits: 0, summaryDigits: 1, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-  { key: 'moveSpeed', label: '移動速度', axisLabel: '移動速度', suffix: '', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
-  { key: 'baseAttackTime', label: '攻撃間隔', axisLabel: '攻撃間隔（秒）', suffix: '秒', valueDigits: 2, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 0.01, defaultScale: 'LINEAR' },
-  { key: 'massLevel', label: '重量', axisLabel: '重量', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-  { key: 'stageAppearanceCount', label: '登場ステージ数', axisLabel: '登場ステージ数', suffix: '', valueDigits: 0, summaryDigits: 2, logBinCount: 10, minimumLinearBinWidth: 1, defaultScale: 'LINEAR' },
-]
 
 type DistributionChartChoice = ChartKind | 'RATING_COMPARISON'
 type DefenseResistanceDisplay = EnemyRatingComparisonLayout | 'BOXPLOT'
