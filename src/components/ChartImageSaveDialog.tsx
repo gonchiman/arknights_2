@@ -12,7 +12,7 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = CHART_IMAGE_ASPECT_PRESETS, aspectHint, canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false, archive = false, saveLabel, progress }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = CHART_IMAGE_ASPECT_PRESETS, aspectHint, canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false, archive = false, saveLabel, progress, showFilename = true }: {
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -28,6 +28,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   archive?: boolean
   saveLabel?: string
   progress?: string
+  showFilename?: boolean
   cancelWhileSaving?: boolean
   onClose: () => void
   onSave: (filename: string, aspectRatio?: number) => void
@@ -62,7 +63,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
       : customFilename.value
     : getDefaultFilename?.(invalidAspect ? undefined : aspectRatio) ?? initialFilename
   const extensionPattern = videoExtension ? /\.(?:mp4|webm)$/i : archive ? /\.zip$/i : /\.png$/i
-  const validationError = validateFilename(filename, extensionPattern)
+  const validationError = showFilename ? validateFilename(filename, extensionPattern) : null
   const filenameHint = `.${fileExtension} は省略できます。`
   const destinationHint = canChooseLocation
     ? '次の画面で保存先フォルダを選べます。'
@@ -83,14 +84,14 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
         event.preventDefault()
-        if (!saving && !saveDisabled && !composing.current && !validationError && !invalidAspect) onSave(filename.trim(), aspectRatio)
+        if (!saving && !saveDisabled && (!showFilename || !composing.current) && !validationError && !invalidAspect) onSave(filename.trim(), aspectRatio)
       }}
       onKeyDown={(event) => {
-        if (event.key === 'Enter' && (composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
+        if (event.key === 'Enter' && ((showFilename && composing.current) || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)) {
           event.preventDefault()
         }
       }}>
-      <div className="chart-image-save-field">
+      {showFilename && <div className="chart-image-save-field">
         {popoverHelp ? <div className="chart-image-save-field-heading">
           <HelpPopover label="ファイル名の説明" triggerText="ファイル名">
             <p>{filenameHint}</p>
@@ -110,7 +111,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
           }} />
         <p id={hintId} className={popoverHelp || quietHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{filenameHint}</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
-      </div>
+      </div>}
       {aspect && onAspectChange && <fieldset className="chart-image-save-aspect" disabled={saving} aria-describedby={aspectHintId}>
         <legend>{popoverHelp ? <HelpPopover label={`${aspectLabel}の説明`} triggerText={`${aspectLabel}（幅:高さ）`}>
           <p>{aspectDescription}</p>
@@ -152,7 +153,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
         <button type="button" className="button secondary" disabled={closeDisabled} onClick={onClose}>キャンセル</button>
         {additionalSaveAction && <button type="button" className="button secondary"
           disabled={saving || saveDisabled || !!validationError || invalidAspect}
-          onClick={() => { if (!composing.current) additionalSaveAction.onSave(filename.trim(), aspectRatio) }}>
+          onClick={() => { if (!showFilename || !composing.current) additionalSaveAction.onSave(filename.trim(), aspectRatio) }}>
           {additionalSaveAction.label}
         </button>}
         <button type="submit" className="button" disabled={saving || saveDisabled || !!validationError || invalidAspect}>

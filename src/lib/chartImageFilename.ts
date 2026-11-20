@@ -1,5 +1,6 @@
 const encoder = new TextEncoder()
-const FILENAME_BYTE_LIMIT = 240
+export const CHART_IMAGE_FILENAME_BYTE_LIMIT = 240
+const FILENAME_BYTE_LIMIT = CHART_IMAGE_FILENAME_BYTE_LIMIT
 export type ChartImageFilenamePart = string | number | null | undefined | false
 
 function sanitizePart(value: string): string {
