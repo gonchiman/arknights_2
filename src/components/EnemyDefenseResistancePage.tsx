@@ -14,13 +14,14 @@ import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot, type EnemyResistanceScatterSnapshot } from './EnemyResistanceImageDialog'
 import { EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
 import { EnemyResistanceScatterVideoDialog } from './EnemyResistanceScatterVideoDialog'
+import { EnemyRankBandStatisticsPanel } from './EnemyRankBandStatisticsPanel'
 import './DamageCalculator.css'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
-const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ']] as const
+const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ'], ['statistics', '順位帯の統計']] as const
 const RESISTANCE_VIEWS = [['table', '表'], ['scatter', '散布図'], ['bar', '棒グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
@@ -142,6 +143,8 @@ export function EnemyDefenseResistancePage() {
             </div>
           </>}
           {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
+          {view === 'statistics' && scopedData && <EnemyRankBandStatisticsPanel rows={scopedData.rows} counts={scopedData.counts}
+            conditions={[`集計版 ${aggregation.selectedId}`, scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体']} />}
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </EnemyDataContent>

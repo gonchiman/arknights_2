@@ -17,12 +17,13 @@ export interface ComparisonTableImageSnapshot {
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth }: {
+export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth, helpMode = 'popover' }: {
   snapshot: ComparisonTableImageSnapshot
   onClose: () => void
   options?: (saving: boolean) => ReactNode
   selectionError?: string
   fixedOutputWidth?: number
+  helpMode?: 'inline' | 'popover' | 'none'
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [fixOutputWidth, setFixOutputWidth] = useState(false)
@@ -130,7 +131,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
       {options?.(saving)}
       {!selectionError && typeof saveError === 'string' && <p className="chart-image-save-error" role="alert">{saveError}</p>}
     </>}
-    helpMode="popover"
+    helpMode={helpMode}
     onClose={onClose}
     onSave={selectedFilename => { void saveImage(selectedFilename, true) }}
     additionalSaveAction={picker ? {
