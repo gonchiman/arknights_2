@@ -1,14 +1,17 @@
 import { createChartImageFilename, withChartImageAspect } from './chartImageFilename.ts'
+import type { StatRankBand } from './statRankBands.ts'
 
 export interface BarChartDisplaySettings {
   values: boolean
   axisBand: boolean
   percent: boolean
   cumulative: boolean
+  cumulativeBand?: boolean
+  rankBand?: boolean
 }
 
 export const DEFAULT_BAR_CHART_DISPLAY_SETTINGS: Readonly<BarChartDisplaySettings> = Object.freeze({
-  values: true, axisBand: true, percent: false, cumulative: false,
+  values: true, axisBand: true, percent: false, cumulative: false, cumulativeBand: false, rankBand: false,
 })
 
 export interface BarChartInterval {
@@ -39,6 +42,7 @@ export interface BarChartSemantics {
   readonly kind: 'histogram' | 'correspondence'
   readonly subject: string
   readonly xLabel: string
+  readonly xUnit?: string
   readonly yLabel: string
   readonly yUnit?: string
 }
@@ -84,10 +88,12 @@ export interface BarChartDocument {
   readonly yAxisTitle: string
   readonly xKind: 'interval' | 'point' | 'category'
   readonly bins: readonly BarChartBin[]
+  /** Source-projected fractions of the plot width; rendering never derives rating boundaries. */
+  readonly rankBands?: readonly StatRankBand[]
   readonly conditions: string
   readonly filenameParts: readonly string[]
   readonly fractionDigits: number
-  readonly capabilities: { readonly percentages: boolean; readonly cumulative: boolean }
+  readonly capabilities: { readonly percentages: boolean; readonly cumulative: boolean; readonly rankBands?: boolean }
   readonly semantics: BarChartSemantics
   readonly source: BarChartSource
 }
@@ -96,10 +102,11 @@ export function getBarChartLabels(semantics: BarChartSemantics, xKind: BarChartD
   const xQualifier = xKind === 'interval' ? '階級'
     : semantics.kind === 'correspondence' && xKind === 'point' ? '下限' : ''
   const yLabel = `${semantics.kind === 'correspondence' ? '対応する' : ''}${semantics.yLabel}`
+  const xDetails = [xQualifier, semantics.xUnit].filter(Boolean).join('・')
   return {
     title: semantics.kind === 'histogram' ? `${semantics.subject}のヒストグラム`
       : `${semantics.yLabel}と${semantics.xLabel}の対応（${semantics.xLabel}別）`,
-    xAxisTitle: `${semantics.xLabel}${xQualifier ? `（${xQualifier}）` : ''}`,
+    xAxisTitle: `${semantics.xLabel}${xDetails ? `（${xDetails}）` : ''}`,
     yAxisTitle: `${yLabel}${semantics.yUnit ? `（${semantics.yUnit}）` : ''}`,
   }
 }
@@ -118,7 +125,7 @@ export function getBarChartConditions(source: BarChartSource): string {
   ].filter(Boolean).join(' · ')
 }
 
-type DocumentInput = Pick<BarChartDocument, 'xKind' | 'bins' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
+type DocumentInput = Pick<BarChartDocument, 'xKind' | 'bins' | 'rankBands' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
 
 /** Freeze a detached JSON snapshot so later source edits cannot change a preview or export. */
 export function createBarChartDocument(input: DocumentInput): BarChartDocument {
@@ -141,6 +148,25 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
     }
     ids.add(bin.id)
   }
+  if (input.rankBands !== undefined) {
+    if (!Array.isArray(input.rankBands) || input.capabilities.rankBands !== true) {
+      throw new Error('棒グラフの評価帯を確認できませんでした。')
+    }
+    let previousEnd = 0
+    for (const band of input.rankBands) {
+      if (!band || typeof band.rating !== 'string' || !band.rating.trim()
+        || typeof band.label !== 'string' || !band.label.trim()
+        || !Number.isInteger(band.index) || band.index < 0
+        || !Number.isFinite(band.start) || !Number.isFinite(band.end)
+        || band.start < 0 || band.end > 1 || band.start > band.end
+        || band.start < previousEnd - 1e-12
+        || (band.pointValue === undefined ? band.start === band.end
+          : !Number.isFinite(band.pointValue) || band.start !== band.end)) {
+        throw new Error('棒グラフの評価帯を確認できませんでした。')
+      }
+      previousEnd = band.end
+    }
+  }
   const detached = JSON.parse(JSON.stringify(input)) as DocumentInput
   const content = { schemaVersion: 1 as const, ...detached,
     ...getBarChartLabels(detached.semantics, detached.xKind), conditions: getBarChartConditions(detached.source) }
@@ -157,6 +183,8 @@ export function getBarChartFilename(document: BarChartDocument, settings: BarCha
     settings.axisBand && '階級帯',
     settings.percent && document.capabilities.percentages && '割合帯',
     settings.cumulative && document.capabilities.cumulative && '累積割合',
+    settings.cumulativeBand && document.capabilities.cumulative && '累積割合帯',
+    settings.rankBand && document.capabilities.rankBands && Boolean(document.rankBands?.length) && '評価帯',
   ])
   return withChartImageAspect(filename, aspectRatio)
 }

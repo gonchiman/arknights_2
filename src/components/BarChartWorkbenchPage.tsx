@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { BAR_CHART_PROVIDERS, createBarChartFromProvider, type BarChartProviderId } from '../lib/barChartProviders'
-import type { BarChartDisplaySettings } from '../lib/barChartDocument'
+import { DEFAULT_BAR_CHART_DISPLAY_SETTINGS, type BarChartDisplaySettings } from '../lib/barChartDocument'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { getBarChartPresentationLabels } from '../lib/barChartPresentation'
+import { ENEMY_STAT_METRICS, type EnemyStatKey } from '../lib/enemyStatMetrics'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -14,16 +15,17 @@ import './BarChartWorkbenchPage.css'
 
 export function BarChartWorkbenchPage() {
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
-  const [sourceId, setSourceId] = useState<BarChartProviderId>('enemy-resistance-histogram')
+  const [sourceId, setSourceId] = useState<BarChartProviderId>('enemy-stat-histogram')
+  const [statKey, setStatKey] = useState<EnemyStatKey>('magicResistance')
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
-  const [settings, setSettings] = useState<BarChartDisplaySettings>({ values: true, axisBand: true, percent: false, cumulative: false })
+  const [settings, setSettings] = useState<BarChartDisplaySettings>({ ...DEFAULT_BAR_CHART_DISPLAY_SETTINGS })
   const [snapshot, setSnapshot] = useState<BarChartImageSnapshot | null>(null)
   const { data, version, loading, error } = aggregation
   const result = useMemo(() => {
     if (!data || !version || loading || error) return null
-    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope }), error: null } }
+    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey }), error: null } }
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
-  }, [sourceId, data, version, loading, error, scope])
+  }, [sourceId, data, version, loading, error, scope, statKey])
   const document = result?.document
   const presentation = document ? getBarChartPresentationLabels(document.xKind) : null
   const update = (key: keyof BarChartDisplaySettings, checked: boolean) => setSettings(current => ({ ...current, [key]: checked }))
@@ -35,11 +37,18 @@ export function BarChartWorkbenchPage() {
         onClick={() => document && setSnapshot(createBarChartImageSnapshot(document, settings))}>画像を保存</button>
     </header>
     <section className="bar-chart-workbench-data" aria-label="グラフに渡すデータ">
-      <label className="bar-chart-source">データ
-        <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => setSourceId(event.target.value as BarChartProviderId)}>
-          {BAR_CHART_PROVIDERS.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
-        </select>
-      </label>
+      <div className="bar-chart-data-selectors">
+        <label className="bar-chart-source">データ
+          <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => setSourceId(event.target.value as BarChartProviderId)}>
+            {BAR_CHART_PROVIDERS.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
+          </select>
+        </label>
+        {sourceId === 'enemy-stat-histogram' && <label className="bar-chart-source">ステータス
+          <select aria-label="ステータス" value={statKey} onChange={event => setStatKey(event.target.value as EnemyStatKey)}>
+            {ENEMY_STAT_METRICS.map(metric => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
+          </select>
+        </label>}
+      </div>
       <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
         <EnemyAggregationSelector state={aggregation} />
         <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data || loading} />
@@ -51,6 +60,8 @@ export function BarChartWorkbenchPage() {
           <div><dt>縦軸</dt><dd><strong>{document.yAxisTitle}</strong></dd></div>
           <div><dt>描画方式</dt><dd><strong>{presentation.type}</strong><span className="bar-chart-auto-mark">自動</span></dd></div>
           <div><dt>棒幅</dt><dd><strong>{presentation.width}</strong>{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
+          {document.semantics.kind === 'histogram' && document.source.parameters.map(parameter =>
+            <div key={parameter.label}><dt>{parameter.label}</dt><dd><strong>{parameter.value}</strong></dd></div>)}
         </dl>
       </div>}
     </section>
@@ -62,7 +73,11 @@ export function BarChartWorkbenchPage() {
           <label><input type="checkbox" checked={settings.values} onChange={event => update('values', event.target.checked)} />数値</label>
           <label><input type="checkbox" checked={settings.axisBand} onChange={event => update('axisBand', event.target.checked)} />横軸の帯</label>
           {document.capabilities.percentages && <label><input type="checkbox" checked={settings.percent} onChange={event => update('percent', event.target.checked)} />割合帯</label>}
-          {document.capabilities.cumulative && <label><input type="checkbox" checked={settings.cumulative} onChange={event => update('cumulative', event.target.checked)} />累積割合</label>}
+          {document.capabilities.cumulative && <>
+            <label><input type="checkbox" checked={settings.cumulative} onChange={event => update('cumulative', event.target.checked)} />累積割合線</label>
+            <label><input type="checkbox" checked={Boolean(settings.cumulativeBand)} onChange={event => update('cumulativeBand', event.target.checked)} />累積割合帯</label>
+          </>}
+          {document.capabilities.rankBands && <label><input type="checkbox" checked={Boolean(settings.rankBand)} onChange={event => update('rankBand', event.target.checked)} />評価帯</label>}
         </div>
         <BarChartFigure document={document} settings={settings} />
       </>}
