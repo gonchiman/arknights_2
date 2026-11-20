@@ -85,7 +85,7 @@ export function BarChartPlot({ document: data, settings, width, height, imageMod
     ...(showPercent ? [{ key: 'percentage' as const, title: '割合', labels: bins.map(bin => percentage(bin.share)) }] : []),
   ]
   const measure = useTextWidths([...texts, ...bins.map(bin => bin.label), ...axis.ticks.map(format),
-    ...proportionBands.flatMap(band => band.labels)])
+    ...proportionBands.flatMap(band => band.labels), ...(data.secondaryAxisBand?.labels.flat() ?? [])])
   const svgWidth = Math.max(240, Number.isFinite(width) ? width : MINIMUM_WIDTH)
   const svgHeight = Math.max(240, height !== undefined && Number.isFinite(height) ? height : getBarChartNaturalHeight(data, settings))
   const left = Math.max(62, ...axis.ticks.map(tick => measure(format(tick)) + 34))
@@ -94,11 +94,16 @@ export function BarChartPlot({ document: data, settings, width, height, imageMod
   const slot = plotWidth / Math.max(1, bins.length)
   const axisLines = bins.map(bin => wrapLabel(bin.label, Math.max(11, slot - 8), measure))
   const axisHeight = Math.max(24, Math.max(1, ...axisLines.map(lines => lines.length)) * 14 + 10)
+  const secondaryBand = settings.axisBand ? data.secondaryAxisBand : undefined
+  const secondaryLines = secondaryBand?.labels.map(lines => lines.flatMap(line => wrapLabel(line, Math.max(11, slot - 8), measure)))
+  const secondaryAxisHeight = secondaryLines ? Math.max(24, Math.max(1, ...secondaryLines.map(lines => lines.length)) * 14 + 10) : 0
+  const secondaryHeight = secondaryBand ? secondaryAxisHeight + BAR_CHART_BAND_GAP : 0
   const bandHeight = BAR_CHART_BAND_HEIGHT + BAR_CHART_BAND_GAP
   const top = 20 + proportionBands.length * bandHeight
   const rankHeight = rankBands.length ? bandHeight : 0
-  const bottom = Math.max(top + 80, svgHeight - axisHeight - 12 - rankHeight)
-  const rankTop = bottom + 8 + axisHeight + BAR_CHART_BAND_GAP
+  const bottom = Math.max(top + 80, svgHeight - axisHeight - 12 - rankHeight - secondaryHeight)
+  const secondaryTop = bottom + 8 + axisHeight + BAR_CHART_BAND_GAP
+  const rankTop = secondaryTop + secondaryHeight
   const plotHeight = bottom - top
   const y = (value: number) => plotHeight * (1 - value / axis.maximum)
   const centerX = (index: number) => (index + .5) * slot
@@ -120,10 +125,15 @@ export function BarChartPlot({ document: data, settings, width, height, imageMod
   })
   if (showCumulative) placement = avoidHistogramCumulativeLine({ layout: placement, points: cumulativePoints, bars: obstacles })
   const byId = new Map(bars.map(bar => [bar.id, bar]))
+  const describeRange = (bin: typeof bins[number]) => {
+    const interval = bin.interval
+    if (!interval || !data.secondaryAxisBand) return ''
+    return `${interval.start === null ? '' : `${format(interval.start)}${interval.includesMinimum ? '以上' : '超'}`}${interval.end === null ? '' : `${format(interval.end)}${interval.includesMaximum ? '以下' : '未満'}`}`
+  }
   return <svg className={`bar-chart-plot${imageMode ? ' is-image' : ''}`} width={svgWidth} height={svgHeight}
     viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{data.title}</title>
-    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}</desc>
+    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}${describeRange(bin) ? `（${describeRange(bin)}）` : ''}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}</desc>
     <g transform={`translate(${left} ${top})`}>
       {axis.ticks.map(tick => <g key={tick} aria-hidden="true">
         <line className={`bar-chart-guide${tick === 0 ? ' is-zero' : ''}`} x1="0" x2={plotWidth} y1={y(tick)} y2={y(tick)} />
@@ -177,7 +187,18 @@ export function BarChartPlot({ document: data, settings, width, height, imageMod
         {axisLines[index].map((line, row) => <tspan key={row} x={left + centerX(index)} dy={row ? 14 : 0}>{line}</tspan>)}
       </text>
     </g>)}
-    {settings.axisBand && <text {...INK} className="chart-strip-title" x={left - 8} y={bottom + 8 + axisHeight / 2 + 4} textAnchor="end">階級</text>}
+    {settings.axisBand && <text {...INK} className="chart-strip-title" x={left - 8} y={bottom + 8 + axisHeight / 2 + 4} textAnchor="end">{data.semantics.xBandTitle ?? '階級'}</text>}
+    {secondaryBand && secondaryLines && <g data-bar-chart-secondary-axis-band="true" role="group" aria-label={secondaryBand.title}>
+      <text {...INK} className="chart-strip-title" x={left - 8} y={secondaryTop + secondaryAxisHeight / 2 + 4} textAnchor="end">{secondaryBand.title}</text>
+      {secondaryLines.map((lines, index) => <g key={bins[index].id} role="img" aria-label={`${bins[index].label}：${describeRange(bins[index])}`}>
+        <ChartStripCell left={left + index * slot} width={slot} top={secondaryTop} height={secondaryAxisHeight}
+          leftInset={1.5} rightInset={1.5} label={secondaryBand.labels[index].join('')} showLabel={false} />
+        <text {...INK} className="chart-strip-label" x={left + centerX(index)} textAnchor="middle"
+          y={secondaryTop + (secondaryAxisHeight - lines.length * 14) / 2 + 11}>
+          {lines.map((line, row) => <tspan key={row} x={left + centerX(index)} dy={row ? 14 : 0}>{line}</tspan>)}
+        </text>
+      </g>)}
+    </g>}
     {rankBands.length > 0 && <g data-bar-chart-rank-band="true" role="group" aria-label="評価">
       <text {...INK} className="chart-strip-title" x={left - 8} y={rankTop + 16} textAnchor="end">評価</text>
       <StatRankStrip bands={rankBands} left={left} right={right} top={rankTop} title="評価" showTooltips={false} />
@@ -201,8 +222,16 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
     return () => observer.disconnect()
   }, [])
   const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: data.fractionDigits })
-  const slot = Math.max(40, ...data.bins.map(bin => bin.value === null || !settings.values ? 0 : estimatedWidth(number.format(bin.value)) + 10))
-  const plotWidth = Math.max(MINIMUM_WIDTH, width, 90 + data.bins.length * slot)
+  const secondaryLabels = settings.axisBand ? data.secondaryAxisBand?.labels.flat() ?? [] : []
+  const measure = useTextWidths(secondaryLabels)
+  const secondarySlot = Math.max(0, ...secondaryLabels.map(label => measure(label) + 8))
+  const slot = Math.max(40, secondarySlot, ...data.bins.map(bin => bin.value === null || !settings.values ? 0 : estimatedWidth(number.format(bin.value)) + 10))
+  const maximum = Math.max(0, ...data.bins.map(bin => bin.value ?? 0))
+  const axis = createZeroBasedValueAxis(maximum * 1.12, 10 ** -data.fractionDigits)
+  // Keep supplied range lines horizontal instead of shrinking the natural data area.
+  const sidePadding = secondaryLabels.length ? Math.max(62, ...axis.ticks.map(tick => estimatedWidth(number.format(tick)) + 34))
+    + (settings.cumulative && data.capabilities.cumulative ? 70 : 14) : 90
+  const plotWidth = Math.max(MINIMUM_WIDTH, width, sidePadding + data.bins.length * slot)
   return <figure className="bar-chart-figure" aria-label={data.title}>
     <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
     <div className="bar-chart-scroll" ref={ref}>
