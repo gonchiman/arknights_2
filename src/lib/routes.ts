@@ -61,6 +61,7 @@ export type AppRoute =
   | { view: 'roguelike' }
   | { view: 'sources' }
   | { view: 'slide-maker' }
+  | { view: 'bar-chart-workbench' }
 
 const LEGACY_CLASSIFIER_SKILL_ROUTE_PREFIX = '#/skills/'
 const OPERATOR_SKILL_ROUTE_PREFIX = '#/operators/skills/'
@@ -298,6 +299,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/roguelike') return { view: 'roguelike' }
   if (hash === '#/sources') return { view: 'sources' }
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
+  if (matchesEnemyAggregationRoute(hash, '#/charts/bar')) return { view: 'bar-chart-workbench' }
   if (hash === '#/skills') return { view: 'skills' }
   if (hash === '#/skill-classification') return { view: 'skill-classification' }
   if (hash === '#/talent-classification') return { view: 'talent-classification' }

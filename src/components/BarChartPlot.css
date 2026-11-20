@@ -1,0 +1,63 @@
+.bar-chart-figure {
+  min-width: 0;
+  margin: 0;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+}
+.bar-chart-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(44%) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.bar-chart-heading > strong {
+  font-size: 17px;
+  line-height: 22px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.bar-chart-conditions {
+  color: var(--text-muted, #666);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.bar-chart-scroll { overflow-x: auto; min-width: 0; }
+.bar-chart-plot {
+  display: block;
+  flex: none;
+  overflow: visible;
+  font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  --bar-chart-bar: #777;
+  --bar-chart-cumulative: #d66a20;
+}
+.bar-chart-plot.is-image {
+  --text-muted: #666;
+  --text-soft: #444;
+  --bar-chart-bar: #777;
+  --bar-chart-cumulative: #d66a20;
+  --border: #d4d4d4;
+  --border-strong: #999;
+}
+.bar-chart-guide { fill: none; stroke: var(--border, #d4d4d4); stroke-width: 1; }
+.bar-chart-guide.is-zero { stroke: var(--border-strong, #999); }
+.bar-chart-bar { fill: var(--bar-chart-bar); }
+.bar-chart-tick { fill: var(--text-muted, #555); font-size: 11px; }
+.bar-chart-value, .bar-chart-missing { fill: var(--text-soft, #444); font-size: 11px; }
+.bar-chart-value-connector { stroke: var(--text-muted, #777); stroke-width: .7; opacity: .6; }
+.bar-chart-axis-title { fill: var(--text-soft, #444); font-size: 12px; font-weight: 700; }
+.bar-chart-axis-title.is-cumulative { fill: var(--bar-chart-cumulative); }
+.bar-chart-cumulative { fill: none; stroke: var(--bar-chart-cumulative); stroke-width: 2; }
+.bar-chart-cumulative-point { fill: var(--bar-chart-cumulative); stroke: var(--surface, #fff); stroke-width: 1; }
+.bar-chart-plot.is-image .bar-chart-cumulative-point { stroke: #fff; }
+.bar-chart-x-title {
+  padding-top: 12px;
+  color: var(--text-soft, #444);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

@@ -84,6 +84,7 @@ const EnemyRegressionPage = lazy(() => import('./components/EnemyRegressionPage'
 const EnemyImmunityPage = lazy(() => import('./components/EnemyImmunityPage'))
 const EnemyDefenseResistancePage = lazy(() => import('./components/EnemyDefenseResistancePage').then((module) => ({ default: module.EnemyDefenseResistancePage })))
 const EnemyDefenseResistanceFormulaPage = lazy(() => import('./components/EnemyDefenseResistanceFormulaPage').then((module) => ({ default: module.EnemyDefenseResistanceFormulaPage })))
+const BarChartWorkbenchPage = lazy(() => import('./components/BarChartWorkbenchPage').then((module) => ({ default: module.BarChartWorkbenchPage })))
 const OperatorPcaPage = lazy(() => import('./components/OperatorPcaPage').then((module) => ({ default: module.OperatorPcaPage })))
 const OperatorPcaFourStatsPage = lazy(() => import('./components/OperatorPcaFourStatsPage').then((module) => ({ default: module.OperatorPcaFourStatsPage })))
 const OperatorWikiViewsPage = lazy(() => import('./components/OperatorWikiViewsPage').then((module) => ({ default: module.OperatorWikiViewsPage })))
@@ -132,7 +133,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'home' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-defense-resistance-formula' || route.view === 'enemy-map-coverage' || route.view === 'enemy-wiki-stats' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
+    if (route.view === 'home' || route.view === 'bar-chart-workbench' || route.view === 'enemies' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-defense-resistance-formula' || route.view === 'enemy-map-coverage' || route.view === 'enemy-wiki-stats' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -333,7 +334,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-defense-resistance-formula' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'enemy-wiki-stats' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'home' && displayedRoute.view !== 'bar-chart-workbench' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-defense-resistance-formula' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'enemy-wiki-stats' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -453,6 +454,10 @@ export default function App() {
         ) : displayedRoute.view === 'enemy-defense-resistance' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">防御力と術耐性の対応を読み込み中…</p>}>
             <EnemyDefenseResistancePage />
+          </Suspense>
+        ) : displayedRoute.view === 'bar-chart-workbench' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">棒グラフ作成を読み込み中…</p>}>
+            <BarChartWorkbenchPage />
           </Suspense>
         ) : displayedRoute.view === 'enemy-defense-resistance-formula' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">防御力・術耐性の対応式を読み込み中…</p>}>

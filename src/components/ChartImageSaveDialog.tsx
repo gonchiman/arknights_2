@@ -32,7 +32,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
     label: string
     onSave: (filename: string, aspectRatio?: number) => void
   }
-  helpMode?: 'inline' | 'popover'
+  helpMode?: 'inline' | 'popover' | 'none'
   options?: ReactNode
   preview?: ReactNode
 }) {
@@ -40,6 +40,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
   const inputRef = useRef<HTMLInputElement>(null)
   const selectedInitialName = useRef(false)
   const composing = useRef(false)
+  const quietHelp = helpMode === 'none'
   const id = useId()
   const inputId = `${id}-filename`
   const hintId = `${id}-hint`
@@ -98,7 +99,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
             const value = event.currentTarget.value
             event.currentTarget.setSelectionRange(0, value.replace(extensionPattern, '').length)
           }} />
-        <p id={hintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{filenameHint}</p>
+        <p id={hintId} className={popoverHelp || quietHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{filenameHint}</p>
         {validationError && <p id={validationId} className="chart-image-save-error" role="alert">{validationError}</p>}
       </div>
       {aspect && onAspectChange && <fieldset className="chart-image-save-aspect" disabled={saving} aria-describedby={aspectHintId}>
@@ -131,11 +132,11 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
           </label>)}
         </div>}
         {invalidAspect && <p id={aspectErrorId} className="chart-image-save-error" role="alert">{aspectValidationError}</p>}
-        <p id={aspectHintId} className={popoverHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectDescription}</p>
+        <p id={aspectHintId} className={popoverHelp || quietHelp ? 'visually-hidden' : 'chart-image-save-hint'}>{aspectDescription}</p>
       </fieldset>}
       {options}
       {hasPreview && <div className="chart-image-save-preview">{preview}</div>}
-      {!popoverHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
+      {!popoverHelp && !quietHelp && <p className="chart-image-save-hint">{destinationHint}</p>}
       {errorMessage && <p className="chart-image-save-error" role="alert">{errorMessage}</p>}
       <div className="chart-image-save-actions">
         <button type="button" className="button secondary" disabled={closeDisabled} onClick={onClose}>キャンセル</button>

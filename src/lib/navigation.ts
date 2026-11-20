@@ -4,6 +4,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
   | 'enemy-defense-resistance-formula'
+  | 'bar-chart-workbench'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -135,6 +136,13 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
 ]
 
 export const APP_NAV_ITEMS: readonly NavigationItem[] = [
+  {
+    id: 'bar-chart-workbench',
+    href: '#/charts/bar',
+    label: '棒グラフ作成',
+    description: '',
+    section: 'analysis',
+  },
   {
     id: 'operators',
     href: '#/operators',
