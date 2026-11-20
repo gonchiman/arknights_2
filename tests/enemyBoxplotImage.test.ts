@@ -23,7 +23,8 @@ function fixture(): EnemyBoxplotComparisonImageSnapshot {
         key: 'magicResistance', label: '術耐性', validCount: 0, missingCount: 14, statistics: null,
       }],
     },
-    scale: 'RAW', range: 'ALL', scopeLabel: 'メインストーリー · 全敵', countMode: 'SPAWNS',
+    scale: 'RAW', range: 'ALL', showOutlierInfo: true,
+    scopeLabel: 'メインストーリー · 全敵', countMode: 'SPAWNS',
     aggregationVersion: { id: 'v12', label: '集計版 v12', sourceRevision: 'source', ruleVersion: 'rules' },
     coverage: { mapCount: 268, missingMapCount: 0, spawnMapCount: 268, spawnExcludedMapCount: 0, lowerBoundMapCount: 35 },
   }
@@ -43,6 +44,7 @@ test('save snapshot retains statistics, fractional weights and conditions after 
   live.scopeLabel = '全体'
   live.scale = 'MEDIAN'
   live.range = 'WHISKERS'
+  live.showOutlierInfo = false
 
   assert.equal(saved.data.series.length, 2)
   assert.equal(saved.data.series[0].validCount, 12.5)
@@ -54,15 +56,27 @@ test('save snapshot retains statistics, fractional weights and conditions after 
   assert.equal(saved.scopeLabel, 'メインストーリー · 全敵')
   assert.equal(saved.scale, 'RAW')
   assert.equal(saved.range, 'ALL')
+  assert.equal(saved.showOutlierInfo, true)
+})
+
+test('save snapshot defaults outlier information on and preserves an explicit hidden setting', () => {
+  const original = fixture()
+  const enabled = createEnemyBoxplotComparisonImageSnapshot({ ...original, showOutlierInfo: undefined })
+  assert.equal(enabled.showOutlierInfo, true)
+  assert.equal(getEnemyBoxplotComparisonImageFilename(enabled), getEnemyBoxplotComparisonImageFilename(original))
+  const hidden = createEnemyBoxplotComparisonImageSnapshot({ ...original, showOutlierInfo: false })
+  assert.equal(hidden.showOutlierInfo, false)
+  assert.doesNotMatch(getEnemyBoxplotComparisonImageFilename(hidden), /外れ値情報/)
 })
 
 test('filename identifies the box plot and every effective display setting, without computed results', () => {
   const original = fixture()
   const filename = getEnemyBoxplotComparisonImageFilename(original)
-  assert.equal(filename, '敵_集計v12_防御力・術耐性の箱ひげ図_出現回数_メインストーリー·全敵_元の値_全範囲.png')
+  assert.equal(filename, '敵_集計v12_防御力・術耐性の箱ひげ図_出現回数_メインストーリー·全敵_元の値_全範囲_外れ値情報.png')
   assert.doesNotMatch(filename, /評価別分布|12\.5|4000/)
   for (const change of [
     { scale: 'MEDIAN' as const }, { range: 'WHISKERS' as const }, { countMode: 'TYPES' as const },
+    { showOutlierInfo: false },
     { scopeLabel: '全体 · ボス' }, { aggregationVersion: { ...original.aggregationVersion!, id: 'v13' } },
   ]) {
     assert.notEqual(getEnemyBoxplotComparisonImageFilename({ ...original, ...change }), filename)
