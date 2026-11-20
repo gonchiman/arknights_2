@@ -9,14 +9,18 @@ import {
 import { calculateWeightedHistogram } from './enemyWeightedHistogram.ts'
 import { formatHistogramBinRangeLines } from './histogramBinRangeLabels.ts'
 import { buildHistogramCumulativeRows } from './histogramCumulative.ts'
+import { ENEMY_STAT_METRICS, type EnemyStatKey } from './enemyStatMetrics.ts'
+import { isEnemyRatingStat } from './enemyRatingHistogram.ts'
+import { getHistogramStatRankBands } from './histogramStatRankBands.ts'
 
-export type BarChartProviderId = 'enemy-resistance-histogram' | 'enemy-defense-resistance'
+export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance'
 
 export interface BarChartProviderContext {
   readonly data: EnemyAggregationData
   readonly version: Pick<EnemyAggregationVersion, 'id' | 'label' | 'sourceRevision' | 'ruleVersion'>
   readonly scope: 'all' | 'main'
   readonly countMode?: EnemyHistogramCountMode
+  readonly statKey?: EnemyStatKey
 }
 
 export interface BarChartProvider {
@@ -57,12 +61,17 @@ const filenameParts = (source: BarChartSource) => [
   ...source.parameters.map(({ label, value }) => `${label}${value}`),
 ]
 
-function createResistanceHistogram(context: BarChartProviderContext): BarChartDocument {
+function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDocument {
+  const statKey = context.statKey ?? 'magicResistance'
+  const metric = ENEMY_STAT_METRICS.find(item => item.key === statKey)
+  if (!metric) throw new Error('ステータスを確認できませんでした。')
   const countMode = context.countMode ?? 'SPAWNS'
   const scoped = scopeData(context, countMode)
-  const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats.magicResistance, countMode, scoped.counts)
+  const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats[statKey], countMode, scoped.counts)
   const statistics = calculateWeightedHistogram(observations, {
-    scale: 'LINEAR', minimumLinearBinWidth: 1, customLinearBinWidth: 10, minimumLinearUpperBound: 100,
+    scale: metric.defaultScale, minimumLinearBinWidth: metric.minimumLinearBinWidth,
+    // Preserve the workbench's existing resistance classes; other stats reuse automatic classes.
+    ...(statKey === 'magicResistance' ? { customLinearBinWidth: 10, minimumLinearUpperBound: 100 } : {}),
   })
   const bins = buildHistogramCumulativeRows(statistics.bins, statistics.count).map(({ bin, proportion, cumulativeProportion }, index): BarChartBin => ({
     id: `interval-${index}-${bin.start}-${bin.end}`,
@@ -72,14 +81,21 @@ function createResistanceHistogram(context: BarChartProviderContext): BarChartDo
       isOverflow: Boolean(bin.isOverflow) },
     share: proportion, cumulativeShare: cumulativeProportion,
   }))
-  const parameters = [{ label: '階級幅', value: '10' }, { label: '上限', value: statistics.histogram ? `自動 ${number(statistics.histogram.normalRangeEnd)}` : '自動' }]
-  const source = sourceMetadata(context, 'enemy-resistance-histogram', countMode, scoped.counts,
+  const binWidth = statistics.histogram?.binWidth
+  const parameters = [
+    { label: '階級幅', value: statKey === 'magicResistance' ? '10' : binWidth == null ? '自動' : `自動 ${number(binWidth)}` },
+    { label: '上限', value: statistics.histogram ? `自動 ${number(statistics.histogram.normalRangeEnd)}` : '自動' },
+  ]
+  const source = sourceMetadata(context, 'enemy-stat-histogram', countMode, scoped.counts,
     { total: statistics.totalCount, valid: statistics.count, missing: statistics.missingCount, basis: 'single-stat' }, parameters)
+  const rankBands = isEnemyRatingStat(statKey)
+    ? getHistogramStatRankBands(statKey, statistics.bins, metric.defaultScale) : undefined
   return createBarChartDocument({
     xKind: 'interval', bins, fractionDigits: fractionDigits(statistics.bins.map(bin => bin.count)),
-    semantics: { kind: 'histogram', subject: '術耐性', xLabel: '術耐性',
+    ...(rankBands !== undefined ? { rankBands } : {}),
+    semantics: { kind: 'histogram', subject: metric.label, xLabel: metric.label, xUnit: metric.suffix || undefined,
       yLabel: ENEMY_HISTOGRAM_COUNT_MODES.find(item => item.key === countMode)!.axisLabel, yUnit: source.countUnit },
-    source, filenameParts: filenameParts(source), capabilities: { percentages: true, cumulative: true },
+    source, filenameParts: filenameParts(source), capabilities: { percentages: true, cumulative: true, rankBands: rankBands !== undefined },
   })
 }
 
@@ -102,13 +118,13 @@ function createDefenseResistance(context: BarChartProviderContext): BarChartDocu
     })),
     fractionDigits: fractionDigits(result.resistanceThresholds.flatMap(row => row.defense === null ? [] : [row.defense])),
     semantics: { kind: 'correspondence', subject: '防御力と術耐性', xLabel: '術耐性', yLabel: '防御力' },
-    source, filenameParts: filenameParts(source), capabilities: { percentages: false, cumulative: false },
+    source, filenameParts: filenameParts(source), capabilities: { percentages: false, cumulative: false, rankBands: false },
   })
 }
 
 /** Providers consume their own calculated snapshot; they never inspect another page's state. */
 export const BAR_CHART_PROVIDERS: readonly BarChartProvider[] = Object.freeze([
-  Object.freeze({ id: 'enemy-resistance-histogram', label: '敵の術耐性分布', createDocument: createResistanceHistogram }),
+  Object.freeze({ id: 'enemy-stat-histogram', label: '敵のステータス分布', createDocument: createEnemyStatHistogram }),
   Object.freeze({ id: 'enemy-defense-resistance', label: '防御力と術耐性の対応', createDocument: createDefenseResistance }),
 ])
 
