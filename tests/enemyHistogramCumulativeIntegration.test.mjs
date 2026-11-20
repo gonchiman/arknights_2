@@ -61,6 +61,12 @@ before(async () => {
 })
 after(async () => { await server?.close() })
 
+const ratingTexts = markup => [...markup.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)].map(([, tag, text]) => ({
+  classes: /\bclass="([^"]*)"/.exec(tag)?.[1].split(' ') ?? [], text,
+}))
+const isRatingValue = classes => classes.includes('enemy-rating-comparison-value')
+  || classes.includes('chart-strip-label') && !classes.includes('enemy-rating-comparison-rank')
+
 test('防御力・術耐性の全3形式で複数ランクを強調し、同じ順序でファイル名に反映する', () => {
   const data = buildEnemyRatingComparison(enemies, 'SPAWNS', fixtureCounts)
   const filenames = ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key: layout, label }) => {
@@ -86,12 +92,13 @@ test('防御力・術耐性の全3形式で複数ランクを強調し、同じ�
     }
     assert.equal(image.match(/class="enemy-rating-comparison-highlight"/g)?.length, 2)
     assert.doesNotMatch(unselected, /enemy-rating-comparison-highlight|is-selected|stroke-width="1\.5"/)
-    const getRankTicks = markup => [...markup.matchAll(/<text\b[^>]*class="enemy-rating-comparison-tick( is-selected)?"[^>]*>([A-Z]\+?|SS)<\/text>/g)]
+    const getRankTicks = markup => ratingTexts(markup).filter(({ classes, text }) =>
+      (classes.includes('enemy-rating-comparison-tick') || classes.includes('enemy-rating-comparison-rank')) && /^(?:[A-Z]\+?|SS)$/.test(text))
     const rankTicks = getRankTicks(image)
     for (const ticks of [rankTicks, getRankTicks(unselected)]) {
-      assert.deepEqual(ticks.map(([, , rank]) => rank), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
+      assert.deepEqual(ticks.map(({ text }) => text), ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS'])
     }
-    assert.deepEqual(rankTicks.filter(([, selected]) => selected).map(([, , rank]) => rank), ['E', 'B+'])
+    assert.deepEqual(rankTicks.filter(({ classes }) => classes.includes('is-selected')).map(({ text }) => text), ['E', 'B+'])
     if (layout === 'CUMULATIVE') {
       assert.match(unselected, /ゲーム内評価/)
       const getLines = markup => [...markup.matchAll(/<polyline\b[^>]*points="([^"]+)"/g)].map(([, points]) => points)
@@ -102,13 +109,12 @@ test('防御力・術耐性の全3形式で複数ランクを強調し、同じ�
       assert.equal(image.match(/<circle\b[^>]*stroke-width="1\.5"/g)?.length, 4)
     } else {
       assert.match(unselected, /評価別割合（%）/)
-      assert.match(image, /<text\b[^>]*class="(?:chart-strip-label|enemy-rating-comparison-value) is-selected"[^>]*>25<\/text>/)
+      assert.ok(ratingTexts(image).some(({ classes, text }) => isRatingValue(classes) && classes.includes('is-selected') && text === '25'))
       const getBars = markup => markup.match(/<rect\b[^>]*class="enemy-rating-comparison-series [^"]+"[^>]*>/g)
       const seriesRectangles = getBars(image)
       assert.equal(seriesRectangles?.length, layout === 'GROUPED' ? 7 : 5)
       assert.deepEqual(getBars(unselected), seriesRectangles)
-      const getValues = markup => [...markup.matchAll(/<text\b[^>]*class="(?:chart-strip-label|enemy-rating-comparison-value)(?: is-selected)?"[^>]*>([^<]*)<\/text>/g)]
-        .map(([, value]) => value)
+      const getValues = markup => ratingTexts(markup).filter(({ classes }) => isRatingValue(classes)).map(({ text }) => text)
       assert.deepEqual(getValues(unselected), getValues(image))
     }
 
@@ -166,8 +172,7 @@ test('左右の横棒は外側の数値を階級の割合に切り替え、保�
   const snapshot = { data, layout: 'MIRRORED', selectedRanks: ['D'], scopeLabel: '全敵',
     countMode: 'SPAWNS', countLabel: '出現回数' }
   const renderImage = sideValue => renderToStaticMarkup(createElement(RatingImage, { snapshot: { ...snapshot, sideValue } }))
-  const getValues = markup => [...markup.matchAll(/<text\b[^>]*class="enemy-rating-comparison-value(?: is-selected)?"[^>]*>([^<]*)<\/text>/g)]
-    .map(([, value]) => value)
+  const getValues = markup => ratingTexts(markup).filter(({ classes }) => classes.includes('enemy-rating-comparison-value')).map(({ text }) => text)
 
   const cumulative = renderImage('cumulative')
   assert.match(cumulative, /累積割合（%）/)

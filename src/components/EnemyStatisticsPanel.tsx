@@ -21,6 +21,11 @@ import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
 import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
 import { EnemyRatingComparisonPlot, EnemyRatingComparisonSwatch } from './EnemyRatingComparisonPlot'
 import { EnemyRatingComparisonSaveDialog, type EnemyRatingComparisonImageSnapshot } from './EnemyRatingComparisonImage'
+import { EnemyBoxplotComparisonPlot, EnemyBoxplotComparisonLegend } from './EnemyBoxplotComparisonPlot'
+import { EnemyBoxplotComparisonSaveDialog } from './EnemyBoxplotComparisonImage'
+import { buildEnemyBoxplotComparison, getEnemyBoxplotDisplaySeries,
+  type EnemyBoxplotComparison, type EnemyBoxplotScale, type EnemyBoxplotRange } from '../lib/enemyBoxplotComparison'
+import { createEnemyBoxplotComparisonImageSnapshot, type EnemyBoxplotComparisonImageSnapshot } from '../lib/enemyBoxplotImage'
 import { EnemyEcdfGuideControls } from './EnemyEcdfGuideControls'
 import { EnemyDistributionComparison } from './EnemyDistributionComparison'
 import { EnemyJointHeatmap, EnemyJointHeatmapSvg } from './EnemyJointHeatmap'
@@ -127,6 +132,11 @@ const STAT_METRICS: StatMetric[] = [
 ]
 
 type DistributionChartChoice = ChartKind | 'RATING_COMPARISON'
+type DefenseResistanceDisplay = EnemyRatingComparisonLayout | 'BOXPLOT'
+const DEFENSE_RESISTANCE_DISPLAYS: readonly { key: DefenseResistanceDisplay; label: string }[] = [
+  ...ENEMY_RATING_COMPARISON_LAYOUTS,
+  { key: 'BOXPLOT', label: '箱ひげ図' },
+]
 
 const CHART_OPTIONS: Array<{ key: DistributionChartChoice; label: string }> = [
   { key: 'HISTOGRAM', label: 'ヒストグラム' },
@@ -268,7 +278,12 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const isThresholdChart = selectedChart === 'PIE' || selectedChart === 'RATIO_BAR'
   const isRatingComparison = selectedChart === 'RATING_COMPARISON'
   const ratingComparisonLayoutId = useId()
-  const [ratingComparisonLayout, setRatingComparisonLayout] = useState<EnemyRatingComparisonLayout>('GROUPED')
+  const [ratingComparisonLayout, setRatingComparisonLayout] = useState<DefenseResistanceDisplay>('GROUPED')
+  const isBoxplotComparison = isRatingComparison && ratingComparisonLayout === 'BOXPLOT'
+  const [boxplotScale, setBoxplotScale] = useState<EnemyBoxplotScale>('RAW')
+  const [boxplotRange, setBoxplotRange] = useState<EnemyBoxplotRange>('ALL')
+  const boxplotScaleId = useId()
+  const boxplotRangeId = useId()
   const [ratingComparisonRanks, setRatingComparisonRanks] = useState<string[]>(['A'])
   const ratingSideValueId = useId()
   const [ratingSideValue, setRatingSideValue] = useState<EnemyRatingComparisonSideValue>('cumulative')
@@ -292,9 +307,13 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     ? { data: aggregationCounts ?? null, loading: false, error: !aggregationCounts, retry: liveCountData.retry }
     : liveCountData
   const countUnavailable = activeCountMode !== 'TYPES' && !countData.data
-  const ratingComparison = useMemo(() => isRatingComparison && !countUnavailable
+  const ratingComparison = useMemo(() => isRatingComparison && !isBoxplotComparison && !countUnavailable
     ? buildEnemyRatingComparison(rows, activeCountMode, countData.data) : null,
-  [isRatingComparison, countUnavailable, rows, activeCountMode, countData.data])
+  [isRatingComparison, isBoxplotComparison, countUnavailable, rows, activeCountMode, countData.data])
+  const boxplotComparison = useMemo(() => isBoxplotComparison && !countUnavailable
+    ? buildEnemyBoxplotComparison(rows, activeCountMode, countData.data) : null,
+  [isBoxplotComparison, countUnavailable, rows, activeCountMode, countData.data])
+  const [boxplotComparisonImage, setBoxplotComparisonImage] = useState<EnemyBoxplotComparisonImageSnapshot | null>(null)
   const [ratingComparisonImage, setRatingComparisonImage] = useState<
     (EnemyRatingComparisonImageSnapshot & { media: 'image' | 'video' }) | null
   >(null)
@@ -429,7 +448,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       statistics: { ...withHistogramDispersion(histogram), ...calculateWeightedHistogramMoments(metricObservations) },
     }
   }) : [], [showSummary, rows, activeCountMode, countData.data])
-  const canSaveImage = (isRatingComparison ? Number(ratingComparison?.hasData)
+  const canSaveImage = (isBoxplotComparison ? Number(boxplotComparison && getEnemyBoxplotDisplaySeries(boxplotComparison, boxplotScale).some(({ statistics }) => statistics !== null))
+    : isRatingComparison ? Number(ratingComparison?.hasData)
     : isThresholdChart ? thresholdComparison?.series.filter(({ condition }) => condition.visible).reduce((sum, series) => sum + series.count, 0) ?? 0
     : selectedChart === 'HEATMAP' ? jointDistribution.count
     : selectedChart === 'SCATTER' ? scatterObservations.length : summaryStatistics.count) > 0
@@ -496,8 +516,16 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
     if (media === 'video' && !canOpenVideoSaveDialog) return
     setImageFeedback(null)
+    if (isBoxplotComparison && boxplotComparison) {
+      setBoxplotComparisonImage(createEnemyBoxplotComparisonImageSnapshot({
+        data: boxplotComparison, scale: boxplotScale, range: boxplotRange,
+        scopeLabel, countMode: activeCountMode, aggregationVersion,
+        coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
+      }))
+      return
+    }
     if (selectedChart === 'RATING_COMPARISON') {
-      if (ratingComparison) setRatingComparisonImage({
+      if (ratingComparison && ratingComparisonLayout !== 'BOXPLOT') setRatingComparisonImage({
         media,
         data: ratingComparison, layout: ratingComparisonLayout, selectedRanks: ratingComparisonRanks, sideValue: ratingSideValue,
         scopeLabel, countMode: activeCountMode, countLabel: countOption.label, aggregationVersion,
@@ -585,7 +613,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       {isRatingComparison && <fieldset className="enemy-chart-visibility">
         <legend>表示形式</legend>
         <div role="radiogroup" aria-label="表示形式">
-          {ENEMY_RATING_COMPARISON_LAYOUTS.map(({ key, label }) => (
+          {DEFENSE_RESISTANCE_DISPLAYS.map(({ key, label }) => (
             <label className={ratingComparisonLayout === key ? 'active' : ''} key={key}>
               <input type="radio" name={ratingComparisonLayoutId} value={key} checked={ratingComparisonLayout === key}
                 onChange={() => setRatingComparisonLayout(key)} />
@@ -594,6 +622,28 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           ))}
         </div>
       </fieldset>}
+      {isBoxplotComparison && <>
+        <fieldset className="enemy-chart-visibility">
+          <legend>値</legend>
+          <div role="radiogroup" aria-label="箱ひげ図の値">
+            {([{ key: 'RAW', label: '元の値' }, { key: 'MEDIAN', label: '中央値＝1' }] as const).map(({ key, label }) =>
+              <label className={boxplotScale === key ? 'active' : ''} key={key}>
+                <input type="radio" name={boxplotScaleId} value={key} checked={boxplotScale === key}
+                  onChange={() => setBoxplotScale(key)} /><span>{label}</span>
+              </label>)}
+          </div>
+        </fieldset>
+        <fieldset className="enemy-chart-visibility">
+          <legend>範囲</legend>
+          <div role="radiogroup" aria-label="箱ひげ図の範囲">
+            {([{ key: 'ALL', label: '全範囲' }, { key: 'WHISKERS', label: '箱とひげ' }] as const).map(({ key, label }) =>
+              <label className={boxplotRange === key ? 'active' : ''} key={key}>
+                <input type="radio" name={boxplotRangeId} value={key} checked={boxplotRange === key}
+                  onChange={() => setBoxplotRange(key)} /><span>{label}</span>
+              </label>)}
+          </div>
+        </fieldset>
+      </>}
       {isRatingComparison && ratingComparisonLayout === 'MIRRORED' && <div className="statistics-bin-width-control">
         <label htmlFor={ratingSideValueId}>左右の数値</label>
         <div className="enemy-chart-select-label">
@@ -850,7 +900,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
             : <ChartEmpty message="基準の術耐性を入力してください" />)}
           {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
-          {isRatingComparison && (ratingComparison?.hasData
+          {isBoxplotComparison && boxplotComparison && <EnemyBoxplotComparisonFigure data={boxplotComparison}
+            scale={boxplotScale} range={boxplotRange} countLabel={countOption.label} countUnit={countOption.unit} />}
+          {isRatingComparison && ratingComparisonLayout !== 'BOXPLOT' && (ratingComparison?.hasData
             ? <EnemyRatingComparisonFigure data={ratingComparison} layout={ratingComparisonLayout}
                 selectedRanks={ratingComparisonRanks} sideValue={ratingSideValue}
                 onRankToggle={rank => setRatingComparisonRanks(current => current.includes(rank)
@@ -925,6 +977,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
         </div>
       </CollapsibleCalculatorPanel>
       {ratingComparisonImage && <EnemyRatingComparisonSaveDialog {...ratingComparisonImage} onClose={() => setRatingComparisonImage(null)} />}
+      {boxplotComparisonImage && <EnemyBoxplotComparisonSaveDialog snapshot={boxplotComparisonImage} onClose={() => setBoxplotComparisonImage(null)} />}
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
         initialFilename={imageData.filename ?? getEnemyAggregationFilename(getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
@@ -2517,6 +2570,27 @@ function ScaleSwitch({ scale, onChange, label }: { scale: HistogramScale; onChan
       <button type="button" className={scale === 'LOG' ? 'active' : ''} aria-pressed={scale === 'LOG'} onClick={() => onChange('LOG')}>対数</button>
     </div>
   )
+}
+
+function EnemyBoxplotComparisonFigure({ data, scale, range, countLabel, countUnit }: {
+  data: EnemyBoxplotComparison
+  scale: EnemyBoxplotScale
+  range: EnemyBoxplotRange
+  countLabel: string
+  countUnit: string
+}) {
+  const titleId = useId()
+  const [chartRef, width] = useChartWidth()
+  return <figure className="enemy-analysis-figure" aria-labelledby={titleId}>
+    <figcaption><div>
+      <strong id={titleId}>防御力・術耐性の箱ひげ図</strong>
+      <span>{countLabel}</span>
+    </div></figcaption>
+    <EnemyBoxplotComparisonLegend />
+    <div className="enemy-rating-comparison-plot-container" ref={chartRef}>
+      <EnemyBoxplotComparisonPlot data={data} scale={scale} range={range} width={width} unit={countUnit} />
+    </div>
+  </figure>
 }
 
 function EnemyRatingComparisonFigure({ data, layout, selectedRanks, onRankToggle, sideValue, countLabel, countUnit }: {
