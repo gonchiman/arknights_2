@@ -10,8 +10,9 @@ import { calculateWeightedHistogram } from './enemyWeightedHistogram.ts'
 import { formatHistogramBinRangeLines } from './histogramBinRangeLabels.ts'
 import { buildHistogramCumulativeRows } from './histogramCumulative.ts'
 import { ENEMY_STAT_METRICS, type EnemyStatKey } from './enemyStatMetrics.ts'
-import { isEnemyRatingStat } from './enemyRatingHistogram.ts'
+import { buildEnemyRatingHistogramBins, isEnemyRatingStat } from './enemyRatingHistogram.ts'
 import { getHistogramStatRankBands } from './histogramStatRankBands.ts'
+import { formatHistogramRatingRangeLines } from './histogramRatingRangeStrip.ts'
 
 export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance'
 
@@ -21,6 +22,7 @@ export interface BarChartProviderContext {
   readonly scope: 'all' | 'main'
   readonly countMode?: EnemyHistogramCountMode
   readonly statKey?: EnemyStatKey
+  readonly histogramBinning?: 'numeric' | 'rating'
 }
 
 export interface BarChartProvider {
@@ -65,6 +67,11 @@ function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDoc
   const statKey = context.statKey ?? 'magicResistance'
   const metric = ENEMY_STAT_METRICS.find(item => item.key === statKey)
   if (!metric) throw new Error('ステータスを確認できませんでした。')
+  const binning = context.histogramBinning ?? 'numeric'
+  if (binning !== 'numeric' && binning !== 'rating') throw new Error('階級の区切りを確認できませんでした。')
+  if (binning === 'rating' && !isEnemyRatingStat(statKey)) {
+    throw new Error('このステータスはゲーム内評価に対応していません。')
+  }
   const countMode = context.countMode ?? 'SPAWNS'
   const scoped = scopeData(context, countMode)
   const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats[statKey], countMode, scoped.counts)
@@ -73,6 +80,28 @@ function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDoc
     // Preserve the workbench's existing resistance classes; other stats reuse automatic classes.
     ...(statKey === 'magicResistance' ? { customLinearBinWidth: 10, minimumLinearUpperBound: 100 } : {}),
   })
+  if (binning === 'rating' && isEnemyRatingStat(statKey)) {
+    const ratingBins = buildEnemyRatingHistogramBins(observations, statKey)
+    const bins = buildHistogramCumulativeRows(ratingBins, statistics.count)
+      .map(({ bin, proportion, cumulativeProportion }): BarChartBin => ({
+        id: `rating-${bin.rating}`, label: bin.rating, value: bin.count,
+        interval: { start: bin.lowerBound, end: bin.upperBound,
+          includesMinimum: bin.lowerInclusive, includesMaximum: bin.upperInclusive,
+          isOverflow: bin.upperBound === null },
+        share: proportion, cumulativeShare: cumulativeProportion,
+      }))
+    const source = sourceMetadata(context, 'enemy-stat-histogram', countMode, scoped.counts,
+      { total: statistics.totalCount, valid: statistics.count, missing: statistics.missingCount, basis: 'single-stat' },
+      [{ label: '階級', value: 'ゲーム内評価' }])
+    return createBarChartDocument({
+      xKind: 'interval', bins, fractionDigits: fractionDigits(ratingBins.map(bin => bin.count)),
+      secondaryAxisBand: { title: '範囲', labels: ratingBins.map(formatHistogramRatingRangeLines) },
+      semantics: { kind: 'histogram', subject: metric.label, xLabel: metric.label, xUnit: metric.suffix || undefined,
+        xQualifier: 'ゲーム内評価', xBandTitle: '評価',
+        yLabel: ENEMY_HISTOGRAM_COUNT_MODES.find(item => item.key === countMode)!.axisLabel, yUnit: source.countUnit },
+      source, filenameParts: filenameParts(source), capabilities: { percentages: true, cumulative: true, rankBands: false },
+    })
+  }
   const bins = buildHistogramCumulativeRows(statistics.bins, statistics.count).map(({ bin, proportion, cumulativeProportion }, index): BarChartBin => ({
     id: `interval-${index}-${bin.start}-${bin.end}`,
     label: formatHistogramBinRangeLines(bin).join(''), value: bin.count,

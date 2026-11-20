@@ -10,6 +10,9 @@ import { buildEnemyDefenseResistanceBands } from '../src/lib/enemyDefenseResista
 import { buildHistogramCumulativeRows } from '../src/lib/histogramCumulative.ts'
 import { ENEMY_STAT_METRICS } from '../src/lib/enemyStatMetrics.ts'
 import { getHistogramStatRankBands } from '../src/lib/histogramStatRankBands.ts'
+import { buildEnemyRatingHistogramBins } from '../src/lib/enemyRatingHistogram.ts'
+import { getEnemyRatingNumericRanges } from '../src/lib/enemyStatRatings.ts'
+import { formatHistogramRatingRangeLines } from '../src/lib/histogramRatingRangeStrip.ts'
 
 const version = { id: 'v12', label: '集計版 v12', sourceRevision: 'a'.repeat(40), ruleVersion: 'fixture' }
 const enemy = (id, defense, magicResistance) => ({ id, stats: { defense, magicResistance } })
@@ -26,6 +29,7 @@ const correspondence = () => createBarChartFromProvider('enemy-defense-resistanc
 const inputOf = document => Object.fromEntries(['xKind', 'bins', 'filenameParts', 'fractionDigits', 'capabilities', 'semantics', 'source']
   .map(key => [key, document[key]]))
 const settings = { values: true, axisBand: true, percent: true, cumulative: true }
+const ratingOrder = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
 
 test('提供元は既存の度数と階級の意味を保持し、同じ入力から同じタイトルとデータを返す', () => {
   const original = structuredClone(context)
@@ -209,6 +213,79 @@ test('術耐性の端点評価を隣の評価に併記し、評価帯を切り�
   assert.throws(() => createBarChartDocument({ ...input, rankBands: [{ ...document.rankBands[0], end: 1.5 }] }))
 })
 
+test('ゲーム内評価の階級は0と境界値の包含を保ち、空の評価と小数度数を残す', () => {
+  const values = [0, Number.EPSILON, 10, 20, 30, 50, 60, 70, 80, 90, 90.01, null, NaN]
+  const endpointRows = values.map((magicResistance, index) => enemy(String(index), 0, magicResistance))
+  const weights = [1.75, .25, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 3]
+  const endpointCounts = { ...counts, enemies: Object.fromEntries(weights.map((spawnCount, index) => [String(index), { mapCount: 1, spawnCount }])) }
+  const input = { ...context, data: { ...context.data, rows: endpointRows, counts: endpointCounts }, histogramBinning: 'rating' }
+  const document = createBarChartFromProvider('enemy-stat-histogram', input)
+  assert.deepEqual(document.bins.map(bin => bin.label), ratingOrder)
+  assert.deepEqual(document.bins.map(bin => bin.value), [1.75, .25, 1, 1, 1, 1, 1, 1, 2, 1])
+  assert.equal(document.source.population.valid, 11)
+  assert.equal(document.source.population.missing, 5)
+  assert.equal(document.source.population.total, 16)
+  assert.equal(document.bins[0].share, 1.75 / 11)
+  assert.equal(document.bins.at(-1).cumulativeShare, 1)
+  assert.deepEqual(document.bins.map(bin => bin.interval), getEnemyRatingNumericRanges('magicResistance').map(range => ({
+    start: range.lowerBound, end: range.upperBound,
+    includesMinimum: range.lowerInclusive, includesMaximum: range.upperInclusive,
+    isOverflow: range.upperBound === null,
+  })))
+  assert.equal(document.xKind, 'interval')
+  assert.equal(document.capabilities.rankBands, false)
+  assert.equal(document.rankBands?.length ?? 0, 0)
+  assert.equal(document.semantics.xQualifier, 'ゲーム内評価')
+  assert.equal(document.semantics.xBandTitle, '評価')
+  assert.equal(document.xAxisTitle, '術耐性（ゲーム内評価）')
+  assert.equal(document.secondaryAxisBand.title, '範囲')
+  assert.deepEqual(document.secondaryAxisBand.labels,
+    getEnemyRatingNumericRanges('magicResistance').map(formatHistogramRatingRangeLines))
+  assert.ok(Object.isFrozen(document.secondaryAxisBand) && Object.isFrozen(document.secondaryAxisBand.labels)
+    && Object.isFrozen(document.secondaryAxisBand.labels[0]))
+  const captured = JSON.stringify(document)
+  input.histogramBinning = 'numeric'
+  assert.notEqual(createBarChartFromProvider('enemy-stat-histogram', input).id, document.id)
+  assert.equal(JSON.stringify(document), captured)
+  assert.deepEqual(JSON.parse(captured), document)
+  for (const statKey of ['moveSpeed', 'baseAttackTime', 'massLevel']) {
+    assert.throws(() => createBarChartFromProvider('enemy-stat-histogram', { ...context, statKey, histogramBinning: 'rating' }))
+  }
+  assert.throws(() => createBarChartFromProvider('enemy-stat-histogram', { ...context, histogramBinning: 'unknown' }))
+})
+
+test('評価階級の空データはE〜SSを0件で保ち、割合の分母0を欠損と区別する', () => {
+  const missing = createBarChartFromProvider('enemy-stat-histogram', {
+    ...context, histogramBinning: 'rating', data: { ...context.data, rows: [enemy('a', 0, null)] },
+  })
+  assert.deepEqual(missing.bins.map(bin => bin.label), ratingOrder)
+  assert.ok(missing.bins.every(bin => bin.value === 0 && bin.share === null && bin.cumulativeShare === null))
+  assert.equal(missing.source.population.missing, 1.75)
+  const onlyZero = createBarChartFromProvider('enemy-stat-histogram', {
+    ...context, histogramBinning: 'rating', data: { ...context.data, rows: [enemy('a', 0, 0)] },
+  })
+  assert.equal(onlyZero.bins[0].value, 1.75)
+  assert.equal(onlyZero.bins[0].share, 1)
+  assert.ok(onlyZero.bins.slice(1).every(bin => bin.value === 0 && bin.share === 0 && bin.cumulativeShare === 1))
+  const empty = createBarChartFromProvider('enemy-stat-histogram', {
+    ...context, histogramBinning: 'rating', data: { ...context.data, rows: [] },
+  })
+  assert.equal(empty.source.population.total, 0)
+  assert.equal(empty.bins.length, 10)
+})
+
+test('評価階級の保存名・条件は数値階級と区別し、追加評価帯は持ち越しても記録しない', () => {
+  const numeric = histogram()
+  const rating = createBarChartFromProvider('enemy-stat-histogram', { ...context, histogramBinning: 'rating' })
+  assert.deepEqual(createBarChartFromProvider('enemy-stat-histogram', { ...context, histogramBinning: 'numeric' }), numeric)
+  assert.notEqual(rating.id, numeric.id)
+  assert.notEqual(getBarChartFilename(rating, settings), getBarChartFilename(numeric, settings))
+  assert.match(rating.conditions, /ゲーム内評価/)
+  assert.match(getBarChartFilename(rating, settings), /ゲーム内評価/)
+  assert.equal(getBarChartFilename(rating, { ...settings, rankBand: true }), getBarChartFilename(rating, { ...settings, rankBand: false }))
+  assert.doesNotMatch(getBarChartFilename(rating, { ...settings, rankBand: true }), /評価帯/)
+})
+
 test('共通契約は不正な数値・重複階級・欠けた区間を拒否し、カテゴリ名は提供元の順序を保つ', () => {
   const input = inputOf(histogram())
   for (const bins of [
@@ -243,6 +320,8 @@ test('v12メインストーリー出現回数の度数・欠損・防御力対�
   assert.deepEqual(document.bins.map(bin => bin.value), expected.bins.map(bin => bin.count))
   assert.equal(document.bins.at(-1).cumulativeShare, 1)
   assert.equal(document.source.aggregationVersion.sourceRevision, version.sourceRevision)
+  const resistanceRatings = createBarChartFromProvider('enemy-stat-histogram', { data, version, scope: 'main', histogramBinning: 'rating' })
+  assert.deepEqual(resistanceRatings.bins.map(bin => bin.value), [3549, 0, 485, 3521, 1997, 1436, 304, 3, 114, 0])
   const statExpectations = {
     maxHp: [11610, 0, 5000, 50000], attack: [11610, 0, 200, 2000], defense: [11409, 201, 200, 2000],
     magicResistance: [11409, 201, 10, 100], moveSpeed: [11610, 0, .2, 2],
@@ -275,6 +354,17 @@ test('v12メインストーリー出現回数の度数・欠損・防御力対�
     const hasRanks = ['maxHp', 'attack', 'defense', 'magicResistance'].includes(metric.key)
     assert.equal(Boolean(selected.capabilities.rankBands), hasRanks)
     if (hasRanks) {
+      const rating = createBarChartFromProvider('enemy-stat-histogram', { data, version, scope: 'main', statKey: metric.key, histogramBinning: 'rating' })
+      const expectedRatings = buildEnemyRatingHistogramBins(buildEnemyHistogramObservations(scoped.rows,
+        row => row.stats[metric.key], 'SPAWNS', scoped.counts), metric.key)
+      assert.deepEqual(rating.bins.map(bin => bin.label), ratingOrder)
+      assert.deepEqual(rating.bins.map(bin => bin.value), expectedRatings.map(bin => bin.count))
+      assert.deepEqual(rating.source.population, selected.source.population)
+      assert.equal(rating.bins.reduce((sum, bin) => sum + bin.value, 0), valid)
+      assert.ok(Math.abs(rating.bins.reduce((sum, bin) => sum + bin.share, 0) - 1) < 1e-12)
+      assert.equal(rating.bins.at(-1).cumulativeShare, 1)
+      assert.deepEqual(rating.secondaryAxisBand.labels, expectedRatings.map(formatHistogramRatingRangeLines))
+      assert.equal(rating.capabilities.rankBands, false)
       assert.deepEqual(selected.rankBands, getHistogramStatRankBands(metric.key, expectedStat.bins, 'LINEAR'))
       assert.ok(Object.isFrozen(selected.rankBands))
       if (expectedStat.bins.at(-1).isOverflow) {
