@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-20T02:43:06.607Z",
+  "observedAt": "2026-11-20T07:25:38.533Z",
   "throughDate": "2026-11-19",
   "entries": [
     {
@@ -1214,7 +1214,7 @@
         "2026-11-06": 1,
         "2026-11-18": 2
       },
-      "total": 127
+      "total": 128
     },
     {
       "operatorId": "char_002_amiya",
@@ -1593,7 +1593,7 @@
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%8B%E3%82%A2%E3%83%BC%E3%83%AB",
       "coveredFrom": "2026-10-21",
       "counts": {},
-      "total": 923
+      "total": 924
     },
     {
       "operatorId": "char_226_hmau",
@@ -2147,7 +2147,7 @@
         "2026-11-14": 2,
         "2026-11-16": 1
       },
-      "total": 148
+      "total": 149
     },
     {
       "operatorId": "char_369_bena",
@@ -2219,9 +2219,9 @@
     {
       "operatorId": "char_456_ash",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2FAsh",
-      "coveredFrom": "2026-10-21",
+      "coveredFrom": null,
       "counts": {},
-      "total": null
+      "total": 1645
     },
     {
       "operatorId": "char_340_shwaz",
@@ -2328,7 +2328,7 @@
         "2026-11-09": 1,
         "2026-11-11": 1
       },
-      "total": null
+      "total": 3569
     },
     {
       "operatorId": "char_1013_chen2",
@@ -2494,7 +2494,7 @@
         "2026-11-06": 1,
         "2026-11-14": 1
       },
-      "total": 858
+      "total": 861
     },
     {
       "operatorId": "char_4087_ines",
@@ -2518,18 +2518,15 @@
     {
       "operatorId": "char_213_mostma",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%A2%E3%82%B9%E3%83%86%E3%82%A3%E3%83%9E",
-      "coveredFrom": "2026-10-21",
+      "coveredFrom": null,
       "counts": {},
-      "total": null
+      "total": 3834
     },
     {
       "operatorId": "char_180_amgoat",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%82%A8%E3%82%A4%E3%83%A4%E3%83%95%E3%82%A3%E3%83%A4%E3%83%88%E3%83%A9",
-      "coveredFrom": "2026-10-21",
-      "counts": {
-        "2026-10-22": 1,
-        "2026-10-23": 2
-      },
+      "coveredFrom": null,
+      "counts": {},
       "total": null
     },
     {
@@ -2539,7 +2536,7 @@
       "counts": {
         "2026-11-08": 3
       },
-      "total": 2034
+      "total": 2035
     },
     {
       "operatorId": "char_4027_heyak",
@@ -2633,11 +2630,9 @@
     {
       "operatorId": "char_1038_whitw2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E8%8D%92%E8%95%AA%E3%83%A9%E3%83%83%E3%83%97%E3%83%A9%E3%83%B3%E3%83%89",
-      "coveredFrom": "2026-10-21",
-      "counts": {
-        "2026-11-04": 1
-      },
-      "total": null
+      "coveredFrom": null,
+      "counts": {},
+      "total": 1306
     },
     {
       "operatorId": "char_4046_ebnhlz",
@@ -2843,7 +2838,7 @@
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%82%B9%E3%83%86%E3%82%A4%E3%83%B3%E3%83%AC%E3%82%B9",
       "coveredFrom": "2026-10-21",
       "counts": {},
-      "total": 2039
+      "total": 2040
     },
     {
       "operatorId": "char_4212_nasti",
@@ -2880,7 +2875,7 @@
         "2026-11-03": 1,
         "2026-11-10": 1
       },
-      "total": 760
+      "total": 761
     },
     {
       "operatorId": "char_250_phatom",
@@ -2910,7 +2905,7 @@
         "2026-11-16": 4,
         "2026-11-17": 3
       },
-      "total": 1394
+      "total": 1396
     },
     {
       "operatorId": "char_1502_crosly",
@@ -3033,7 +3028,7 @@
         "2026-11-16": 1,
         "2026-11-19": 1
       },
-      "total": 1000
+      "total": 1001
     },
     {
       "operatorId": "char_1039_thorn2",
@@ -3161,11 +3156,9 @@
     {
       "operatorId": "char_136_hsguma",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%9B%E3%82%B7%E3%82%B0%E3%83%9E",
-      "coveredFrom": "2026-10-21",
-      "counts": {
-        "2026-11-10": 1
-      },
-      "total": null
+      "coveredFrom": null,
+      "counts": {},
+      "total": 1800
     },
     {
       "operatorId": "char_202_demkni",
@@ -3182,9 +3175,9 @@
     {
       "operatorId": "char_423_blemsh",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%96%E3%83%AC%E3%83%9F%E3%82%B7%E3%83%A3%E3%82%A4%E3%83%B3",
-      "coveredFrom": "2026-10-21",
+      "coveredFrom": null,
       "counts": {},
-      "total": null
+      "total": 2431
     },
     {
       "operatorId": "char_2025_shu",
@@ -3668,13 +3661,9 @@
     {
       "operatorId": "char_263_skadi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%82%B9%E3%82%AB%E3%82%B8",
-      "coveredFrom": "2026-10-21",
-      "counts": {
-        "2026-10-22": 5,
-        "2026-10-25": 1,
-        "2026-11-01": 1
-      },
-      "total": null
+      "coveredFrom": null,
+      "counts": {},
+      "total": 7109
     },
     {
       "operatorId": "wiki:%E7%84%94%E7%8B%90%E7%AB%9C%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
@@ -3695,7 +3684,7 @@
         "2026-11-18": 40,
         "2026-11-19": 18
       },
-      "total": 290
+      "total": 305
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
@@ -3724,7 +3713,7 @@
         "2026-11-18": 17,
         "2026-11-19": 6
       },
-      "total": 119
+      "total": 120
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",

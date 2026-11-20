@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-19T16:08:04.506Z",
+  "observedAt": "2026-11-20T07:25:38.369Z",
   "todayDate": "2026-11-20",
   "yesterdayDate": "2026-11-19",
   "entries": [
@@ -7,2941 +7,2941 @@
       "operatorId": "char_285_medic2",
       "wikiUrl": "https://arknights.wikiru.jp/?Lancet-2",
       "yesterday": 33,
-      "today": 1,
-      "total": 83721
+      "today": 16,
+      "total": 83736
     },
     {
       "operatorId": "char_286_cast3",
       "wikiUrl": "https://arknights.wikiru.jp/?Castle-3",
       "yesterday": 37,
-      "today": 2,
-      "total": 90674
+      "today": 12,
+      "total": 90684
     },
     {
       "operatorId": "char_376_therex",
       "wikiUrl": "https://arknights.wikiru.jp/?THRM-EX",
       "yesterday": 66,
-      "today": 2,
-      "total": 115820
+      "today": 16,
+      "total": 115834
     },
     {
       "operatorId": "char_4000_jnight",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A3%E3%82%B9%E3%83%86%E3%82%A3%E3%82%B9%E3%83%8A%E3%82%A4%E3%83%88",
       "yesterday": 37,
-      "today": 2,
-      "total": 93112
+      "today": 10,
+      "total": 93120
     },
     {
       "operatorId": "char_4077_palico",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%83%A9%E5%A4%A7%E9%99%B8%E8%AA%BF%E6%9F%BB%E5%9B%A3",
       "yesterday": 148,
-      "today": 9,
-      "total": 152467
+      "today": 86,
+      "total": 152544
     },
     {
       "operatorId": "char_4091_ulika",
       "wikiUrl": "https://arknights.wikiru.jp/?U-Official",
       "yesterday": 56,
-      "today": 3,
-      "total": 238448
+      "today": 32,
+      "total": 238477
     },
     {
       "operatorId": "char_4093_frston",
       "wikiUrl": "https://arknights.wikiru.jp/?Friston-3",
       "yesterday": 58,
-      "today": 3,
-      "total": 197832
+      "today": 19,
+      "total": 197848
     },
     {
       "operatorId": "char_4136_phonor",
       "wikiUrl": "https://arknights.wikiru.jp/?PhonoR-0",
       "yesterday": 70,
-      "today": 4,
-      "total": 129417
+      "today": 24,
+      "total": 129437
     },
     {
       "operatorId": "char_4188_confes",
       "wikiUrl": "https://arknights.wikiru.jp/?CONFESS-47",
       "yesterday": 65,
-      "today": 5,
-      "total": 69161
+      "today": 36,
+      "total": 69192
     },
     {
       "operatorId": "char_4227_gallus",
       "wikiUrl": "https://arknights.wikiru.jp/?GALLUS%C2%B2",
       "yesterday": 96,
-      "today": 6,
-      "total": 34488
+      "today": 60,
+      "total": 34542
     },
     {
       "operatorId": "char_502_nblade",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A4%E3%83%88%E3%82%A6",
       "yesterday": 80,
-      "today": 4,
-      "total": 103837
+      "today": 33,
+      "total": 103866
     },
     {
       "operatorId": "char_500_noirc",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%82%A4%E3%83%AB%E3%83%9B%E3%83%BC%E3%83%B3",
       "yesterday": 51,
-      "today": 1,
-      "total": 75334
+      "today": 25,
+      "total": 75358
     },
     {
       "operatorId": "char_503_rang",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
       "yesterday": 20,
-      "today": 2,
-      "total": 49120
+      "today": 18,
+      "total": 49136
     },
     {
       "operatorId": "char_501_durin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%82%A5%E3%83%AA%E3%83%B3",
       "yesterday": 44,
-      "today": 5,
-      "total": 88961
+      "today": 23,
+      "total": 88979
     },
     {
       "operatorId": "char_009_12fce",
       "wikiUrl": "https://arknights.wikiru.jp/?12F",
       "yesterday": 25,
-      "today": 3,
-      "total": 73252
+      "today": 16,
+      "total": 73265
     },
     {
       "operatorId": "char_123_fang",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A7%E3%83%B3",
       "yesterday": 34,
-      "today": 4,
-      "total": 112011
+      "today": 29,
+      "total": 112036
     },
     {
       "operatorId": "char_240_wyvern",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%83%8B%E3%83%A9",
       "yesterday": 33,
-      "today": 5,
-      "total": 79371
+      "today": 25,
+      "total": 79391
     },
     {
       "operatorId": "char_192_falco",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AA%E3%83%A5%E3%83%A0",
       "yesterday": 28,
-      "today": 4,
-      "total": 75086
+      "today": 27,
+      "total": 75109
     },
     {
       "operatorId": "char_208_melan",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%A9%E3%83%B3%E3%82%B5",
       "yesterday": 66,
-      "today": 5,
-      "total": 109929
+      "today": 60,
+      "total": 109984
     },
     {
       "operatorId": "char_281_popka",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%97%E3%82%AB%E3%83%AB",
       "yesterday": 336,
-      "today": 18,
-      "total": 109491
+      "today": 193,
+      "total": 109666
     },
     {
       "operatorId": "char_209_ardign",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%BC%E3%83%87%E3%82%A3",
       "yesterday": 49,
-      "today": 2,
-      "total": 98689
+      "today": 28,
+      "total": 98715
     },
     {
       "operatorId": "char_122_beagle",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%82%B0%E3%83%AB",
       "yesterday": 124,
-      "today": 5,
-      "total": 92053
+      "today": 55,
+      "total": 92103
     },
     {
       "operatorId": "char_284_spot",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%9D%E3%83%83%E3%83%88",
       "yesterday": 102,
-      "today": 5,
-      "total": 82641
+      "today": 41,
+      "total": 82677
     },
     {
       "operatorId": "char_124_kroos",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AB%E3%83%BC%E3%82%B9",
       "yesterday": 56,
-      "today": 6,
-      "total": 108066
+      "today": 27,
+      "total": 108087
     },
     {
       "operatorId": "char_211_adnach",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%89%E3%83%8A%E3%82%AD%E3%82%A8%E3%83%AB",
       "yesterday": 39,
-      "today": 4,
-      "total": 90462
+      "today": 21,
+      "total": 90479
     },
     {
       "operatorId": "char_121_lava",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%B4%E3%82%A1",
       "yesterday": 29,
-      "today": 4,
-      "total": 72507
+      "today": 13,
+      "total": 72516
     },
     {
       "operatorId": "char_120_hibisc",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%93%E3%82%B9%E3%82%AB%E3%82%B9",
       "yesterday": 26,
-      "today": 3,
-      "total": 78071
+      "today": 22,
+      "total": 78090
     },
     {
       "operatorId": "char_212_ansel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%82%BB%E3%83%AB",
       "yesterday": 57,
-      "today": 5,
-      "total": 9058
+      "today": 27,
+      "total": 9080
     },
     {
       "operatorId": "char_210_stward",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%81%E3%83%A5%E3%83%AF%E3%83%BC%E3%83%89",
       "yesterday": 32,
-      "today": 3,
-      "total": 79774
+      "today": 16,
+      "total": 79787
     },
     {
       "operatorId": "char_278_orchid",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
       "yesterday": 178,
-      "today": 10,
-      "total": 81993
+      "today": 67,
+      "total": 82050
     },
     {
       "operatorId": "char_141_nights",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%82%A4%E3%82%BA",
       "yesterday": 44,
-      "today": 4,
-      "total": 119444
+      "today": 23,
+      "total": 119463
     },
     {
       "operatorId": "char_109_fmout",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AE%E3%82%BF%E3%83%BC%E3%83%8E",
       "yesterday": 32,
-      "today": 4,
-      "total": 104652
+      "today": 21,
+      "total": 104669
     },
     {
       "operatorId": "char_253_greyy",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4",
       "yesterday": 24,
-      "today": 1,
-      "total": 79497
+      "today": 17,
+      "total": 79513
     },
     {
       "operatorId": "char_4051_akkord",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B3%E3%83%AB%E3%83%88",
       "yesterday": 53,
-      "today": 1,
-      "total": 50155
+      "today": 34,
+      "total": 50188
     },
     {
       "operatorId": "char_328_cammou",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%B7%E3%83%A3",
       "yesterday": 45,
-      "today": 2,
-      "total": 145522
+      "today": 29,
+      "total": 145549
     },
     {
       "operatorId": "char_469_indigo",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%83%87%E3%82%A3%E3%82%B4",
       "yesterday": 60,
-      "today": 5,
-      "total": 147485
+      "today": 33,
+      "total": 147513
     },
     {
       "operatorId": "char_4004_pudd",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AA%E3%83%B3",
       "yesterday": 41,
-      "today": 1,
-      "total": 122589
+      "today": 26,
+      "total": 122614
     },
     {
       "operatorId": "char_235_jesica",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A7%E3%82%B7%E3%82%AB",
       "yesterday": 68,
-      "today": 3,
-      "total": 160169
+      "today": 35,
+      "total": 160201
     },
     {
       "operatorId": "char_126_shotst",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%86%E3%82%AA",
       "yesterday": 39,
-      "today": 3,
-      "total": 132724
+      "today": 24,
+      "total": 132745
     },
     {
       "operatorId": "char_190_clour",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%BC%E3%83%9F%E3%83%AB",
       "yesterday": 76,
-      "today": 9,
-      "total": 176766
+      "today": 54,
+      "total": 176811
     },
     {
       "operatorId": "char_133_mm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%82%A4",
       "yesterday": 41,
-      "today": 2,
-      "total": 129946
+      "today": 29,
+      "total": 129973
     },
     {
       "operatorId": "char_118_yuki",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A9%E3%83%A6%E3%82%AD",
       "yesterday": 32,
-      "today": 2,
-      "total": 112404
+      "today": 18,
+      "total": 112420
     },
     {
       "operatorId": "char_440_pinecn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%A4%E3%83%B3%E3%82%B3%E3%83%BC%E3%83%B3",
       "yesterday": 60,
-      "today": 3,
-      "total": 148090
+      "today": 38,
+      "total": 148125
     },
     {
       "operatorId": "char_302_glaze",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%96%E3%83%AA%E3%82%A8%E3%83%AB",
       "yesterday": 61,
-      "today": 4,
-      "total": 168399
+      "today": 31,
+      "total": 168426
     },
     {
       "operatorId": "char_366_acdrop",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B7%E3%83%83%E3%83%89%E3%83%89%E3%83%AD%E3%83%83%E3%83%97",
       "yesterday": 41,
-      "today": 1,
-      "total": 81692
+      "today": 26,
+      "total": 81717
     },
     {
       "operatorId": "char_4062_totter",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%BF%E3%83%BC",
       "yesterday": 36,
-      "today": 8,
-      "total": 200682
+      "today": 29,
+      "total": 200703
     },
     {
       "operatorId": "char_4100_caper",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%A4%E3%83%91%E3%83%BC",
       "yesterday": 62,
-      "today": 4,
-      "total": 205882
+      "today": 35,
+      "total": 205913
     },
     {
       "operatorId": "char_198_blackd",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%BC%E3%83%AA%E3%82%A8",
       "yesterday": 46,
-      "today": 4,
-      "total": 133524
+      "today": 21,
+      "total": 133541
     },
     {
       "operatorId": "char_149_scave",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%83%99%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
       "yesterday": 39,
-      "today": 4,
-      "total": 102681
+      "today": 15,
+      "total": 102692
     },
     {
       "operatorId": "char_290_vigna",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%B0%E3%83%8A",
       "yesterday": 52,
-      "today": 3,
-      "total": 142672
+      "today": 18,
+      "total": 142687
     },
     {
       "operatorId": "char_151_myrtle",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%83%B3%E3%83%8B%E3%83%B3%E3%82%AB",
       "yesterday": 121,
-      "today": 6,
-      "total": 391715
+      "today": 75,
+      "total": 391784
     },
     {
       "operatorId": "char_452_bstalk",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF",
       "yesterday": 81,
-      "today": 4,
-      "total": 199951
+      "today": 55,
+      "total": 200002
     },
     {
       "operatorId": "char_4208_wintim",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8D%E3%82%B0%E3%83%BC%E3%83%A9%E3%83%81%E3%82%AB",
       "yesterday": 110,
-      "today": 7,
-      "total": 84291
+      "today": 70,
+      "total": 84354
     },
     {
       "operatorId": "char_130_doberm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%83%BC%E3%83%99%E3%83%AB%E3%83%9E%E3%83%B3",
       "yesterday": 46,
-      "today": 3,
-      "total": 103700
+      "today": 16,
+      "total": 103713
     },
     {
       "operatorId": "char_289_gyuki",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%88%E3%82%A4%E3%83%9E%E3%83%AB",
       "yesterday": 48,
-      "today": 4,
-      "total": 124531
+      "today": 18,
+      "total": 124545
     },
     {
       "operatorId": "char_159_peacok",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%B3%E3%83%93%E3%82%AF%E3%82%B7%E3%83%A7%E3%83%B3",
       "yesterday": 55,
-      "today": 4,
-      "total": 134782
+      "today": 21,
+      "total": 134799
     },
     {
       "operatorId": "char_193_frostl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AD%E3%82%B9%E3%83%88%E3%83%AA%E3%83%BC%E3%83%95",
       "yesterday": 65,
-      "today": 5,
-      "total": 187881
+      "today": 38,
+      "total": 187914
     },
     {
       "operatorId": "char_127_estell",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%B9%E3%83%86%E3%83%AB",
       "yesterday": 51,
-      "today": 3,
-      "total": 123790
+      "today": 27,
+      "total": 123814
     },
     {
       "operatorId": "char_185_frncat",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A0%E3%83%BC%E3%82%B9",
       "yesterday": 47,
-      "today": 3,
-      "total": 152348
+      "today": 24,
+      "total": 152369
     },
     {
       "operatorId": "char_301_cutter",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%83%E3%82%BF%E3%83%BC",
       "yesterday": 57,
-      "today": 2,
-      "total": 131519
+      "today": 19,
+      "total": 131536
     },
     {
       "operatorId": "char_337_utage",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%BF%E3%82%B2",
       "yesterday": 90,
-      "today": 4,
-      "total": 202898
+      "today": 37,
+      "total": 202931
     },
     {
       "operatorId": "char_271_spikes",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AC%E3%83%BC%E3%83%B3",
       "yesterday": 59,
-      "today": 4,
-      "total": 155591
+      "today": 32,
+      "total": 155619
     },
     {
       "operatorId": "char_4067_lolxh",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%BE%85%E5%B0%8F%E9%BB%92",
       "yesterday": 69,
-      "today": 2,
-      "total": 167779
+      "today": 17,
+      "total": 167794
     },
     {
       "operatorId": "char_4063_quartz",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%A9%E3%83%BC%E3%83%84",
       "yesterday": 45,
-      "today": 4,
-      "total": 168679
+      "today": 24,
+      "total": 168699
     },
     {
       "operatorId": "char_491_humus",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%92%E3%83%A5%E3%83%BC%E3%83%9E%E3%82%B9",
       "yesterday": 25,
-      "today": 3,
-      "total": 142117
+      "today": 16,
+      "total": 142130
     },
     {
       "operatorId": "char_445_wscoot",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%82%B9%E3%82%AF%E3%83%BC%E3%83%88",
       "yesterday": 54,
-      "today": 6,
-      "total": 74391
+      "today": 39,
+      "total": 74424
     },
     {
       "operatorId": "char_237_gravel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%83%99%E3%83%AB",
       "yesterday": 86,
-      "today": 5,
-      "total": 211182
+      "today": 45,
+      "total": 211222
     },
     {
       "operatorId": "char_272_strong",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A7%E3%82%A4",
       "yesterday": 70,
-      "today": 3,
-      "total": 224973
+      "today": 48,
+      "total": 225018
     },
     {
       "operatorId": "char_236_rope",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%BC%E3%83%97",
       "yesterday": 37,
-      "today": 1,
-      "total": 123889
+      "today": 31,
+      "total": 123919
     },
     {
       "operatorId": "char_117_myrrh",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%AB%E3%83%A9",
       "yesterday": 20,
-      "today": 2,
-      "total": 67939
+      "today": 11,
+      "total": 67948
     },
     {
       "operatorId": "char_187_ccheal",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AC%E3%83%B4%E3%82%A3%E3%83%AB",
       "yesterday": 48,
-      "today": 6,
-      "total": 140433
+      "today": 36,
+      "total": 140463
     },
     {
       "operatorId": "char_298_susuro",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%B9%E3%83%BC%E3%83%AD",
       "yesterday": 62,
-      "today": 12,
-      "total": 174777
+      "today": 79,
+      "total": 174844
     },
     {
       "operatorId": "char_181_flower",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%95%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC",
       "yesterday": 71,
-      "today": 6,
-      "total": 193798
+      "today": 29,
+      "total": 193821
     },
     {
       "operatorId": "char_385_finlpp",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%82%A4%E3%83%AA%E3%83%A5%E3%82%A6",
       "yesterday": 69,
-      "today": 5,
-      "total": 177179
+      "today": 40,
+      "total": 177214
     },
     {
       "operatorId": "char_4041_chnut",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%82%A7%E3%82%B9%E3%83%88%E3%83%8A%E3%83%83%E3%83%88",
       "yesterday": 34,
-      "today": 5,
-      "total": 93399
+      "today": 24,
+      "total": 93418
     },
     {
       "operatorId": "char_199_yak",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%83%E3%82%BF%E3%83%BC%E3%83%9B%E3%83%AB%E3%83%B3",
       "yesterday": 62,
-      "today": 2,
-      "total": 124860
+      "today": 44,
+      "total": 124902
     },
     {
       "operatorId": "char_150_snakek",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%AA%E3%83%BC%E3%83%A9",
       "yesterday": 53,
-      "today": 2,
-      "total": 162164
+      "today": 39,
+      "total": 162201
     },
     {
       "operatorId": "char_381_bubble",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%83%96%E3%83%AB",
       "yesterday": 62,
-      "today": 6,
-      "total": 133302
+      "today": 42,
+      "total": 133338
     },
     {
       "operatorId": "char_4130_luton",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%88%E3%83%8A%E3%83%80",
       "yesterday": 53,
-      "today": 8,
-      "total": 150330
+      "today": 46,
+      "total": 150368
     },
     {
       "operatorId": "char_196_sunbr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A0",
       "yesterday": 75,
-      "today": 1,
-      "total": 188303
+      "today": 31,
+      "total": 188333
     },
     {
       "operatorId": "char_260_durnar",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A5%E3%83%8A%E3%83%BC",
       "yesterday": 39,
-      "today": 1,
-      "total": 108412
+      "today": 29,
+      "total": 108440
     },
     {
       "operatorId": "char_110_deepcl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%82%A3%E3%83%94%E3%82%AB",
       "yesterday": 41,
-      "today": 2,
-      "total": 122348
+      "today": 29,
+      "total": 122375
     },
     {
       "operatorId": "char_183_skgoat",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%B9%E3%83%94%E3%83%AA%E3%83%83%E3%83%88",
       "yesterday": 25,
-      "today": 1,
-      "total": 79904
+      "today": 20,
+      "total": 79923
     },
     {
       "operatorId": "char_258_podego",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%87%E3%83%B3%E3%82%B3",
       "yesterday": 41,
-      "today": 2,
-      "total": 137390
+      "today": 37,
+      "total": 137425
     },
     {
       "operatorId": "char_484_robrta",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%99%E3%83%AB%E3%82%BF",
       "yesterday": 47,
-      "today": 5,
-      "total": 147371
+      "today": 38,
+      "total": 147404
     },
     {
       "operatorId": "char_355_ethan",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%BC%E3%82%B5%E3%83%B3",
       "yesterday": 56,
-      "today": 8,
-      "total": 191247
+      "today": 48,
+      "total": 191287
     },
     {
       "operatorId": "char_277_sqrrel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A7%E3%82%A6",
       "yesterday": 45,
-      "today": 3,
-      "total": 137600
+      "today": 27,
+      "total": 137624
     },
     {
       "operatorId": "char_4107_vrdant",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%BC%E3%83%80%E3%83%B3%E3%83%88",
       "yesterday": 32,
-      "today": 1,
-      "total": 119692
+      "today": 15,
+      "total": 119706
     },
     {
       "operatorId": "char_4165_ctrail",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%B3%E3%83%88%E3%83%AC%E3%82%A4%E3%83%AB",
       "yesterday": 60,
-      "today": 1,
-      "total": 110609
+      "today": 23,
+      "total": 110631
     },
     {
       "operatorId": "char_128_plosis",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%83%AA%E3%82%AA%E3%83%97%E3%82%B7%E3%82%B9",
       "yesterday": 81,
-      "today": 12,
-      "total": 328747
+      "today": 55,
+      "total": 328790
     },
     {
       "operatorId": "char_275_breeze",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%83%BC%E3%82%BA",
       "yesterday": 34,
-      "today": 4,
-      "total": 103712
+      "today": 22,
+      "total": 103730
     },
     {
       "operatorId": "char_4163_rosesa",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%BC%E3%82%BA%E3%82%BD%E3%83%AB%E3%83%88",
       "yesterday": 38,
-      "today": 5,
-      "total": 120272
+      "today": 27,
+      "total": 120294
     },
     {
       "operatorId": "char_115_headbr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BA%E3%82%A3%E3%83%9E%E3%83%BC",
       "yesterday": 52,
-      "today": 7,
-      "total": 163308
+      "today": 42,
+      "total": 163343
     },
     {
       "operatorId": "char_102_texas",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AD%E3%82%B5%E3%82%B9",
       "yesterday": 138,
-      "today": 5,
-      "total": 395047
+      "today": 68,
+      "total": 395110
     },
     {
       "operatorId": "char_349_chiave",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%82%A2%E3%83%BC%E3%83%99",
       "yesterday": 36,
-      "today": 2,
-      "total": 124644
+      "today": 23,
+      "total": 124665
     },
     {
       "operatorId": "char_488_buildr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9D%E3%83%B3%E3%82%B7%E3%83%A9%E3%82%B9",
       "yesterday": 125,
-      "today": 8,
-      "total": 315211
+      "today": 41,
+      "total": 315244
     },
     {
       "operatorId": "char_4023_rfalcn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%B9%E3%83%88%E3%83%AC%E3%83%AB",
       "yesterday": 34,
-      "today": 3,
-      "total": 120485
+      "today": 26,
+      "total": 120508
     },
     {
       "operatorId": "char_4199_makiri",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%84%E3%82%AD%E3%83%AA",
       "yesterday": 110,
-      "today": 9,
-      "total": 114824
+      "today": 62,
+      "total": 114877
     },
     {
       "operatorId": "char_261_sddrag",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%BC%E3%83%89",
       "yesterday": 54,
-      "today": 2,
-      "total": 181059
+      "today": 28,
+      "total": 181085
     },
     {
       "operatorId": "char_496_wildmn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%82%A4%E3%83%AB%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3",
       "yesterday": 58,
-      "today": 2,
-      "total": 144384
+      "today": 23,
+      "total": 144405
     },
     {
       "operatorId": "char_1036_fang2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%AD%B4%E9%99%A3%E9%8B%AD%E6%A7%8D%E3%83%95%E3%82%A7%E3%83%B3",
       "yesterday": 58,
-      "today": 7,
-      "total": 209686
+      "today": 49,
+      "total": 209728
     },
     {
       "operatorId": "char_401_elysm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%AA%E3%82%B8%E3%82%A6%E3%83%A0",
       "yesterday": 119,
-      "today": 8,
-      "total": 316792
+      "today": 51,
+      "total": 316835
     },
     {
       "operatorId": "char_4119_wanqin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%83%B3%E3%83%81%E3%82%A3%E3%83%B3",
       "yesterday": 32,
-      "today": 4,
-      "total": 131919
+      "today": 25,
+      "total": 131940
     },
     {
       "operatorId": "char_476_blkngt",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%A9%E3%83%83%E3%82%AF%E3%83%8A%E3%82%A4%E3%83%88",
       "yesterday": 46,
-      "today": 4,
-      "total": 205033
+      "today": 34,
+      "total": 205063
     },
     {
       "operatorId": "char_4147_mitm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%88%E3%83%A0",
       "yesterday": 65,
-      "today": 5,
-      "total": 142915
+      "today": 44,
+      "total": 142954
     },
     {
       "operatorId": "char_497_ctable",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%93%E3%83%AC",
       "yesterday": 108,
-      "today": 10,
-      "total": 327594
+      "today": 65,
+      "total": 327649
     },
     {
       "operatorId": "char_4017_puzzle",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%BA%E3%83%AB",
       "yesterday": 69,
-      "today": 7,
-      "total": 263587
+      "today": 46,
+      "total": 263626
     },
     {
       "operatorId": "char_4144_chilc",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%AB%E3%83%81%E3%83%A3%E3%83%83%E3%82%AF",
       "yesterday": 33,
-      "today": 1,
-      "total": 145827
+      "today": 20,
+      "total": 145846
     },
     {
       "operatorId": "char_4052_surfer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%BC%E3%83%95%E3%82%A1%E3%83%BC",
       "yesterday": 81,
-      "today": 1,
-      "total": 164754
+      "today": 52,
+      "total": 164805
     },
     {
       "operatorId": "char_308_swire",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC",
       "yesterday": 68,
-      "today": 4,
-      "total": 149257
+      "today": 49,
+      "total": 149302
     },
     {
       "operatorId": "char_265_sophia",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B9%E3%83%A9%E3%83%83%E3%82%B7%E3%83%A5",
       "yesterday": 77,
-      "today": 7,
-      "total": 181688
+      "today": 44,
+      "total": 181725
     },
     {
       "operatorId": "char_4106_bryota",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%A9%E3%82%A4%E3%82%AA%E3%83%95%E3%82%A1%E3%82%A4%E3%82%BF",
       "yesterday": 51,
-      "today": 5,
-      "total": 181548
+      "today": 45,
+      "total": 181588
     },
     {
       "operatorId": "char_4125_rdoc",
       "wikiUrl": "https://arknights.wikiru.jp/?Doc",
       "yesterday": 60,
-      "today": 2,
-      "total": 122641
+      "today": 26,
+      "total": 122665
     },
     {
       "operatorId": "char_106_franka",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%A9%E3%83%B3%E3%82%AB",
       "yesterday": 43,
-      "today": 2,
-      "total": 148859
+      "today": 34,
+      "total": 148891
     },
     {
       "operatorId": "char_131_flameb",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%82%AB%E3%82%AF",
       "yesterday": 69,
-      "today": 5,
-      "total": 193284
+      "today": 40,
+      "total": 193319
     },
     {
       "operatorId": "char_154_morgan",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A2%E3%83%BC%E3%82%AC%E3%83%B3",
       "yesterday": 57,
-      "today": 4,
-      "total": 159701
+      "today": 34,
+      "total": 159731
     },
     {
       "operatorId": "char_4142_laios",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%82%A4%E3%82%AA%E3%82%B9",
       "yesterday": 37,
-      "today": 3,
-      "total": 118938
+      "today": 18,
+      "total": 118953
     },
     {
       "operatorId": "char_155_tiger",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%83%89%E3%83%A9",
       "yesterday": 48,
-      "today": 2,
-      "total": 136776
+      "today": 24,
+      "total": 136798
     },
     {
       "operatorId": "char_415_flint",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AA%E3%83%B3%E3%83%88",
       "yesterday": 50,
-      "today": 2,
-      "total": 110857
+      "today": 18,
+      "total": 110873
     },
     {
       "operatorId": "char_157_dagda",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%80%E3%82%B0%E3%82%B6",
       "yesterday": 28,
-      "today": 2,
-      "total": 148170
+      "today": 16,
+      "total": 148184
     },
     {
       "operatorId": "char_140_whitew",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%83%E3%83%97%E3%83%A9%E3%83%B3%E3%83%89",
       "yesterday": 118,
-      "today": 7,
-      "total": 415117
+      "today": 58,
+      "total": 415168
     },
     {
       "operatorId": "char_294_ayer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A2%E3%83%BC%E3%82%B9%E3%82%AB%E3%83%BC%E3%83%9A",
       "yesterday": 46,
-      "today": 3,
-      "total": 146332
+      "today": 27,
+      "total": 146356
     },
     {
       "operatorId": "char_194_leto",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%A7%E3%83%BC%E3%82%BF",
       "yesterday": 47,
-      "today": 7,
-      "total": 167727
+      "today": 34,
+      "total": 167754
     },
     {
       "operatorId": "char_4083_chimes",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%83%81%E3%83%A3%E3%82%A4%E3%83%A0",
       "yesterday": 49,
-      "today": 5,
-      "total": 153436
+      "today": 43,
+      "total": 153474
     },
     {
       "operatorId": "char_252_bibeak",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%A4%E3%83%93%E3%83%BC%E3%82%AF",
       "yesterday": 87,
-      "today": 7,
-      "total": 161353
+      "today": 30,
+      "total": 161376
     },
     {
       "operatorId": "char_459_tachak",
       "wikiUrl": "https://arknights.wikiru.jp/?Tachanka",
       "yesterday": 33,
-      "today": 5,
-      "total": 139318
+      "today": 28,
+      "total": 139341
     },
     {
       "operatorId": "char_143_ghost",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%9A%E3%82%AF%E3%82%BF%E3%83%BC",
       "yesterday": 84,
-      "today": 11,
-      "total": 340947
+      "today": 58,
+      "total": 340994
     },
     {
       "operatorId": "char_356_broca",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AD%E3%83%BC%E3%82%AB",
       "yesterday": 30,
-      "today": 4,
-      "total": 105070
+      "today": 23,
+      "total": 105089
     },
     {
       "operatorId": "char_4126_fuze",
       "wikiUrl": "https://arknights.wikiru.jp/?Fuze",
       "yesterday": 32,
-      "today": 4,
-      "total": 123379
+      "today": 18,
+      "total": 123393
     },
     {
       "operatorId": "char_4166_varkis",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%AB%E3%82%AB%E3%83%AA%E3%82%B9",
       "yesterday": 58,
-      "today": 4,
-      "total": 56748
+      "today": 43,
+      "total": 56787
     },
     {
       "operatorId": "char_274_astesi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B7%E3%82%A2",
       "yesterday": 47,
-      "today": 5,
-      "total": 177432
+      "today": 34,
+      "total": 177461
     },
     {
       "operatorId": "char_333_sidero",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%87%E3%83%AD%E3%82%AB",
       "yesterday": 45,
-      "today": 4,
-      "total": 134637
+      "today": 34,
+      "total": 134667
     },
     {
       "operatorId": "char_475_akafyu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%AB%E3%83%95%E3%83%A6",
       "yesterday": 52,
-      "today": 3,
-      "total": 144071
+      "today": 25,
+      "total": 144093
     },
     {
       "operatorId": "char_1030_noirc2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A6%E3%82%B9S%E3%83%8E%E3%82%A4%E3%83%AB%E3%83%9B%E3%83%BC%E3%83%B3",
       "yesterday": 166,
-      "today": 7,
-      "total": 218480
+      "today": 84,
+      "total": 218557
     },
     {
       "operatorId": "char_421_crow",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A9%E3%83%BB%E3%83%97%E3%83%AB%E3%83%9E",
       "yesterday": 99,
-      "today": 9,
-      "total": 310946
+      "today": 77,
+      "total": 311014
     },
     {
       "operatorId": "char_4066_highmo",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%A2%E3%82%A2",
       "yesterday": 60,
-      "today": 4,
-      "total": 347366
+      "today": 47,
+      "total": 347409
     },
     {
       "operatorId": "char_486_takila",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AD%E3%83%BC%E3%83%A9",
       "yesterday": 93,
-      "today": 8,
-      "total": 279410
+      "today": 56,
+      "total": 279458
     },
     {
       "operatorId": "char_4131_odda",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%83%E3%83%80",
       "yesterday": 39,
-      "today": 3,
-      "total": 117598
+      "today": 25,
+      "total": 117620
     },
     {
       "operatorId": "char_4187_graceb",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%83%BC%E3%82%B9%E3%83%99%E3%82%A2%E3%83%A9%E3%83%BC",
       "yesterday": 91,
-      "today": 7,
-      "total": 144933
+      "today": 53,
+      "total": 144979
     },
     {
       "operatorId": "char_4185_amoris",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%A5%90%E5%A4%A9%E5%AF%BA%E3%81%AB%E3%82%83%E3%82%80",
       "yesterday": 40,
-      "today": 8,
-      "total": 95483
+      "today": 33,
+      "total": 95508
     },
     {
       "operatorId": "char_394_hadiya",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%87%E3%82%A3%E3%83%A4",
       "yesterday": 127,
-      "today": 12,
-      "total": 64222
+      "today": 85,
+      "total": 64295
     },
     {
       "operatorId": "char_129_bluep",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%BA%E3%83%AA%E3%82%A6%E3%82%B9",
       "yesterday": 60,
-      "today": 6,
-      "total": 207521
+      "today": 35,
+      "total": 207550
     },
     {
       "operatorId": "char_204_platnm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%A9%E3%83%81%E3%83%8A",
       "yesterday": 68,
-      "today": 4,
-      "total": 211423
+      "today": 44,
+      "total": 211463
     },
     {
       "operatorId": "char_367_swllow",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%83%BC%E3%82%B9%E3%83%AD%E3%83%BC%E3%83%88",
       "yesterday": 56,
-      "today": 3,
-      "total": 134672
+      "today": 29,
+      "total": 134698
     },
     {
       "operatorId": "char_365_aprl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A4%E3%83%97%E3%83%AA%E3%83%AB",
       "yesterday": 57,
-      "today": 6,
-      "total": 163111
+      "today": 37,
+      "total": 163142
     },
     {
       "operatorId": "char_1021_kroos2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%AF%92%E8%8A%92%E3%82%AF%E3%83%AB%E3%83%BC%E3%82%B9",
       "yesterday": 74,
-      "today": 9,
-      "total": 282292
+      "today": 82,
+      "total": 282365
     },
     {
       "operatorId": "char_498_inside",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%B3%E3%82%B5%E3%82%A4%E3%83%80%E3%83%BC",
       "yesterday": 68,
-      "today": 5,
-      "total": 226136
+      "today": 35,
+      "total": 226166
     },
     {
       "operatorId": "char_219_meteo",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%86%E3%82%AA%E3%83%AA%E3%83%BC%E3%83%86",
       "yesterday": 30,
-      "today": 2,
-      "total": 133415
+      "today": 18,
+      "total": 133431
     },
     {
       "operatorId": "char_379_sesa",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%82%A7%E3%83%BC%E3%82%B7%E3%83%A3",
       "yesterday": 38,
-      "today": 2,
-      "total": 101211
+      "today": 15,
+      "total": 101224
     },
     {
       "operatorId": "char_4078_bdhkgt",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%82%A8%E3%83%A6%E3%83%B3",
       "yesterday": 47,
-      "today": 3,
-      "total": 169215
+      "today": 21,
+      "total": 169233
     },
     {
       "operatorId": "char_279_excu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%82%B0%E3%82%BC%E3%82%AD%E3%83%A5%E3%82%BF%E3%83%BC",
       "yesterday": 57,
-      "today": 1,
-      "total": 176347
+      "today": 40,
+      "total": 176386
     },
     {
       "operatorId": "char_346_aosta",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%AA%E3%82%B9%E3%82%BF",
       "yesterday": 31,
-      "today": 3,
-      "total": 90065
+      "today": 15,
+      "total": 90077
     },
     {
       "operatorId": "char_4203_kichi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%81%E3%82%BB%E3%82%A4",
       "yesterday": 66,
-      "today": 8,
-      "total": 89567
+      "today": 54,
+      "total": 89613
     },
     {
       "operatorId": "char_4213_skybx",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%9C%E3%83%83%E3%82%AF%E3%82%B9",
       "yesterday": 50,
-      "today": 10,
-      "total": 63888
+      "today": 65,
+      "total": 63943
     },
     {
       "operatorId": "char_002_amiya",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4",
       "yesterday": 186,
-      "today": 8,
-      "total": 525619
+      "today": 104,
+      "total": 525715
     },
     {
       "operatorId": "char_405_absin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%96%E3%82%B5%E3%83%B3%E3%83%88",
       "yesterday": 51,
-      "today": 2,
-      "total": 151754
+      "today": 26,
+      "total": 151778
     },
     {
       "operatorId": "char_411_tomimi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%83%9F%E3%83%9F",
       "yesterday": 44,
-      "today": 2,
-      "total": 147778
+      "today": 28,
+      "total": 147804
     },
     {
       "operatorId": "char_466_qanik",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%8B%E3%83%91%E3%83%A9%E3%83%BC%E3%83%88",
       "yesterday": 19,
-      "today": 3,
-      "total": 139723
+      "today": 17,
+      "total": 139737
     },
     {
       "operatorId": "char_166_skfire",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%A4%E3%83%95%E3%83%AC%E3%82%A2",
       "yesterday": 24,
-      "today": 3,
-      "total": 120564
+      "today": 15,
+      "total": 120576
     },
     {
       "operatorId": "char_306_leizi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4%E3%82%BA",
       "yesterday": 57,
-      "today": 7,
-      "total": 220332
+      "today": 43,
+      "total": 220368
     },
     {
       "operatorId": "char_135_halo",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B8%E3%83%BC%E3%83%8B",
       "yesterday": 59,
-      "today": 5,
-      "total": 229327
+      "today": 33,
+      "total": 229355
     },
     {
       "operatorId": "char_344_beewax",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%82%BA%E3%83%AF%E3%82%AF%E3%82%B9",
       "yesterday": 46,
-      "today": 4,
-      "total": 131736
+      "today": 30,
+      "total": 131762
     },
     {
       "operatorId": "char_373_lionhd",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%AA%E3%83%B3%E3%83%8F%E3%83%AB%E3%83%88",
       "yesterday": 34,
-      "today": 3,
-      "total": 119312
+      "today": 23,
+      "total": 119332
     },
     {
       "operatorId": "char_341_sntlla",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%82%BF%E3%83%A9",
       "yesterday": 42,
-      "today": 1,
-      "total": 199569
+      "today": 22,
+      "total": 199590
     },
     {
       "operatorId": "char_4031_liesel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%97%E3%83%AC%E3%83%BC%E3%82%B6",
       "yesterday": 81,
-      "today": 5,
-      "total": 42254
+      "today": 45,
+      "total": 42294
     },
     {
       "operatorId": "char_388_mint",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%B3%E3%83%88",
       "yesterday": 91,
-      "today": 7,
-      "total": 172056
+      "today": 44,
+      "total": 172093
     },
     {
       "operatorId": "char_338_iris",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%A4%E3%83%AA%E3%82%B9",
       "yesterday": 59,
-      "today": 1,
-      "total": 150479
+      "today": 26,
+      "total": 150504
     },
     {
       "operatorId": "char_297_hamoni",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%BC%E3%83%A2%E3%83%8B%E3%83%BC",
       "yesterday": 86,
-      "today": 3,
-      "total": 265060
+      "today": 34,
+      "total": 265091
     },
     {
       "operatorId": "char_4110_delphn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%83%AB%E3%83%95%E3%82%A3%E3%83%BC%E3%83%B3",
       "yesterday": 69,
-      "today": 2,
-      "total": 244745
+      "today": 42,
+      "total": 244785
     },
     {
       "operatorId": "char_1011_lava2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%82%8E%E7%8D%84%E3%83%A9%E3%83%B4%E3%82%A1",
       "yesterday": 54,
-      "today": 7,
-      "total": 192933
+      "today": 39,
+      "total": 192965
     },
     {
       "operatorId": "char_489_serum",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%AD%E3%82%BB%E3%83%A9%E3%83%A0",
       "yesterday": 38,
-      "today": 1,
-      "total": 116189
+      "today": 19,
+      "total": 116207
     },
     {
       "operatorId": "char_446_aroma",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AD%E3%83%9E",
       "yesterday": 69,
-      "today": 4,
-      "total": 147873
+      "today": 51,
+      "total": 147920
     },
     {
       "operatorId": "char_4013_kjera",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%82%A7%E3%83%A9",
       "yesterday": 74,
-      "today": 5,
-      "total": 225050
+      "today": 40,
+      "total": 225085
     },
     {
       "operatorId": "char_4040_rockr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%83%E3%82%AF%E3%83%AD%E3%83%83%E3%82%AF",
       "yesterday": 34,
-      "today": 2,
-      "total": 167528
+      "today": 12,
+      "total": 167538
     },
     {
       "operatorId": "char_4054_malist",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%8B%E3%83%9E%E3%83%AA%E3%82%B9%E3%83%88",
       "yesterday": 64,
-      "today": 3,
-      "total": 167190
+      "today": 40,
+      "total": 167227
     },
     {
       "operatorId": "char_499_kaitou",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%82%A3%E3%82%A2%E3%83%9E%E3%83%B3%E3%83%86",
       "yesterday": 58,
-      "today": 3,
-      "total": 174700
+      "today": 32,
+      "total": 174729
     },
     {
       "operatorId": "char_4081_warmy",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A9%E3%83%BC%E3%83%9F%E3%83%BC",
       "yesterday": 53,
-      "today": 3,
-      "total": 185067
+      "today": 29,
+      "total": 185093
     },
     {
       "operatorId": "char_4198_christ",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%82%B9%E3%83%BB%E3%82%AF%E3%83%AA%E3%82%B9%E3%83%86%E3%82%A3%E3%83%BC%E3%83%B3",
       "yesterday": 81,
-      "today": 5,
-      "total": 142010
+      "today": 49,
+      "total": 142054
     },
     {
       "operatorId": "char_4164_tecno",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%AF%E3%83%8E",
       "yesterday": 47,
-      "today": 2,
-      "total": 131678
+      "today": 29,
+      "total": 131705
     },
     {
       "operatorId": "char_242_otter",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%82%A4%E3%83%A4%E3%83%BC",
       "yesterday": 63,
-      "today": 2,
-      "total": 157255
+      "today": 59,
+      "total": 157312
     },
     {
       "operatorId": "char_336_folivo",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC%E3%83%B3",
       "yesterday": 107,
-      "today": 7,
-      "total": 223855
+      "today": 70,
+      "total": 223918
     },
     {
       "operatorId": "char_4140_lasher",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%83%89%E3%83%AC%E3%82%B3%E3%83%8A%E3%83%BC",
       "yesterday": 38,
-      "today": 3,
-      "total": 99532
+      "today": 89,
+      "total": 99618
     },
     {
       "operatorId": "char_108_silent",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%A4%E3%83%AC%E3%83%B3%E3%82%B9",
       "yesterday": 56,
-      "today": 5,
-      "total": 205750
+      "today": 47,
+      "total": 205792
     },
     {
       "operatorId": "char_171_bldsk",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%83%AB%E3%83%95%E3%82%A1%E3%83%AA%E3%83%B3",
       "yesterday": 132,
-      "today": 12,
-      "total": 326365
+      "today": 227,
+      "total": 326580
     },
     {
       "operatorId": "char_345_folnic",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A9%E3%83%AA%E3%83%8B%E3%83%83%E3%82%AF",
       "yesterday": 42,
-      "today": 4,
-      "total": 133921
+      "today": 24,
+      "total": 133941
     },
     {
       "operatorId": "char_4196_reckpr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%B3%E3%83%BC%E3%83%89%E3%82%AD%E3%83%BC%E3%83%91%E3%83%BC",
       "yesterday": 30,
-      "today": 4,
-      "total": 55122
+      "today": 23,
+      "total": 55141
     },
     {
       "operatorId": "char_348_ceylon",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%82%A4%E3%83%AD%E3%83%B3",
       "yesterday": 45,
-      "today": 5,
-      "total": 130414
+      "today": 24,
+      "total": 130433
     },
     {
       "operatorId": "char_436_whispr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B9%E3%83%91%E3%83%BC%E3%83%AC%E3%82%A4%E3%83%B3",
       "yesterday": 103,
-      "today": 8,
-      "total": 252260
+      "today": 56,
+      "total": 252308
     },
     {
       "operatorId": "char_4173_nowell",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%82%A6%E3%82%A8%E3%83%AB",
       "yesterday": 59,
-      "today": 2,
-      "total": 90571
+      "today": 48,
+      "total": 90617
     },
     {
       "operatorId": "char_402_tuye",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%A5%E3%82%A4%E3%82%A8",
       "yesterday": 34,
-      "today": 3,
-      "total": 148470
+      "today": 34,
+      "total": 148501
     },
     {
       "operatorId": "char_473_mberry",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%AB%E3%83%99%E3%83%AA%E3%83%BC",
       "yesterday": 50,
-      "today": 1,
-      "total": 190593
+      "today": 32,
+      "total": 190624
     },
     {
       "operatorId": "char_449_glider",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%8B%E3%83%BC%E3%83%99%E3%83%AA%E3%83%BC",
       "yesterday": 53,
-      "today": 1,
-      "total": 198888
+      "today": 30,
+      "total": 198917
     },
     {
       "operatorId": "char_4114_harold",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%AD%E3%83%AB%E3%83%89",
       "yesterday": 32,
-      "today": 3,
-      "total": 161905
+      "today": 18,
+      "total": 161920
     },
     {
       "operatorId": "char_1024_hbisc2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%BF%AF%E5%A1%B5%E3%83%8F%E3%82%A4%E3%83%93%E3%82%B9%E3%82%AB%E3%82%B9",
       "yesterday": 57,
-      "today": 11,
-      "total": 220936
+      "today": 44,
+      "total": 220969
     },
     {
       "operatorId": "char_494_vendla",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%B3%E3%83%87%E3%83%A9",
       "yesterday": 131,
-      "today": 7,
-      "total": 215690
+      "today": 70,
+      "total": 215753
     },
     {
       "operatorId": "char_4071_peper",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%97%E3%83%AA%E3%82%AB",
       "yesterday": 42,
-      "today": 6,
-      "total": 192908
+      "today": 21,
+      "total": 192923
     },
     {
       "operatorId": "char_4139_papyrs",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%94%E3%83%AB%E3%82%B9",
       "yesterday": 49,
-      "today": 5,
-      "total": 163978
+      "today": 25,
+      "total": 163998
     },
     {
       "operatorId": "char_4224_turdus",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%AF%E3%82%B7%E3%82%AF",
       "yesterday": 160,
-      "today": 13,
-      "total": 89033
+      "today": 78,
+      "total": 89098
     },
     {
       "operatorId": "char_4222_taraxa",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BF%E3%83%A9%E3%82%AF%E3%82%B5%E3%82%AB%E3%83%A0",
       "yesterday": 50,
-      "today": 2,
-      "total": 43619
+      "today": 27,
+      "total": 43644
     },
     {
       "operatorId": "char_148_nearl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%82%A2%E3%83%BC%E3%83%AB",
       "yesterday": 65,
-      "today": 5,
-      "total": 196902
+      "today": 39,
+      "total": 196936
     },
     {
       "operatorId": "char_226_hmau",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%B3",
       "yesterday": 39,
-      "today": 6,
-      "total": 106831
+      "today": 19,
+      "total": 106844
     },
     {
       "operatorId": "char_4109_baslin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%BC%E3%82%B9%E3%83%A9%E3%82%A4%E3%83%B3",
       "yesterday": 33,
-      "today": 1,
-      "total": 168219
+      "today": 28,
+      "total": 168246
     },
     {
       "operatorId": "char_4143_sensi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%83%B3%E3%82%B7",
       "yesterday": 31,
-      "today": 2,
-      "total": 104619
+      "today": 14,
+      "total": 104631
     },
     {
       "operatorId": "char_144_red",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%83%E3%83%89",
       "yesterday": 72,
-      "today": 5,
-      "total": 229078
+      "today": 53,
+      "total": 229126
     },
     {
       "operatorId": "char_243_waaifu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AF%E3%82%A4%E3%83%95%E3%83%BC",
       "yesterday": 69,
-      "today": 8,
-      "total": 184324
+      "today": 54,
+      "total": 184370
     },
     {
       "operatorId": "char_214_kafka",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%95%E3%82%AB",
       "yesterday": 58,
-      "today": 4,
-      "total": 168327
+      "today": 47,
+      "total": 168370
     },
     {
       "operatorId": "char_455_nothin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%A6%E3%82%A6",
       "yesterday": 84,
-      "today": 6,
-      "total": 212783
+      "today": 53,
+      "total": 212830
     },
     {
       "operatorId": "char_4155_talr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%82%B0%E3%83%AA%E3%83%BC%E3%83%8E",
       "yesterday": 36,
-      "today": 3,
-      "total": 87141
+      "today": 23,
+      "total": 87161
     },
     {
       "operatorId": "char_107_liskam",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%B9%E3%82%AB%E3%83%A0",
       "yesterday": 64,
-      "today": 6,
-      "total": 233300
+      "today": 42,
+      "total": 233336
     },
     {
       "operatorId": "char_4137_udflow",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%80%E3%83%BC%E3%83%95%E3%83%AD%E3%83%BC",
       "yesterday": 46,
-      "today": 4,
-      "total": 154151
+      "today": 36,
+      "total": 154183
     },
     {
       "operatorId": "char_201_moeshd",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AD%E3%83%AF%E3%83%83%E3%82%B5%E3%83%B3",
       "yesterday": 40,
-      "today": 3,
-      "total": 126419
+      "today": 27,
+      "total": 126443
     },
     {
       "operatorId": "char_325_bison",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%A4%E3%82%BD%E3%83%B3",
       "yesterday": 29,
-      "today": 5,
-      "total": 100460
+      "today": 23,
+      "total": 100478
     },
     {
       "operatorId": "char_163_hpsts",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%AB%E3%82%AB%E3%83%B3",
       "yesterday": 70,
-      "today": 6,
-      "total": 169743
+      "today": 47,
+      "total": 169784
     },
     {
       "operatorId": "char_4207_branch",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A7%E3%83%88%E3%83%81%E3%82%AD",
       "yesterday": 71,
-      "today": 13,
-      "total": 66260
+      "today": 77,
+      "total": 66324
     },
     {
       "operatorId": "char_378_asbest",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%83%99%E3%82%B9%E3%83%88%E3%82%B9",
       "yesterday": 40,
-      "today": 3,
-      "total": 145455
+      "today": 27,
+      "total": 145479
     },
     {
       "operatorId": "char_4025_aprot2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%83%AC%E3%83%A0",
       "yesterday": 46,
-      "today": 2,
-      "total": 141991
+      "today": 26,
+      "total": 142015
     },
     {
       "operatorId": "char_4047_pianst",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%84%E3%82%A7%E3%83%AB%E3%83%8B%E3%83%BC",
       "yesterday": 40,
-      "today": 2,
-      "total": 122343
+      "today": 24,
+      "total": 122365
     },
     {
       "operatorId": "char_457_blitz",
       "wikiUrl": "https://arknights.wikiru.jp/?Blitz",
       "yesterday": 19,
-      "today": 2,
-      "total": 107459
+      "today": 13,
+      "total": 107470
     },
     {
       "operatorId": "char_304_zebra",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%93%E3%83%BC%E3%83%AC%E3%82%A4%E3%83%B3",
       "yesterday": 55,
-      "today": 1,
-      "total": 161763
+      "today": 26,
+      "total": 161788
     },
     {
       "operatorId": "char_431_ashlok",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5%E3%83%AD%E3%83%83%E3%82%AF",
       "yesterday": 37,
-      "today": 4,
-      "total": 168631
+      "today": 17,
+      "total": 168644
     },
     {
       "operatorId": "char_493_firwhl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%82%A4%E3%83%A4%E3%83%BC%E3%83%9B%E3%82%A4%E3%83%83%E3%82%B9%E3%83%AB",
       "yesterday": 79,
-      "today": 12,
-      "total": 269855
+      "today": 50,
+      "total": 269893
     },
     {
       "operatorId": "char_422_aurora",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AA%E3%83%BC%E3%83%AD%E3%83%A9",
       "yesterday": 52,
-      "today": 7,
-      "total": 227388
+      "today": 47,
+      "total": 227428
     },
     {
       "operatorId": "char_464_cement",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BB%E3%83%A1%E3%83%B3%E3%83%88",
       "yesterday": 39,
-      "today": 2,
-      "total": 160917
+      "today": 21,
+      "total": 160936
     },
     {
       "operatorId": "char_4148_philae",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%83%A9%E3%82%A8",
       "yesterday": 389,
-      "today": 8,
-      "total": 128379
+      "today": 114,
+      "total": 128485
     },
     {
       "operatorId": "char_4225_tanya",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%A9%E3%83%83%E3%82%AF%E3%83%9C%E3%83%BC%E3%83%B3",
       "yesterday": 137,
-      "today": 9,
-      "total": 52186
+      "today": 67,
+      "total": 52244
     },
     {
       "operatorId": "char_145_prove",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AD%E3%83%B4%E3%82%A1%E3%83%B3%E3%82%B9",
       "yesterday": 63,
-      "today": 2,
-      "total": 123105
+      "today": 23,
+      "total": 123126
     },
     {
       "operatorId": "char_4006_melnte",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A1%E3%83%A9%E3%83%8A%E3%82%A4%E3%83%88",
       "yesterday": 46,
-      "today": 3,
-      "total": 150992
+      "today": 32,
+      "total": 151021
     },
     {
       "operatorId": "char_158_milu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%82%A4%E3%83%A4%E3%83%BC%E3%82%A6%E3%82%A9%E3%83%83%E3%83%81",
       "yesterday": 32,
-      "today": 5,
-      "total": 168373
+      "today": 37,
+      "total": 168405
     },
     {
       "operatorId": "char_218_cuttle",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%83%89%E3%83%AC%E3%82%A2%E3%83%8A",
       "yesterday": 68,
-      "today": 4,
-      "total": 291240
+      "today": 32,
+      "total": 291268
     },
     {
       "operatorId": "char_4014_lunacu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%8A%E3%82%AB%E3%83%96",
       "yesterday": 58,
-      "today": 6,
-      "total": 279903
+      "today": 41,
+      "total": 279938
     },
     {
       "operatorId": "char_363_toddi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%82%AE%E3%83%95%E3%82%A9%E3%83%B3%E3%82%B9",
       "yesterday": 48,
-      "today": 2,
-      "total": 133169
+      "today": 21,
+      "total": 133188
     },
     {
       "operatorId": "char_4043_erato",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%A9%E3%83%88",
       "yesterday": 42,
-      "today": 1,
-      "total": 186085
+      "today": 31,
+      "total": 186115
     },
     {
       "operatorId": "char_4221_ju",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A5%E3%83%BC",
       "yesterday": 50,
-      "today": 4,
-      "total": 49428
+      "today": 35,
+      "total": 49459
     },
     {
       "operatorId": "char_1027_greyy2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%89%BF%E6%9B%A6%E3%82%B0%E3%83%AC%E3%82%A4",
       "yesterday": 57,
-      "today": 4,
-      "total": 263402
+      "today": 52,
+      "total": 263450
     },
     {
       "operatorId": "char_4104_coldst",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%89%E3%82%B7%E3%83%A7%E3%83%83%E3%83%88",
       "yesterday": 29,
-      "today": 5,
-      "total": 149432
+      "today": 27,
+      "total": 149454
     },
     {
       "operatorId": "char_4211_snhunt",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8E%E3%83%BC%E3%83%8F%E3%83%B3%E3%82%BF%E3%83%BC",
       "yesterday": 56,
-      "today": 5,
-      "total": 69043
+      "today": 41,
+      "total": 69079
     },
     {
       "operatorId": "char_4177_brigid",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%82%AE%E3%83%83%E3%83%89",
       "yesterday": 44,
-      "today": 4,
-      "total": 99314
+      "today": 35,
+      "total": 99345
     },
     {
       "operatorId": "char_4015_spuria",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%97%E3%83%AA%E3%82%A2",
       "yesterday": 62,
-      "today": 6,
-      "total": 230010
+      "today": 46,
+      "total": 230050
     },
     {
       "operatorId": "char_173_slchan",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AA%E3%83%95%E3%83%8F%E3%83%BC%E3%83%88",
       "yesterday": 62,
-      "today": 5,
-      "total": 178361
+      "today": 35,
+      "total": 178391
     },
     {
       "operatorId": "char_383_snsant",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%8E%E3%83%BC%E3%82%BA%E3%83%B3%E3%83%88",
       "yesterday": 27,
-      "today": 1,
-      "total": 111540
+      "today": 29,
+      "total": 111568
     },
     {
       "operatorId": "char_4105_almond",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%A2%E3%83%B3%E3%83%89",
       "yesterday": 52,
-      "today": 4,
-      "total": 166406
+      "today": 23,
+      "total": 166425
     },
     {
       "operatorId": "char_174_slbell",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%A9%E3%83%9E%E3%83%8B%E3%82%AF%E3%82%B9",
       "yesterday": 86,
-      "today": 4,
-      "total": 245313
+      "today": 47,
+      "total": 245356
     },
     {
       "operatorId": "char_254_vodfox",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%83%9E%E3%83%AC",
       "yesterday": 102,
-      "today": 8,
-      "total": 288145
+      "today": 68,
+      "total": 288205
     },
     {
       "operatorId": "char_4079_haini",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%82%B7%E3%83%BC%E3%83%A9",
       "yesterday": 78,
-      "today": 7,
-      "total": 178195
+      "today": 49,
+      "total": 178237
     },
     {
       "operatorId": "char_195_glassb",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%BC%E3%82%B9%E3%83%81%E3%83%8A",
       "yesterday": 50,
-      "today": 3,
-      "total": 134908
+      "today": 32,
+      "total": 134937
     },
     {
       "operatorId": "char_326_glacus",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%82%A6%E3%82%B3%E3%82%B9",
       "yesterday": 27,
-      "today": 3,
-      "total": 122532
+      "today": 30,
+      "total": 122559
     },
     {
       "operatorId": "char_4032_provs",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%97%E3%83%AD%E3%83%B4%E3%82%A1%E3%82%A4%E3%82%BE",
       "yesterday": 157,
-      "today": 3,
-      "total": 344690
+      "today": 67,
+      "total": 344754
     },
     {
       "operatorId": "char_4122_grabds",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4%E3%83%B3%E3%83%90%E3%83%83%E3%82%BA",
       "yesterday": 35,
-      "today": 1,
-      "total": 1651
+      "today": 24,
+      "total": 1674
     },
     {
       "operatorId": "char_433_windft",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A4%E3%83%B3%E3%83%89%E3%83%95%E3%83%AA%E3%83%83%E3%83%88",
       "yesterday": 33,
-      "today": 1,
-      "total": 113502
+      "today": 30,
+      "total": 113531
     },
     {
       "operatorId": "char_4162_cathy",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%A3%E3%82%B5%E3%83%AA%E3%83%B3",
       "yesterday": 45,
-      "today": 1,
-      "total": 117765
+      "today": 27,
+      "total": 117791
     },
     {
       "operatorId": "char_4178_alanna",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%A9%E3%83%B3%E3%83%8A",
       "yesterday": 47,
-      "today": 6,
-      "total": 85864
+      "today": 33,
+      "total": 85891
     },
     {
       "operatorId": "char_101_sora",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BD%E3%83%A9",
       "yesterday": 115,
-      "today": 6,
-      "total": 155858
+      "today": 64,
+      "total": 155916
     },
     {
       "operatorId": "char_4045_heidi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%82%A4%E3%83%87%E3%82%A3",
       "yesterday": 72,
-      "today": 3,
-      "total": 218713
+      "today": 43,
+      "total": 218753
     },
     {
       "operatorId": "char_4184_dolris",
       "wikiUrl": "https://arknights.wikiru.jp/?%E4%B8%89%E8%A7%92%E5%88%9D%E8%8F%AF",
       "yesterday": 71,
-      "today": 9,
-      "total": 127425
+      "today": 45,
+      "total": 127461
     },
     {
       "operatorId": "char_343_tknogi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%84%E3%82%AD%E3%83%8E%E3%82%AE",
       "yesterday": 42,
-      "today": 1,
-      "total": 129918
+      "today": 20,
+      "total": 129937
     },
     {
       "operatorId": "char_4019_ncdeer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E4%B9%9D%E8%89%B2%E9%B9%BF",
       "yesterday": 38,
-      "today": 3,
-      "total": 135324
+      "today": 26,
+      "total": 135347
     },
     {
       "operatorId": "char_492_quercu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%82%A8%E3%83%AB%E3%82%AF%E3%82%B9",
       "yesterday": 43,
-      "today": 3,
-      "total": 229200
+      "today": 28,
+      "total": 229225
     },
     {
       "operatorId": "char_4172_xingzh",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%82%A3%E3%83%B3%E3%82%BA%E3%82%A5",
       "yesterday": 47,
-      "today": 7,
-      "total": 113774
+      "today": 32,
+      "total": 113799
     },
     {
       "operatorId": "char_1022_flwr2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%90%83%E9%A6%99%E3%83%91%E3%83%95%E3%83%A5%E3%83%BC%E3%83%9E%E3%83%BC",
       "yesterday": 77,
-      "today": 5,
-      "total": 74410
+      "today": 53,
+      "total": 74458
     },
     {
       "operatorId": "char_4102_threye",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A1%E3%83%A9%E3%83%AB%E3%82%AF%E3%83%93%E3%83%B3",
       "yesterday": 78,
-      "today": 5,
-      "total": 289034
+      "today": 51,
+      "total": 289080
     },
     {
       "operatorId": "char_487_bobb",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9C%E3%83%93%E3%83%B3%E3%82%B0",
       "yesterday": 34,
-      "today": 1,
-      "total": 98486
+      "today": 22,
+      "total": 98507
     },
     {
       "operatorId": "char_4223_botany",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9C%E3%82%BF%E3%83%8B",
       "yesterday": 106,
-      "today": 5,
-      "total": 56583
+      "today": 59,
+      "total": 56637
     },
     {
       "operatorId": "char_215_mantic",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%B3%E3%83%86%E3%82%A3%E3%82%B3%E3%82%A2",
       "yesterday": 44,
-      "today": 3,
-      "total": 231555
+      "today": 32,
+      "total": 231584
     },
     {
       "operatorId": "char_478_kirara",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%A9%E3%83%A9",
       "yesterday": 51,
-      "today": 4,
-      "total": 150287
+      "today": 26,
+      "total": 150309
     },
     {
       "operatorId": "char_4186_tmoris",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%85%AB%E5%B9%A1%E6%B5%B7%E9%88%B4",
       "yesterday": 66,
-      "today": 6,
-      "total": 123118
+      "today": 49,
+      "total": 123161
     },
     {
       "operatorId": "char_241_panda",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%95%E3%82%A4%E3%83%BC%E3%82%BF%E3%83%BC",
       "yesterday": 82,
-      "today": 2,
-      "total": 228397
+      "today": 38,
+      "total": 228433
     },
     {
       "operatorId": "char_4036_forcer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B5%E3%83%BC",
       "yesterday": 67,
-      "today": 2,
-      "total": 218416
+      "today": 57,
+      "total": 218471
     },
     {
       "operatorId": "char_451_robin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%93%E3%83%B3",
       "yesterday": 43,
-      "today": 5,
-      "total": 157805
+      "today": 26,
+      "total": 157826
     },
     {
       "operatorId": "char_458_rfrost",
       "wikiUrl": "https://arknights.wikiru.jp/?Frost",
       "yesterday": 26,
-      "today": 2,
-      "total": 88603
+      "today": 15,
+      "total": 88616
     },
     {
       "operatorId": "char_4171_wulfen",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%95%E3%82%A7%E3%83%8A%E3%82%A4%E3%83%88",
       "yesterday": 61,
-      "today": 4,
-      "total": 95290
+      "today": 269,
+      "total": 95555
     },
     {
       "operatorId": "char_369_bena",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%8A",
       "yesterday": 70,
-      "today": 3,
-      "total": 135242
+      "today": 27,
+      "total": 135266
     },
     {
       "operatorId": "char_4016_kazema",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%BC%E3%83%9E%E3%83%AB",
       "yesterday": 57,
-      "today": 3,
-      "total": 202714
+      "today": 28,
+      "total": 202739
     },
     {
       "operatorId": "char_4124_iana",
       "wikiUrl": "https://arknights.wikiru.jp/?Iana",
       "yesterday": 43,
-      "today": 1,
-      "total": 179789
+      "today": 13,
+      "total": 179801
     },
     {
       "operatorId": "char_4183_mortis",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%8B%A5%E8%91%89%E7%9D%A6",
       "yesterday": 85,
-      "today": 11,
-      "total": 153031
+      "today": 42,
+      "total": 153062
     },
     {
       "operatorId": "char_4151_tinman",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AA%E3%82%AD",
       "yesterday": 87,
-      "today": 2,
-      "total": 281471
+      "today": 43,
+      "total": 281512
     },
     {
       "operatorId": "char_4191_tippi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%83%E3%83%94",
       "yesterday": 47,
-      "today": 2,
-      "total": 74720
+      "today": 23,
+      "total": 74741
     },
     {
       "operatorId": "char_103_angel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%AF%E3%82%B7%E3%82%A2",
       "yesterday": 139,
-      "today": 12,
-      "total": 68623
+      "today": 71,
+      "total": 68682
     },
     {
       "operatorId": "char_332_archet",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%AB%E3%82%B1%E3%83%83%E3%83%88",
       "yesterday": 135,
-      "today": 5,
-      "total": 453533
+      "today": 83,
+      "total": 453611
     },
     {
       "operatorId": "char_456_ash",
       "wikiUrl": "https://arknights.wikiru.jp/?Ash",
       "yesterday": 55,
-      "today": 3,
-      "total": 271466
+      "today": 35,
+      "total": 271498
     },
     {
       "operatorId": "char_340_shwaz",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A5%E3%83%B4%E3%82%A1%E3%83%AB%E3%83%84",
       "yesterday": 135,
-      "today": 10,
-      "total": 312700
+      "today": 51,
+      "total": 312741
     },
     {
       "operatorId": "char_4055_bgsnow",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%82%BC%E3%82%AA%E3%83%B3%E3%82%AB",
       "yesterday": 258,
-      "today": 10,
-      "total": 524555
+      "today": 103,
+      "total": 524648
     },
     {
       "operatorId": "char_430_fartth",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%83%BC%E3%83%88%E3%82%A5%E3%83%BC%E3%82%B9",
       "yesterday": 74,
-      "today": 6,
-      "total": 266916
+      "today": 39,
+      "total": 266949
     },
     {
       "operatorId": "char_4193_lemuen",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%9F%E3%83%A5%E3%82%A2%E3%83%B3",
       "yesterday": 202,
-      "today": 12,
-      "total": 586255
+      "today": 138,
+      "total": 586381
     },
     {
       "operatorId": "char_113_cqbw",
       "wikiUrl": "https://arknights.wikiru.jp/?W(%E3%83%97%E3%83%AC%E3%82%A4%E3%82%A2%E3%83%96%E3%83%AB)",
       "yesterday": 143,
-      "today": 9,
-      "total": 412667
+      "today": 69,
+      "total": 412727
     },
     {
       "operatorId": "char_300_phenxi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A3%E3%82%A2%E3%83%A1%E3%83%83%E3%82%BF",
       "yesterday": 118,
-      "today": 8,
-      "total": 518509
+      "today": 80,
+      "total": 518581
     },
     {
       "operatorId": "char_197_poca",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B5",
       "yesterday": 73,
-      "today": 10,
-      "total": 307495
+      "today": 47,
+      "total": 307532
     },
     {
       "operatorId": "char_2012_typhon",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%95%E3%82%A9%E3%83%B3",
       "yesterday": 221,
-      "today": 13,
-      "total": 875344
+      "today": 128,
+      "total": 875459
     },
     {
       "operatorId": "char_391_rosmon",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B9%E3%83%A2%E3%83%B3%E3%83%86%E3%82%A3%E3%82%B9",
       "yesterday": 227,
-      "today": 15,
-      "total": 599579
+      "today": 138,
+      "total": 599702
     },
     {
       "operatorId": "char_1035_wisdel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%82%B7%E3%83%A3%E3%83%87%E3%83%AB",
       "yesterday": 219,
-      "today": 20,
-      "total": 915400
+      "today": 179,
+      "total": 915559
     },
     {
       "operatorId": "char_1013_chen2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E9%81%8A%E9%BE%8D%E3%83%81%E3%82%A7%E3%83%B3",
       "yesterday": 70,
-      "today": 8,
-      "total": 305398
+      "today": 54,
+      "total": 305444
     },
     {
       "operatorId": "char_4117_ray",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4",
       "yesterday": 118,
-      "today": 11,
-      "total": 537609
+      "today": 64,
+      "total": 537662
     },
     {
       "operatorId": "char_4138_narant",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%83%A9%E3%83%B3%E3%83%88%E3%82%A5%E3%83%A4",
       "yesterday": 216,
-      "today": 10,
-      "total": 437083
+      "today": 134,
+      "total": 437207
     },
     {
       "operatorId": "char_112_siege",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC%E3%82%B8",
       "yesterday": 87,
-      "today": 3,
-      "total": 360671
+      "today": 42,
+      "total": 360710
     },
     {
       "operatorId": "char_222_bpipe",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%90%E3%82%B0%E3%83%91%E3%82%A4%E3%83%97",
       "yesterday": 120,
-      "today": 3,
-      "total": 479582
+      "today": 71,
+      "total": 479650
     },
     {
       "operatorId": "char_362_saga",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%AC",
       "yesterday": 80,
-      "today": 1,
-      "total": 291391
+      "today": 29,
+      "total": 291419
     },
     {
       "operatorId": "char_4026_vulpis",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%94%E3%82%B9%E3%83%95%E3%82%A9%E3%83%AA%E3%82%A2",
       "yesterday": 1091,
-      "today": 36,
-      "total": 523118
+      "today": 401,
+      "total": 523483
     },
     {
       "operatorId": "char_479_sleach",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%82%A4%E3%83%A9%E3%83%83%E3%83%8F",
       "yesterday": 110,
-      "today": 10,
-      "total": 432022
+      "today": 59,
+      "total": 432071
     },
     {
       "operatorId": "char_420_flamtl",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%83%AC%E3%82%A4%E3%83%A0%E3%83%86%E3%82%A4%E3%83%AB",
       "yesterday": 69,
-      "today": 4,
-      "total": 363936
+      "today": 38,
+      "total": 363970
     },
     {
       "operatorId": "char_427_vigil",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%B8%E3%82%A7%E3%83%AB",
       "yesterday": 126,
-      "today": 13,
-      "total": 519567
+      "today": 76,
+      "total": 519630
     },
     {
       "operatorId": "char_249_mlyss",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%A5%E3%83%AB%E3%82%B8%E3%82%B9",
       "yesterday": 162,
-      "today": 10,
-      "total": 933887
+      "today": 89,
+      "total": 933966
     },
     {
       "operatorId": "char_4228_closur",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%AD%E3%83%BC%E3%82%B8%E3%83%A3",
       "yesterday": 724,
-      "today": 34,
-      "total": 348765
+      "today": 416,
+      "total": 349147
     },
     {
       "operatorId": "char_1045_svash2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%87%9B%E5%BE%A1%E3%82%B7%E3%83%AB%E3%83%90%E3%83%BC%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5",
       "yesterday": 424,
-      "today": 15,
-      "total": 389696
+      "today": 230,
+      "total": 389911
     },
     {
       "operatorId": "char_4087_ines",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%8D%E3%82%B9",
       "yesterday": 184,
-      "today": 16,
-      "total": 1001205
+      "today": 119,
+      "total": 1001308
     },
     {
       "operatorId": "char_134_ifrit",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A4%E3%83%95%E3%83%AA%E3%83%BC%E3%82%BF",
       "yesterday": 87,
-      "today": 6,
-      "total": 420105
+      "today": 49,
+      "total": 420148
     },
     {
       "operatorId": "char_213_mostma",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A2%E3%82%B9%E3%83%86%E3%82%A3%E3%83%9E",
       "yesterday": 114,
-      "today": 11,
-      "total": 489978
+      "today": 66,
+      "total": 490033
     },
     {
       "operatorId": "char_180_amgoat",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%82%A4%E3%83%A4%E3%83%95%E3%82%A3%E3%83%A4%E3%83%88%E3%83%A9",
       "yesterday": 103,
-      "today": 8,
-      "total": 521838
+      "today": 58,
+      "total": 521888
     },
     {
       "operatorId": "char_2013_cerber",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%82%AA%E3%83%99",
       "yesterday": 628,
-      "today": 31,
-      "total": 42732
+      "today": 239,
+      "total": 42940
     },
     {
       "operatorId": "char_4027_heyak",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%83%AB%E3%83%8F%E3%82%A4%E3%83%A4",
       "yesterday": 129,
-      "today": 14,
-      "total": 658127
+      "today": 74,
+      "total": 658187
     },
     {
       "operatorId": "char_4133_logos",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%82%B4%E3%82%B9",
       "yesterday": 264,
-      "today": 15,
-      "total": 779131
+      "today": 151,
+      "total": 779267
     },
     {
       "operatorId": "char_2015_dusk",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%BC",
       "yesterday": 99,
-      "today": 6,
-      "total": 440311
+      "today": 73,
+      "total": 440378
     },
     {
       "operatorId": "char_4141_marcil",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%AB%E3%82%B7%E3%83%AB",
       "yesterday": 55,
-      "today": 5,
-      "total": 330860
+      "today": 20,
+      "total": 330875
     },
     {
       "operatorId": "char_472_pasngr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%83%E3%82%BB%E3%83%B3%E3%82%B8%E3%83%A3%E3%83%BC",
       "yesterday": 91,
-      "today": 11,
-      "total": 330146
+      "today": 60,
+      "total": 330195
     },
     {
       "operatorId": "char_426_billro",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%83%BC%E3%83%8D%E3%83%AA%E3%82%A2%E3%83%B3",
       "yesterday": 87,
-      "today": 7,
-      "total": 274764
+      "today": 33,
+      "total": 274790
     },
     {
       "operatorId": "char_4080_lin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%B3",
       "yesterday": 82,
-      "today": 11,
-      "total": 662160
+      "today": 64,
+      "total": 662213
     },
     {
       "operatorId": "char_1046_sbell2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%81%96%E8%81%86%E3%83%97%E3%83%A9%E3%83%9E%E3%83%8B%E3%82%AF%E3%82%B9",
       "yesterday": 267,
-      "today": 17,
-      "total": 45640
+      "today": 148,
+      "total": 45771
     },
     {
       "operatorId": "char_377_gdglow",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B4%E3%83%BC%E3%83%AB%E3%83%87%E3%83%B3%E3%82%B0%E3%83%AD%E3%83%BC",
       "yesterday": 116,
-      "today": 2,
-      "total": 621268
+      "today": 55,
+      "total": 621321
     },
     {
       "operatorId": "char_1038_whitw2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%8D%92%E8%95%AA%E3%83%A9%E3%83%83%E3%83%97%E3%83%A9%E3%83%B3%E3%83%89",
       "yesterday": 160,
-      "today": 9,
-      "total": 537109
+      "today": 79,
+      "total": 537179
     },
     {
       "operatorId": "char_4046_ebnhlz",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%BC%E3%83%99%E3%83%B3%E3%83%9B%E3%83%AB%E3%83%84",
       "yesterday": 110,
-      "today": 8,
-      "total": 464345
+      "today": 81,
+      "total": 464418
     },
     {
       "operatorId": "char_4226_veen",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%82%A4",
       "yesterday": 176,
-      "today": 4,
-      "total": 80115
+      "today": 105,
+      "total": 80216
     },
     {
       "operatorId": "char_4146_nymph",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%83%B3%E3%83%95",
       "yesterday": 124,
-      "today": 13,
-      "total": 475866
+      "today": 75,
+      "total": 475928
     },
     {
       "operatorId": "char_1040_blaze2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%86%BE%E7%82%8E%E3%83%96%E3%83%AC%E3%82%A4%E3%82%BA",
       "yesterday": 167,
-      "today": 10,
-      "total": 367183
+      "today": 70,
+      "total": 367243
     },
     {
       "operatorId": "char_4204_mantra",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%B3%E3%83%88%E3%83%A9",
       "yesterday": 167,
-      "today": 19,
-      "total": 183283
+      "today": 106,
+      "total": 183370
     },
     {
       "operatorId": "char_450_necras",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8D%E3%82%AF%E3%83%A9%E3%82%B9",
       "yesterday": 152,
-      "today": 10,
-      "total": 388975
+      "today": 92,
+      "total": 389057
     },
     {
       "operatorId": "char_206_gnosis",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8E%E3%83%BC%E3%82%B7%E3%82%B9",
       "yesterday": 133,
-      "today": 9,
-      "total": 418740
+      "today": 80,
+      "total": 418811
     },
     {
       "operatorId": "char_291_aglina",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%B3%E3%82%B8%E3%82%A7%E3%83%AA%E3%83%BC%E3%83%8A",
       "yesterday": 126,
-      "today": 10,
-      "total": 433877
+      "today": 106,
+      "total": 433973
     },
     {
       "operatorId": "char_358_lisa",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%BA%E3%83%A9%E3%83%B3",
       "yesterday": 262,
-      "today": 14,
-      "total": 621154
+      "today": 122,
+      "total": 621262
     },
     {
       "operatorId": "char_1047_halo2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%BA%AF%E5%85%89%E3%82%A2%E3%82%B9%E3%83%86%E3%82%B8%E3%83%BC%E3%83%8B",
       "yesterday": 220,
-      "today": 20,
-      "total": 108714
+      "today": 125,
+      "total": 108819
     },
     {
       "operatorId": "char_248_mgllan",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%82%BC%E3%83%A9%E3%83%B3",
       "yesterday": 86,
-      "today": 11,
-      "total": 239600
+      "today": 60,
+      "total": 239649
     },
     {
       "operatorId": "char_4195_radian",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%82%A4%E3%83%87%E3%82%A3%E3%82%A2%E3%83%B3",
       "yesterday": 219,
-      "today": 23,
-      "total": 367359
+      "today": 141,
+      "total": 367477
     },
     {
       "operatorId": "char_1012_skadi2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%BF%81%E5%BF%83%E3%82%B9%E3%82%AB%E3%82%B8",
       "yesterday": 177,
-      "today": 16,
-      "total": 620365
+      "today": 120,
+      "total": 620469
     },
     {
       "operatorId": "char_4134_cetsyr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%B4%E3%82%A3%E3%83%A9%E3%82%A4%E3%83%88%E3%83%BB%E3%82%A8%E3%83%86%E3%83%AB%E3%83%8A",
       "yesterday": 193,
-      "today": 17,
-      "total": 560306
+      "today": 107,
+      "total": 560396
     },
     {
       "operatorId": "char_1031_slent2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%B7%AC%E7%BE%BD%E3%82%B5%E3%82%A4%E3%83%AC%E3%83%B3%E3%82%B9",
       "yesterday": 95,
-      "today": 6,
-      "total": 390223
+      "today": 66,
+      "total": 390283
     },
     {
       "operatorId": "char_4202_haruka",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8F%E3%83%AB%E3%82%AB",
       "yesterday": 231,
-      "today": 18,
-      "total": 369013
+      "today": 118,
+      "total": 369113
     },
     {
       "operatorId": "char_2023_ling",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%82%A3%E3%83%B3",
       "yesterday": 94,
-      "today": 10,
-      "total": 444496
+      "today": 77,
+      "total": 444563
     },
     {
       "operatorId": "char_4072_ironmn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%86%E3%82%A4%E3%83%B3%E3%83%AC%E3%82%B9",
       "yesterday": 240,
-      "today": 24,
-      "total": 72925
+      "today": 292,
+      "total": 73193
     },
     {
       "operatorId": "char_4212_nasti",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%B9%E3%83%86%E3%82%A3",
       "yesterday": 199,
-      "today": 13,
-      "total": 223552
+      "today": 128,
+      "total": 223667
     },
     {
       "operatorId": "char_245_cello",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%AB%E3%83%88%E3%82%A5%E3%82%AA%E3%83%BC%E3%82%B5",
       "yesterday": 152,
-      "today": 11,
-      "total": 1018460
+      "today": 121,
+      "total": 1018570
     },
     {
       "operatorId": "char_1042_phatm2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%88%E3%83%A9%E3%82%B4%E3%83%BC%E3%83%87%E3%82%A3%E3%82%A2",
       "yesterday": 285,
-      "today": 16,
-      "total": 437593
+      "today": 157,
+      "total": 437734
     },
     {
       "operatorId": "char_250_phatom",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%95%E3%82%A1%E3%83%B3%E3%83%88%E3%83%A0",
       "yesterday": 156,
-      "today": 14,
-      "total": 362384
+      "today": 75,
+      "total": 362445
     },
     {
       "operatorId": "char_1028_texas2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%A1%80%E6%8E%9F%E3%83%86%E3%82%AD%E3%82%B5%E3%82%B9",
       "yesterday": 169,
-      "today": 8,
-      "total": 990872
+      "today": 89,
+      "total": 990953
     },
     {
       "operatorId": "char_1029_yato2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AD%E3%83%AA%E3%83%B3R%E3%83%A4%E3%83%88%E3%82%A6",
       "yesterday": 985,
-      "today": 61,
-      "total": 689906
+      "today": 519,
+      "total": 690364
     },
     {
       "operatorId": "char_1502_crosly",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%B3%E3%82%B9%E3%83%AC%E3%82%A4%E3%83%A4%E3%83%BC",
       "yesterday": 155,
-      "today": 10,
-      "total": 305758
+      "today": 96,
+      "total": 305844
     },
     {
       "operatorId": "char_322_lmlee",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AA%E3%83%BC",
       "yesterday": 68,
-      "today": 3,
-      "total": 331507
+      "today": 45,
+      "total": 331549
     },
     {
       "operatorId": "char_1033_swire2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%90%B3%E7%90%85%E3%82%B9%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC",
       "yesterday": 100,
-      "today": 9,
-      "total": 431459
+      "today": 77,
+      "total": 431527
     },
     {
       "operatorId": "char_400_weedy",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A3%E3%83%BC%E3%83%87%E3%82%A3",
       "yesterday": 267,
-      "today": 12,
-      "total": 483394
+      "today": 134,
+      "total": 483516
     },
     {
       "operatorId": "char_225_haak",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2",
       "yesterday": 103,
-      "today": 8,
-      "total": 300021
+      "today": 73,
+      "total": 300086
     },
     {
       "operatorId": "char_1041_angel2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%96%B0%E7%B4%84%E3%82%A8%E3%82%AF%E3%82%B7%E3%82%A2",
       "yesterday": 219,
-      "today": 17,
-      "total": 576313
+      "today": 141,
+      "total": 576437
     },
     {
       "operatorId": "char_474_glady",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%AC%E3%82%A4%E3%83%87%E3%82%A3%E3%83%BC%E3%82%A2",
       "yesterday": 200,
-      "today": 13,
-      "total": 731993
+      "today": 99,
+      "total": 732079
     },
     {
       "operatorId": "char_437_mizuki",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%85%E3%82%AD",
       "yesterday": 132,
-      "today": 7,
-      "total": 524217
+      "today": 86,
+      "total": 524296
     },
     {
       "operatorId": "char_4132_ascln",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%B9%E3%82%AB%E3%83%AD%E3%83%B3",
       "yesterday": 195,
-      "today": 13,
-      "total": 762763
+      "today": 102,
+      "total": 762852
     },
     {
       "operatorId": "char_1023_ghost2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%B8%B0%E6%BA%9F%E3%82%B9%E3%83%9A%E3%82%AF%E3%82%BF%E3%83%BC",
       "yesterday": 126,
-      "today": 12,
-      "total": 593248
+      "today": 82,
+      "total": 593318
     },
     {
       "operatorId": "char_4048_doroth",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%89%E3%83%AD%E3%82%B7%E3%83%BC",
       "yesterday": 87,
-      "today": 3,
-      "total": 673893
+      "today": 61,
+      "total": 673951
     },
     {
       "operatorId": "char_4123_ela",
       "wikiUrl": "https://arknights.wikiru.jp/?Ela",
       "yesterday": 49,
-      "today": 8,
-      "total": 451603
+      "today": 49,
+      "total": 451644
     },
     {
       "operatorId": "char_2027_wang",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%82%A1%E3%83%B3",
       "yesterday": 327,
-      "today": 20,
-      "total": 351600
+      "today": 214,
+      "total": 351794
     },
     {
       "operatorId": "char_1039_thorn2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%BC%95%E6%98%9F%E3%82%BD%E3%83%BC%E3%83%B3%E3%82%BA",
       "yesterday": 136,
-      "today": 6,
-      "total": 354204
+      "today": 83,
+      "total": 354281
     },
     {
       "operatorId": "char_147_shining",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A3%E3%82%A4%E3%83%8B%E3%83%B3%E3%82%B0",
       "yesterday": 100,
-      "today": 7,
-      "total": 397601
+      "today": 42,
+      "total": 397636
     },
     {
       "operatorId": "char_179_cgbird",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%A4%E3%83%81%E3%83%B3%E3%82%B2%E3%83%BC%E3%83%AB",
       "yesterday": 75,
-      "today": 8,
-      "total": 348855
+      "today": 48,
+      "total": 348895
     },
     {
       "operatorId": "char_003_kalts",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC",
       "yesterday": 29,
-      "today": 14,
-      "total": 43
+      "today": 125,
+      "total": 154
     },
     {
       "operatorId": "char_4042_lumen",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AB%E3%83%BC%E3%83%A1%E3%83%B3",
       "yesterday": 120,
-      "today": 11,
-      "total": 390107
+      "today": 75,
+      "total": 390171
     },
     {
       "operatorId": "char_1016_agoat2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%B4%94%E7%87%BC%E3%82%A8%E3%82%A4%E3%83%A4%E3%83%95%E3%82%A3%E3%83%A4%E3%83%88%E3%83%A9",
       "yesterday": 124,
-      "today": 15,
-      "total": 702630
+      "today": 67,
+      "total": 702682
     },
     {
       "operatorId": "char_1020_reed2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%84%94%E5%BD%B1%E3%83%AA%E3%83%BC%E3%83%89",
       "yesterday": 179,
-      "today": 10,
-      "total": 793372
+      "today": 94,
+      "total": 793456
     },
     {
       "operatorId": "char_4056_titi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%86%E3%82%A3%E3%83%86%E3%82%A3",
       "yesterday": 139,
-      "today": 8,
-      "total": 184505
+      "today": 60,
+      "total": 184557
     },
     {
       "operatorId": "char_4179_monstr",
       "wikiUrl": "https://arknights.wikiru.jp/?Mon3tr",
       "yesterday": 250,
-      "today": 12,
-      "total": 550427
+      "today": 136,
+      "total": 550551
     },
     {
       "operatorId": "char_1052_kalts2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%82%B7%E3%83%BC%E3%83%BB%E3%82%A8%E3%82%B9%E3%83%9A%E3%83%A9%E3%83%B3%E3%82%BF",
       "yesterday": 621,
-      "today": 21,
-      "total": 281862
+      "today": 260,
+      "total": 282101
     },
     {
       "operatorId": "char_136_hsguma",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%82%B7%E3%82%B0%E3%83%9E",
       "yesterday": 84,
-      "today": 4,
-      "total": 447181
+      "today": 38,
+      "total": 447215
     },
     {
       "operatorId": "char_202_demkni",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%AA%E3%82%A2",
       "yesterday": 155,
-      "today": 9,
-      "total": 615018
+      "today": 89,
+      "total": 615098
     },
     {
       "operatorId": "char_423_blemsh",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AC%E3%83%9F%E3%82%B7%E3%83%A3%E3%82%A4%E3%83%B3",
       "yesterday": 129,
-      "today": 4,
-      "total": 387698
+      "today": 52,
+      "total": 387746
     },
     {
       "operatorId": "char_2025_shu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%A5%E3%82%A6",
       "yesterday": 180,
-      "today": 11,
-      "total": 918904
+      "today": 108,
+      "total": 919001
     },
     {
       "operatorId": "char_2014_nian",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8B%E3%82%A7%E3%83%B3",
       "yesterday": 103,
-      "today": 10,
-      "total": 504177
+      "today": 64,
+      "total": 504231
     },
     {
       "operatorId": "char_311_mudrok",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%83%89%E3%83%AD%E3%83%83%E3%82%AF",
       "yesterday": 172,
-      "today": 13,
-      "total": 584557
+      "today": 91,
+      "total": 584635
     },
     {
       "operatorId": "char_4065_judge",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9A%E3%83%8A%E3%83%B3%E3%82%B9",
       "yesterday": 107,
-      "today": 7,
-      "total": 710962
+      "today": 71,
+      "total": 711026
     },
     {
       "operatorId": "char_416_zumama",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A6%E3%83%BC%E3%83%8D%E3%82%AF%E3%83%86%E3%82%B9",
       "yesterday": 113,
-      "today": 4,
-      "total": 370263
+      "today": 76,
+      "total": 370335
     },
     {
       "operatorId": "char_4039_horn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9B%E3%83%AB%E3%83%B3",
       "yesterday": 116,
-      "today": 16,
-      "total": 515406
+      "today": 85,
+      "total": 515475
     },
     {
       "operatorId": "char_1034_jesca2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%BB%8C%E7%81%AB%E3%82%B8%E3%82%A7%E3%82%B7%E3%82%AB",
       "yesterday": 133,
-      "today": 13,
-      "total": 576713
+      "today": 74,
+      "total": 576774
     },
     {
       "operatorId": "char_4194_rmixer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%B3%E3%82%AF%E3%82%BF%E3%83%BB%E3%83%9F%E3%82%AD%E3%82%B5%E3%83%BC",
       "yesterday": 169,
-      "today": 11,
-      "total": 206878
+      "today": 92,
+      "total": 206959
     },
     {
       "operatorId": "char_2026_yu",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A6%E3%83%BC",
       "yesterday": 132,
-      "today": 10,
-      "total": 451807
+      "today": 70,
+      "total": 451867
     },
     {
       "operatorId": "char_1044_hsgma2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%96%AC%E6%A5%AD%E3%83%9B%E3%82%B7%E3%82%B0%E3%83%9E",
       "yesterday": 166,
-      "today": 11,
-      "total": 391127
+      "today": 103,
+      "total": 391219
     },
     {
       "operatorId": "char_264_f12yin",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%86%E3%83%B3",
       "yesterday": 79,
-      "today": 8,
-      "total": 402223
+      "today": 72,
+      "total": 402287
     },
     {
       "operatorId": "char_2024_chyue",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%A7%E3%83%B3%E3%83%A6%E3%82%A8",
       "yesterday": 149,
-      "today": 10,
-      "total": 823156
+      "today": 100,
+      "total": 823246
     },
     {
       "operatorId": "char_4037_demetr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%99%E3%83%83%E3%83%AD%E3%83%BC%E3%83%8D",
       "yesterday": 174,
-      "today": 8,
-      "total": 203296
+      "today": 129,
+      "total": 203417
     },
     {
       "operatorId": "char_172_svrash",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B7%E3%83%AB%E3%83%90%E3%83%BC%E3%82%A2%E3%83%83%E3%82%B7%E3%83%A5",
       "yesterday": 213,
-      "today": 9,
-      "total": 573288
+      "today": 137,
+      "total": 573416
     },
     {
       "operatorId": "char_293_thorns",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BD%E3%83%BC%E3%83%B3%E3%82%BA",
       "yesterday": 149,
-      "today": 10,
-      "total": 557503
+      "today": 74,
+      "total": 557567
     },
     {
       "operatorId": "char_4082_qiubai",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%83%A5%E3%83%BC%E3%83%90%E3%82%A4",
       "yesterday": 294,
-      "today": 27,
-      "total": 658500
+      "today": 273,
+      "total": 658746
     },
     {
       "operatorId": "char_4182_oblvns",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%B1%8A%E5%B7%9D%E7%A5%A5%E5%AD%90",
       "yesterday": 202,
-      "today": 16,
-      "total": 464824
+      "today": 107,
+      "total": 464915
     },
     {
       "operatorId": "char_4088_hodrer",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%89%E3%83%AA%E3%83%BC",
       "yesterday": 117,
-      "today": 7,
-      "total": 510358
+      "today": 67,
+      "total": 510418
     },
     {
       "operatorId": "char_4145_ulpia",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A6%E3%83%AB%E3%83%94%E3%82%A2%E3%83%8C%E3%82%B9",
       "yesterday": 258,
-      "today": 21,
-      "total": 781200
+      "today": 133,
+      "total": 781312
     },
     {
       "operatorId": "char_4058_pepe",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9A%E3%83%9A",
       "yesterday": 133,
-      "today": 7,
-      "total": 548402
+      "today": 57,
+      "total": 548452
     },
     {
       "operatorId": "char_1051_headb2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E6%80%92%E6%BD%AE%E3%82%BA%E3%82%A3%E3%83%9E%E3%83%BC",
       "yesterday": 162,
-      "today": 10,
-      "total": 140223
+      "today": 99,
+      "total": 140312
     },
     {
       "operatorId": "char_010_chen",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%81%E3%82%A7%E3%83%B3",
       "yesterday": 113,
-      "today": 6,
-      "total": 491876
+      "today": 80,
+      "total": 491950
     },
     {
       "operatorId": "char_4009_irene",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%82%A4%E3%83%AA%E3%83%BC%E3%83%8B",
       "yesterday": 81,
-      "today": 8,
-      "total": 463129
+      "today": 75,
+      "total": 463196
     },
     {
       "operatorId": "char_4116_blkkgt",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%87%E3%83%BC%E3%82%B2%E3%83%B3%E3%83%96%E3%83%AC%E3%83%92%E3%83%A3%E3%83%BC",
       "yesterday": 133,
-      "today": 10,
-      "total": 687785
+      "today": 79,
+      "total": 687854
     },
     {
       "operatorId": "char_017_huang",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%96%E3%83%AC%E3%82%A4%E3%82%BA",
       "yesterday": 124,
-      "today": 5,
-      "total": 456573
+      "today": 64,
+      "total": 456632
     },
     {
       "operatorId": "char_1026_gvial2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%99%BE%E9%8C%AC%E3%82%AC%E3%83%B4%E3%82%A3%E3%83%AB",
       "yesterday": 53,
-      "today": 4,
-      "total": 359190
+      "today": 38,
+      "total": 359224
     },
     {
       "operatorId": "char_350_surtr",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%83%AB%E3%83%88",
       "yesterday": 149,
-      "today": 9,
-      "total": 532055
+      "today": 86,
+      "total": 532132
     },
     {
       "operatorId": "char_4098_vvana",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%B4%E3%82%A3%E3%82%A2%E3%83%8A",
       "yesterday": 262,
-      "today": 8,
-      "total": 41724
+      "today": 94,
+      "total": 41810
     },
     {
       "operatorId": "char_1019_siege2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%B4%E3%82%A3%E3%83%BC%E3%83%8A%E3%83%BB%E3%83%B4%E3%82%A3%E3%82%AF%E3%83%88%E3%83%AA%E3%82%A2",
       "yesterday": 122,
-      "today": 5,
-      "total": 337523
+      "today": 49,
+      "total": 337567
     },
     {
       "operatorId": "char_1050_chen3",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%B5%A4%E5%88%83%E6%98%8E%E9%9C%84%E3%83%81%E3%82%A7%E3%83%B3",
       "yesterday": 371,
-      "today": 28,
-      "total": 233531
+      "today": 265,
+      "total": 233768
     },
     {
       "operatorId": "char_188_helage",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%98%E3%83%A9%E3%82%B0",
       "yesterday": 96,
-      "today": 6,
-      "total": 299321
+      "today": 40,
+      "total": 299355
     },
     {
       "operatorId": "char_4121_zuole",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%BA%E3%82%AA%E3%83%BB%E3%83%A9%E3%82%A6",
       "yesterday": 99,
-      "today": 6,
-      "total": 463544
+      "today": 68,
+      "total": 463606
     },
     {
       "operatorId": "char_485_pallas",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%91%E3%83%A9%E3%82%B9",
       "yesterday": 103,
-      "today": 5,
-      "total": 360163
+      "today": 56,
+      "total": 360214
     },
     {
       "operatorId": "char_1014_nearl2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%80%80%E9%A8%8E%E5%A3%AB%E3%83%8B%E3%82%A2%E3%83%BC%E3%83%AB",
       "yesterday": 75,
-      "today": 6,
-      "total": 412960
+      "today": 49,
+      "total": 413003
     },
     {
       "operatorId": "char_4011_lessng",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AC%E3%83%83%E3%82%B7%E3%83%B3%E3%82%B0",
       "yesterday": 65,
-      "today": 6,
-      "total": 281821
+      "today": 41,
+      "total": 281856
     },
     {
       "operatorId": "char_1032_excu2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E8%81%96%E7%B4%84%E3%82%A4%E3%82%B0%E3%82%BC%E3%82%AD%E3%83%A5%E3%82%BF%E3%83%BC",
       "yesterday": 108,
-      "today": 5,
-      "total": 631659
+      "today": 67,
+      "total": 631721
     },
     {
       "operatorId": "char_4010_etlchi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A8%E3%83%B3%E3%83%86%E3%83%AC%E3%82%B1%E3%82%A4%E3%82%A2",
       "yesterday": 229,
-      "today": 17,
-      "total": 323043
+      "today": 118,
+      "total": 323144
     },
     {
       "operatorId": "char_4064_mlynar",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%A0%E3%83%AA%E3%83%8A%E3%83%BC%E3%83%AB",
       "yesterday": 161,
-      "today": 11,
-      "total": 991091
+      "today": 87,
+      "total": 991167
     },
     {
       "operatorId": "char_1043_leizi2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E5%8F%B8%E9%9C%86%E3%83%AC%E3%82%A4%E3%82%BA",
       "yesterday": 185,
-      "today": 12,
-      "total": 314343
+      "today": 111,
+      "total": 314442
     },
     {
       "operatorId": "char_4214_cairn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B1%E3%83%AB%E3%83%B3",
       "yesterday": 99,
-      "today": 9,
-      "total": 60568
+      "today": 50,
+      "total": 60609
     },
     {
       "operatorId": "char_230_savage",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B5%E3%83%99%E3%83%BC%E3%82%B8",
       "yesterday": 54,
-      "today": 5,
-      "total": 140545
+      "today": 50,
+      "total": 140590
     },
     {
       "operatorId": "char_282_catap",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
       "yesterday": 131,
-      "today": 7,
-      "total": 79673
+      "today": 49,
+      "total": 79715
     },
     {
       "operatorId": "char_283_midn",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%9F%E3%83%83%E3%83%89%E3%83%8A%E3%82%A4%E3%83%88",
       "yesterday": 113,
-      "today": 11,
-      "total": 97766
+      "today": 54,
+      "total": 97809
     },
     {
       "operatorId": "char_137_brownb",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%93%E3%83%BC%E3%83%8F%E3%83%B3%E3%82%BF%E3%83%BC",
       "yesterday": 26,
-      "today": 3,
-      "total": 63928
+      "today": 10,
+      "total": 63935
     },
     {
       "operatorId": "char_347_jaksel",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%A3%E3%83%83%E3%82%AD%E3%83%BC",
       "yesterday": 31,
-      "today": 3,
-      "total": 68211
+      "today": 7,
+      "total": 68215
     },
     {
       "operatorId": "char_164_nightm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%8A%E3%82%A4%E3%83%88%E3%83%A1%E3%82%A2",
       "yesterday": 66,
-      "today": 6,
-      "total": 159960
+      "today": 35,
+      "total": 159989
     },
     {
       "operatorId": "char_220_grani",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B0%E3%83%A9%E3%83%8B",
       "yesterday": 35,
-      "today": 2,
-      "total": 127526
+      "today": 26,
+      "total": 127550
     },
     {
       "operatorId": "char_263_skadi",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B9%E3%82%AB%E3%82%B8",
       "yesterday": 145,
-      "today": 10,
-      "total": 627625
+      "today": 91,
+      "total": 627706
     },
     {
       "operatorId": "wiki:%E7%84%94%E7%8B%90%E7%AB%9C%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
       "wikiUrl": "https://arknights.wikiru.jp/?%E7%84%94%E7%8B%90%E7%AB%9C%E3%82%AA%E3%83%BC%E3%82%AD%E3%83%83%E3%83%89",
       "yesterday": 5058,
-      "today": 248,
-      "total": 140417
+      "today": 2485,
+      "total": 142654
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
       "yesterday": 109,
-      "today": 10,
-      "total": 336535
+      "today": 81,
+      "total": 336606
     },
     {
       "operatorId": "wiki:%E3%82%B8%E3%83%B3%E3%82%AA%E3%82%A6S%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B8%E3%83%B3%E3%82%AA%E3%82%A6S%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
       "yesterday": 1987,
-      "today": 121,
-      "total": 47229
+      "today": 944,
+      "total": 48052
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",
       "yesterday": 121,
-      "today": 5,
-      "total": 309342
+      "today": 84,
+      "total": 309421
     },
     {
       "operatorId": "wiki:%E3%83%AD%E3%83%89%E3%82%B9%E9%9A%A0%E5%AF%86%E9%9A%8A",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%83%AD%E3%83%89%E3%82%B9%E9%9A%A0%E5%AF%86%E9%9A%8A",
       "yesterday": 814,
-      "today": 50,
-      "total": 19493
+      "today": 464,
+      "total": 19907
     }
   ]
 }
