@@ -15,7 +15,8 @@ export const DEFAULT_BAR_CHART_DISPLAY_SETTINGS: Readonly<BarChartDisplaySetting
 })
 
 export interface BarChartInterval {
-  readonly start: number
+  /** Null preserves an unbounded lower endpoint, such as the first rating range. */
+  readonly start: number | null
   /** An overflow class has no finite upper endpoint. */
   readonly end: number | null
   readonly includesMinimum: boolean
@@ -43,6 +44,8 @@ export interface BarChartSemantics {
   readonly subject: string
   readonly xLabel: string
   readonly xUnit?: string
+  readonly xQualifier?: string
+  readonly xBandTitle?: string
   readonly yLabel: string
   readonly yUnit?: string
 }
@@ -90,6 +93,11 @@ export interface BarChartDocument {
   readonly bins: readonly BarChartBin[]
   /** Source-projected fractions of the plot width; rendering never derives rating boundaries. */
   readonly rankBands?: readonly StatRankBand[]
+  /** An aligned row of source-formatted lines, such as numeric bounds under rating classes. */
+  readonly secondaryAxisBand?: {
+    readonly title: string
+    readonly labels: readonly (readonly string[])[]
+  }
   readonly conditions: string
   readonly filenameParts: readonly string[]
   readonly fractionDigits: number
@@ -99,8 +107,8 @@ export interface BarChartDocument {
 }
 
 export function getBarChartLabels(semantics: BarChartSemantics, xKind: BarChartDocument['xKind']) {
-  const xQualifier = xKind === 'interval' ? '階級'
-    : semantics.kind === 'correspondence' && xKind === 'point' ? '下限' : ''
+  const xQualifier = semantics.xQualifier ?? (xKind === 'interval' ? '階級'
+    : semantics.kind === 'correspondence' && xKind === 'point' ? '下限' : '')
   const yLabel = `${semantics.kind === 'correspondence' ? '対応する' : ''}${semantics.yLabel}`
   const xDetails = [xQualifier, semantics.xUnit].filter(Boolean).join('・')
   return {
@@ -125,7 +133,7 @@ export function getBarChartConditions(source: BarChartSource): string {
   ].filter(Boolean).join(' · ')
 }
 
-type DocumentInput = Pick<BarChartDocument, 'xKind' | 'bins' | 'rankBands' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
+type DocumentInput = Pick<BarChartDocument, 'xKind' | 'bins' | 'rankBands' | 'secondaryAxisBand' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
 
 /** Freeze a detached JSON snapshot so later source edits cannot change a preview or export. */
 export function createBarChartDocument(input: DocumentInput): BarChartDocument {
@@ -141,12 +149,25 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
         && (!Number.isFinite(value) || value < 0 || value > 1))
       || (input.xKind === 'point' && (bin.point === undefined || bin.interval !== undefined))
       || (input.xKind === 'interval' && (!bin.interval || bin.point !== undefined))
-      || (bin.interval && (!Number.isFinite(bin.interval.start)
-        || (bin.interval.end !== null && (!Number.isFinite(bin.interval.end) || bin.interval.end < bin.interval.start))
+      || (bin.interval && ((bin.interval.start !== null && !Number.isFinite(bin.interval.start))
+        || (bin.interval.end !== null && (!Number.isFinite(bin.interval.end)
+          || (bin.interval.start !== null && bin.interval.end < bin.interval.start)))
+        || typeof bin.interval.includesMinimum !== 'boolean' || typeof bin.interval.includesMaximum !== 'boolean'
+        || (bin.interval.start === null && bin.interval.includesMinimum)
+        || (bin.interval.end === null && bin.interval.includesMaximum)
         || (bin.interval.isOverflow !== (bin.interval.end === null))))) {
       throw new Error('棒グラフの階級と値を確認できませんでした。')
     }
     ids.add(bin.id)
+  }
+  if (input.secondaryAxisBand !== undefined) {
+    const band = input.secondaryAxisBand
+    if (!band || typeof band.title !== 'string' || !band.title.trim() || !Array.isArray(band.labels)
+      || band.labels.length !== input.bins.length
+      || band.labels.some(lines => !Array.isArray(lines) || !lines.length
+        || lines.some(line => typeof line !== 'string' || !line.trim()))) {
+      throw new Error('棒グラフの範囲帯を確認できませんでした。')
+    }
   }
   if (input.rankBands !== undefined) {
     if (!Array.isArray(input.rankBands) || input.capabilities.rankBands !== true) {

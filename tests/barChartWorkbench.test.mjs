@@ -26,6 +26,9 @@ const data = { rows, counts, mainStoryCounts: counts, maps: { maps: [] } }
 const context = { data, version, scope: 'main' }
 const frequency = createBarChartFromProvider('enemy-stat-histogram', context)
 const distributions = ENEMY_STAT_METRICS.map(metric => createBarChartFromProvider('enemy-stat-histogram', { ...context, statKey: metric.key }))
+const ratingDistributions = ['maxHp', 'attack', 'defense', 'magicResistance'].map(statKey =>
+  createBarChartFromProvider('enemy-stat-histogram', { ...context, statKey, histogramBinning: 'rating' }))
+const ratingFrequency = ratingDistributions.at(-1)
 const correspondence = createBarChartFromProvider('enemy-defense-resistance', context)
 const settings = { values: true, axisBand: true, percent: true, cumulative: true }
 const allBands = { ...settings, cumulativeBand: true, rankBand: true }
@@ -77,7 +80,7 @@ const inputOf = document => Object.fromEntries(['xKind', 'bins', 'filenameParts'
   .map(key => [key, document[key]]))
 
 test('7ステータスと対応値が同じ共通Plotを画面と画像に使い、タイトル・数値・階級・元データを保持する', () => {
-  for (const document of [...distributions, correspondence]) {
+  for (const document of [...distributions, ...ratingDistributions, correspondence]) {
     const original = JSON.stringify(document)
     const screen = render(Plot, { document, settings, width: 928, height: 334 })
     const snapshot = createSnapshot(document, settings)
@@ -255,6 +258,87 @@ test('帯の自然高を画面と画像で共有し、非対応の評価帯・�
   assert.equal(imageFrame(snapshot).naturalChartHeight, 390)
 })
 
+test('評価区切りは評価を主軸に、下段に範囲を描き、軸帯OFFでは補助帯も出さない', () => {
+  for (const document of ratingDistributions) for (const width of [320, 620, 928]) {
+    const markup = render(Plot, { document, settings: allBands, width })
+    const secondary = group(markup, 'data-bar-chart-secondary-axis-band="true"')
+    assert.ok(secondary)
+    assert.match(secondary, /範囲/)
+    assert.match(markup, />評価<\/text>/)
+    assert.doesNotMatch(markup, />階級<\/text>/)
+    assert.equal(markerCount(markup, 'data-bar-chart-axis-band'), 10)
+    assert.equal(markerCount(markup, 'data-bar-chart-rank-band'), 0, '評価主軸に追加の評価注釈帯を重ねない')
+    const secondaryFills = rectangles(secondary).filter(tag => tag.class === 'chart-strip-fill')
+    assert.equal(secondaryFills.length, 10)
+    const primaryFills = [...markup.matchAll(/<g\b[^>]*data-bar-chart-axis-band="[^"]*"[^>]*>(.*?)<\/g>/g)]
+      .flatMap(([, content]) => rectangles(content).filter(tag => tag.class === 'chart-strip-fill'))
+    assert.equal(primaryFills.length, 10)
+    assert.ok(Math.max(...primaryFills.map(tag => Number(tag.y) + Number(tag.height)))
+      < Math.min(...secondaryFills.map(tag => Number(tag.y))))
+    const svg = attributes(markup.match(/<svg\b[^>]*>/)[0])
+    assert.ok(secondaryFills.every(tag => Number(tag.y) + Number(tag.height) <= Number(svg.height)))
+    assert.doesNotMatch(secondary, /<title|tooltip|tabindex|onClick|rotate\(/)
+    assert.doesNotMatch(markup, /onClick|tabindex|role="button"|data-tooltip|foreignObject/)
+    const off = render(Plot, { document, settings: { ...allBands, axisBand: false }, width })
+    assert.equal(markerCount(off, 'data-bar-chart-secondary-axis-band'), 0)
+    assert.equal(markerCount(off, 'data-bar-chart-axis-band'), 0)
+    assert.equal(markerCount(off, 'data-bar-chart-rank-band'), 0)
+    assert.deepEqual(bins(off), bins(markup))
+    finite(markup)
+    finite(off)
+  }
+})
+
+test('評価の範囲情報と自然高は保存スナップショットにも残り、画面とPNGで同じ2段の軸を描く', () => {
+  const off = { ...settings, cumulativeBand: false, rankBand: false }
+  assert.equal(getBarChartNaturalHeight(ratingFrequency, off), 376)
+  assert.equal(getBarChartNaturalHeight(ratingFrequency, { ...off, axisBand: false }), 334)
+  assert.equal(getBarChartNaturalHeight(ratingFrequency, { ...off, rankBand: true }), 376)
+  const natural = getBarChartNaturalHeight(ratingFrequency, allBands)
+  assert.equal(natural, 404)
+  const mutable = { ...allBands }
+  const snapshot = createSnapshot(ratingFrequency, mutable)
+  const captured = JSON.stringify(snapshot)
+  mutable.axisBand = false
+  mutable.rankBand = false
+  createBarChartFromProvider('enemy-stat-histogram', { ...context, histogramBinning: 'numeric' })
+  assert.equal(JSON.stringify(snapshot), captured)
+  const frame = imageFrame(snapshot)
+  assert.equal(frame.naturalChartHeight, natural)
+  const screen = render(Plot, { document: ratingFrequency, settings: allBands, width: 928 })
+  const image = renderToStaticMarkup(frame.children({ width: 928, height: natural }))
+  assert.deepEqual(bins(image), bins(screen))
+  assert.deepEqual(bars(image), bars(screen))
+  assert.equal(group(image, 'data-bar-chart-secondary-axis-band="true"'), group(screen, 'data-bar-chart-secondary-axis-band="true"'))
+  assert.ok(snapshot.document.secondaryAxisBand.labels.some(lines => lines.join('').includes('0以下')))
+  assert.ok(snapshot.document.secondaryAxisBand.labels.some(lines => lines.join('').includes('90超')))
+  assert.deepEqual(getBarChartPresentationLabels(ratingFrequency.xKind), getBarChartPresentationLabels(frequency.xKind), '評価も同じ区間型の棒幅を使う')
+})
+
+test('長い範囲の供給行はFigureの幅を広げて水平に保ち、棒の領域を縦に縮めない', () => {
+  const labels = ratingFrequency.bins.map((_, index) => [`${index},100,000,000,000,000〜`, `${index},200,000,000,000,000`])
+  const document = createBarChartDocument({ ...inputOf(ratingFrequency), secondaryAxisBand: { title: '範囲', labels } })
+  for (const cumulative of [false, true]) {
+    const display = { ...settings, cumulative }
+    const markup = render(Figure, { document, settings: display })
+    const rangeBand = group(markup, 'data-bar-chart-secondary-axis-band="true"')
+    const svg = attributes(markup.match(/<svg\b[^>]*>/)[0])
+    assert.ok(Number(svg.width) > 928, '長い行のために横スクロールできる描画幅を確保する')
+    const rows = [...rangeBand.matchAll(/<text\b[^>]*class="chart-strip-label"[^>]*>(.*?)<\/text>/g)]
+      .map(([, content]) => [...content.matchAll(/<tspan\b[^>]*>(.*?)<\/tspan>/g)].map(([, line]) => line))
+    assert.deepEqual(rows, labels, '行を省略・追加折り返し・回転せず、提供された2行をそのまま表示する')
+    const fills = rectangles(rangeBand).filter(tag => tag.class === 'chart-strip-fill')
+    assert.ok(fills.every(tag => Number(tag.height) === 38), '通常の2行分の高さを保つ')
+    const withoutSecondary = createBarChartDocument(inputOf(ratingFrequency))
+    const baseline = render(Figure, { document: withoutSecondary, settings: display })
+    assert.deepEqual(bars(markup).map(bar => [bar.y, bar.height]), bars(baseline).map(bar => [bar.y, bar.height]),
+      '範囲の文字数はデータ領域の高さや棒の縦方向の形を変えない')
+    const hidden = render(Figure, { document, settings: { ...display, axisBand: false } })
+    assert.equal(Number(attributes(hidden.match(/<svg\b[^>]*>/)[0]).width), 928, '帯OFFなら長い補助ラベルの幅を持ち越さない')
+    finite(markup)
+  }
+})
+
 test('狭い幅・長い階級名・全値0・空データでも不正な座標や操作要素を出さない', () => {
   const input = inputOf(frequency)
   const documents = [frequency,
@@ -307,6 +391,13 @@ test('共通ページはデータを選ぶ入口を持ち、X/Y入力や説明�
   assert.match(markup, /棒幅<\/dt><dd><strong>1項目幅の96%<\/strong>/)
   assert.match(markup, /階級幅<\/dt><dd><strong>10<\/strong>/)
   assert.match(markup, /上限<\/dt><dd><strong>自動 100<\/strong>/)
+  assert.match(markup, /階級/)
+  assert.match(markup, /<input\b(?=[^>]*type="radio")(?=[^>]*value="numeric")(?=[^>]*checked="")[^>]*>/)
+  const ratingRadio = /<input\b(?=[^>]*type="radio")(?=[^>]*value="rating")[^>]*>/.exec(markup)?.[0]
+  assert.ok(ratingRadio)
+  assert.doesNotMatch(ratingRadio, /checked=""/)
+  assert.match(markup, /ゲーム内評価/)
+  assert.equal(markerCount(markup, 'data-bar-chart-secondary-axis-band'), 0)
   assert.doesNotMatch(markup, /上限48px/)
   assert.deepEqual(bins(markup), frequency.bins.map(bin => [bin.id, String(bin.value)]))
   assert.equal(markerCount(markup, 'data-bar-chart-percentage'), 0)

@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { BAR_CHART_PROVIDERS, createBarChartFromProvider, type BarChartProviderId } from '../lib/barChartProviders'
 import { DEFAULT_BAR_CHART_DISPLAY_SETTINGS, type BarChartDisplaySettings } from '../lib/barChartDocument'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { getBarChartPresentationLabels } from '../lib/barChartPresentation'
 import { ENEMY_STAT_METRICS, type EnemyStatKey } from '../lib/enemyStatMetrics'
+import { isEnemyRatingStat } from '../lib/enemyRatingHistogram'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -17,15 +18,19 @@ export function BarChartWorkbenchPage() {
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const [sourceId, setSourceId] = useState<BarChartProviderId>('enemy-stat-histogram')
   const [statKey, setStatKey] = useState<EnemyStatKey>('magicResistance')
+  const [binning, setBinning] = useState<'numeric' | 'rating'>('numeric')
+  const binningName = useId()
+  const supportsRating = sourceId === 'enemy-stat-histogram' && isEnemyRatingStat(statKey)
+  const histogramBinning = supportsRating ? binning : 'numeric'
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
   const [settings, setSettings] = useState<BarChartDisplaySettings>({ ...DEFAULT_BAR_CHART_DISPLAY_SETTINGS })
   const [snapshot, setSnapshot] = useState<BarChartImageSnapshot | null>(null)
   const { data, version, loading, error } = aggregation
   const result = useMemo(() => {
     if (!data || !version || loading || error) return null
-    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey }), error: null } }
+    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning }), error: null } }
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
-  }, [sourceId, data, version, loading, error, scope, statKey])
+  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning])
   const document = result?.document
   const presentation = document ? getBarChartPresentationLabels(document.xKind) : null
   const update = (key: keyof BarChartDisplaySettings, checked: boolean) => setSettings(current => ({ ...current, [key]: checked }))
@@ -52,6 +57,13 @@ export function BarChartWorkbenchPage() {
       <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
         <EnemyAggregationSelector state={aggregation} />
         <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data || loading} />
+        {supportsRating && <fieldset className="enemy-chart-visibility enemy-analysis-scope" disabled={!data || loading}>
+          <legend>階級</legend>
+          <div>{(['numeric', 'rating'] as const).map(mode => <label key={mode} className={binning === mode ? 'active' : ''}>
+            <input type="radio" name={binningName} value={mode} checked={binning === mode} onChange={() => setBinning(mode)} />
+            <span>{mode === 'numeric' ? '数値' : 'ゲーム内評価'}</span>
+          </label>)}</div>
+        </fieldset>}
       </div>
       {document && presentation && <div className="bar-chart-auto-labels" aria-live="polite">
         <span>自動設定</span>
