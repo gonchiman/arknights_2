@@ -28,7 +28,7 @@ export function EnemyAnalysis() {
   // graph controls without showing old counts under the newly selected version.
   const displayed = ready ?? lastReady
   const displayedData = displayed?.data
-  const [aggregationScope, setAggregationScope] = useState<EnemyAggregationScope>('all')
+  const [aggregationScope, setAggregationScope] = useState<EnemyAggregationScope>('main')
   const mainStory = useMemo(
     () => aggregationScope === 'main' && displayedData ? getEnemyMainStoryScope(displayedData) : null,
     [aggregationScope, displayedData],
