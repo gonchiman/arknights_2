@@ -36,7 +36,8 @@ export function getEnemyBoxplotComparisonImageFrameProps(
     aspectRatio,
     exactAspect,
     children: ({ width, height }) => <EnemyBoxplotComparisonPlot data={snapshot.data}
-      scale={snapshot.scale} range={snapshot.range} width={width} height={height} unit={unit} imageMode />,
+      scale={snapshot.scale} range={snapshot.range} showOutlierInfo={snapshot.showOutlierInfo ?? true}
+      width={width} height={height} unit={unit} imageMode />,
   }
 }
 

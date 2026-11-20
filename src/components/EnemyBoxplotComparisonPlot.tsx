@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
+import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import {
   getEnemyBoxplotDisplaySeries,
   type EnemyBoxplotComparison,
@@ -27,6 +28,7 @@ interface PlotProps {
   height?: number
   imageMode?: boolean
   unit?: string
+  showOutlierInfo?: boolean
 }
 
 const INK = { 'data-chart-image-ink': 'true' }
@@ -78,7 +80,7 @@ function makeAxis(series: readonly DisplaySeries[], range: EnemyBoxplotRange, no
 }
 
 /** A read-only comparison; the controls deliberately live outside the drawing. */
-export function EnemyBoxplotComparisonPlot({ data, scale, range, width, height, imageMode = false, unit = '体' }: PlotProps) {
+export function EnemyBoxplotComparisonPlot({ data, scale, range, width, height, imageMode = false, unit = '体', showOutlierInfo = true }: PlotProps) {
   const titleId = useId()
   const descriptionId = useId()
   const series = getEnemyBoxplotDisplaySeries(data, scale)
@@ -89,10 +91,11 @@ export function EnemyBoxplotComparisonPlot({ data, scale, range, width, height, 
   const right = plotWidth - 16
   const sharedAxis = makeAxis(series, range, scale === 'MEDIAN')
   const extraHeight = plotHeight - naturalHeight
-  const description = series.map(item => `${item.label}、${
+  const description = series.map((item, index) => `${item.label}、${
     item.unavailable === 'median-zero' ? '中央値0のため換算不可' : item.unavailable === 'no-data' ? 'データなし'
       : SUMMARY_FIELDS.map(({ key, label }) => `${label} ${formatValue.format(item.statistics![key])}`).join('、')
-  }、有効 ${formatCount.format(item.validCount)}${unit}、値なし ${formatCount.format(item.missingCount)}${unit}`).join('。')
+  }、有効 ${formatCount.format(item.validCount)}${unit}、値なし ${formatCount.format(item.missingCount)}${unit}${showOutlierInfo
+    ? `、${formatOutlierInformation(data.series[index].statistics?.outlierCount ?? null, item.validCount, unit)}` : ''}`).join('。')
 
   return <svg className={`enemy-boxplot-comparison-plot${imageMode ? ' is-image' : ''}`}
     width="100%" height={plotHeight} viewBox={`0 0 ${plotWidth} ${plotHeight}`}
@@ -104,7 +107,8 @@ export function EnemyBoxplotComparisonPlot({ data, scale, range, width, height, 
       const axis = makeAxis([item], range, false)
       return <g key={item.key} className={`enemy-rating-comparison-series ${item.key}`}>
         <text {...INK} x="8" y={top + 16} className="enemy-boxplot-series-label">{item.label}</text>
-        <SeriesStatus series={item} unit={unit} range={range} x={left} y={top + 34} />
+        <SeriesStatus series={item} unit={unit} range={range} x={left} y={top + 34}
+          outlierCount={data.series[index].statistics?.outlierCount ?? null} showOutlierInfo={showOutlierInfo} />
         <Axis axis={axis} left={left} right={right} top={top + 60} bottom={top + 110} />
         <Box series={item} axis={axis} left={left} right={right} y={top + 85} range={range} />
         <SummaryBand statistics={item.statistics} left={left} right={right} top={top + 144} />
@@ -119,7 +123,8 @@ export function EnemyBoxplotComparisonPlot({ data, scale, range, width, height, 
         <text {...INK} x={left - 8} y={240 + index * 92 + extraHeight}
           textAnchor="end" className="enemy-boxplot-series-label">{item.label}</text>
         <SummaryBand statistics={item.statistics} left={left} right={right} top={212 + index * 92 + extraHeight} />
-        <SeriesStatus series={item} range={range} unit={unit} x={left} y={270 + index * 92 + extraHeight} />
+        <SeriesStatus series={item} range={range} unit={unit} x={left} y={270 + index * 92 + extraHeight}
+          outlierCount={data.series[index].statistics?.outlierCount ?? null} showOutlierInfo={showOutlierInfo} />
       </g>)}
       <text {...INK} x={(left + right) / 2} y={188 + extraHeight / 2}
         textAnchor="middle" className="enemy-boxplot-axis-title">中央値に対する倍率</text>
@@ -178,12 +183,21 @@ function SummaryBand({ statistics, left, right, top }: {
   </g>
 }
 
-function SeriesStatus({ series, range, unit, x, y }: {
+function formatOutlierInformation(count: number | null, validCount: number, unit: string): string {
+  const percentage = count === null ? null : formatHistogramPercentage(count, validCount)
+  return percentage === null ? '外れ値 —' : `外れ値 ${formatCount.format(count!)}${unit}（${percentage}）`
+}
+
+function SeriesStatus({ series, range, unit, x, y, outlierCount, showOutlierInfo }: {
   series: DisplaySeries; range: EnemyBoxplotRange; unit: string; x: number; y: number
+  outlierCount: number | null; showOutlierInfo: boolean
 }) {
+  const pointsHidden = range === 'WHISKERS' && outlierCount !== null && outlierCount > 0
+  const outlierLabel = showOutlierInfo
+    ? `${formatOutlierInformation(outlierCount, series.validCount, unit)}${pointsHidden ? ' · 点は非表示' : ''}`
+    : pointsHidden ? `ひげ外 ${formatCount.format(outlierCount)}${unit} 非表示` : null
   return <g className="enemy-boxplot-status">
     <text {...INK} x={x} y={y}>{`有効 ${formatCount.format(series.validCount)}${unit} · 値なし ${formatCount.format(series.missingCount)}${unit}`}</text>
-    {range === 'WHISKERS' && series.statistics && series.statistics.outlierCount > 0 &&
-      <text {...INK} x={x} y={y + 16}>{`ひげ外 ${formatCount.format(series.statistics.outlierCount)}${unit} 非表示`}</text>}
+    {outlierLabel && <text {...INK} x={x} y={y + 16}>{outlierLabel}</text>}
   </g>
 }
