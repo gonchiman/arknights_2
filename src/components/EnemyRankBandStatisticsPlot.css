@@ -1,0 +1,44 @@
+.enemy-rank-band-statistics-scroll {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.enemy-rank-band-statistics-scroll:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: -2px;
+}
+
+.enemy-rank-band-statistics-plot {
+  display: block;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.enemy-rank-band-series-label {
+  fill: currentColor;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.enemy-rank-band-label,
+.enemy-rank-band-value,
+.enemy-rank-band-tick,
+.enemy-rank-band-axis-label {
+  fill: var(--text-soft, #444);
+  font-size: 11px;
+}
+
+.enemy-rank-band-axis-title {
+  fill: var(--text-soft, #444);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.enemy-rank-band-statistics-plot.is-image :is(.enemy-rank-band-label, .enemy-rank-band-value,
+  .enemy-rank-band-tick, .enemy-rank-band-axis-label, .enemy-rank-band-axis-title) {
+  fill: #444;
+}
+
+.enemy-rank-band-statistics-plot.is-image .enemy-rating-comparison-gridline { stroke: #d4d4d4; }
+.enemy-rank-band-statistics-plot.is-image .enemy-rating-comparison-baseline { stroke: #888; }

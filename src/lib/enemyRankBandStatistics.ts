@@ -1,0 +1,79 @@
+import type { EnemyRecord } from '../types/enemy.ts'
+import { buildEnemyHistogramObservations, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
+import type { EmpiricalCdfPoint } from './enemyStatistics.ts'
+import { calculateWeightedEmpiricalCdf } from './enemyWeightedEcdf.ts'
+import { calculateWeightedHistogram, type WeightedHistogramObservation } from './enemyWeightedHistogram.ts'
+
+export type EnemyRankBandMetric = 'width' | 'mean' | 'standardDeviation' | 'variance'
+
+export interface EnemyRankBandStatValues {
+  min: number
+  max: number
+  width: number
+  mean: number
+  variance: number
+  standardDeviation: number
+}
+
+export interface EnemyRankBandStatistics {
+  from: number
+  to: number
+  weight: number
+  defense: EnemyRankBandStatValues
+  resistance: EnemyRankBandStatValues
+}
+
+// Match the existing rank-range calculation when a fractional frequency lands
+// on a cutoff after floating point rounding.
+const RANK_TOLERANCE = Number.EPSILON * 4
+
+export function buildEnemyRankBandStatistics(
+  rows: readonly EnemyRecord[],
+  counts: EnemyHistogramCounts,
+  step: 5 | 10 | 20 = 10,
+): { total: number; bands: EnemyRankBandStatistics[] } {
+  if (step !== 5 && step !== 10 && step !== 20) throw new RangeError('順位の刻みは5・10・20ポイントで指定してください。')
+  const eligible = rows.filter(({ stats }) => Number.isFinite(stats.defense) && Number.isFinite(stats.magicResistance))
+  const defense = calculateWeightedEmpiricalCdf(buildEnemyHistogramObservations(eligible, ({ stats }) => stats.defense, 'SPAWNS', counts))
+  const resistance = calculateWeightedEmpiricalCdf(buildEnemyHistogramObservations(eligible, ({ stats }) => stats.magicResistance, 'SPAWNS', counts))
+  const total = defense.at(-1)?.cumulativeCount ?? 0
+  if (!Number.isFinite(total) || total <= 0 || resistance.length === 0) return { total: 0, bands: [] }
+
+  const bands: EnemyRankBandStatistics[] = []
+  for (let from = 0; from < 100; from += step) {
+    const to = from + step
+    bands.push({
+      from, to, weight: total * step / 100,
+      defense: statisticsForBand(defense, total, from, to),
+      resistance: statisticsForBand(resistance, total, from, to),
+    })
+  }
+  return { total, bands }
+}
+
+function statisticsForBand(
+  points: readonly EmpiricalCdfPoint[], total: number, from: number, to: number,
+): EnemyRankBandStatValues {
+  const lower = total * ((100 - to) / 100)
+  const upper = total * ((100 - from) / 100)
+  const tolerance = total * RANK_TOLERANCE
+  const observations: WeightedHistogramObservation[] = []
+  let previous = 0
+  for (const point of points) {
+    // Only the overlap belongs to this band. A tied value may span several
+    // bands, but its full frequency must not be copied into each of them.
+    const weight = Math.min(point.cumulativeCount, upper) - Math.max(previous, lower)
+    if (weight > tolerance) observations.push({ value: point.value, weight })
+    previous = point.cumulativeCount
+  }
+
+  const min = observations[0].value as number
+  const max = observations[observations.length - 1].value as number
+  if (min === max) return { min, max, width: 0, mean: min, variance: 0, standardDeviation: 0 }
+  const statistics = calculateWeightedHistogram(observations)
+  const standardDeviation = statistics.standardDeviation!
+  return {
+    min, max, width: max - min, mean: statistics.mean!,
+    variance: standardDeviation ** 2, standardDeviation,
+  }
+}
