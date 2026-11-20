@@ -23,6 +23,14 @@ export interface EnemyRankBandStatistics {
   resistance: EnemyRankBandStatValues
 }
 
+export interface EnemyStandardizedRankBandStatistics {
+  from: number
+  to: number
+  weight: number
+  defense: EnemyRankBandStatValues | null
+  resistance: EnemyRankBandStatValues | null
+}
+
 // Match the existing rank-range calculation when a fractional frequency lands
 // on a cutoff after floating point rounding.
 const RANK_TOLERANCE = Number.EPSILON * 4
@@ -49,6 +57,51 @@ export function buildEnemyRankBandStatistics(
     })
   }
   return { total, bands }
+}
+
+/** Standardize against each complete weighted distribution, never within a band. */
+export function buildStandardizedEnemyRankBandStatistics(
+  rows: readonly EnemyRecord[],
+  counts: EnemyHistogramCounts,
+  step: 5 | 10 | 20 = 10,
+): { total: number; bands: EnemyStandardizedRankBandStatistics[] } {
+  const raw = buildEnemyRankBandStatistics(rows, counts, step)
+  if (raw.bands.length === 0) return { total: raw.total, bands: [] }
+  const eligible = rows.filter(({ stats }) => Number.isFinite(stats.defense) && Number.isFinite(stats.magicResistance))
+  const reference = (value: (enemy: EnemyRecord) => number | null) => {
+    const statistics = calculateWeightedHistogram(buildEnemyHistogramObservations(eligible, value, 'SPAWNS', counts))
+    const mean = statistics.mean
+    const standardDeviation = statistics.standardDeviation
+    // Equal values must remain undefined even if a weighted mean rounds a
+    // fraction away from that common value and leaves a tiny nonzero variance.
+    return statistics.minimum === statistics.maximum || mean === null || !Number.isFinite(mean)
+      || standardDeviation === null || !Number.isFinite(standardDeviation) || standardDeviation <= 0
+      ? null : { mean, standardDeviation }
+  }
+  const defense = reference(({ stats }) => stats.defense)
+  const resistance = reference(({ stats }) => stats.magicResistance)
+  return {
+    total: raw.total,
+    bands: raw.bands.map(band => ({
+      from: band.from, to: band.to, weight: band.weight,
+      defense: standardizeBand(band.defense, defense),
+      resistance: standardizeBand(band.resistance, resistance),
+    })),
+  }
+}
+
+function standardizeBand(values: EnemyRankBandStatValues,
+  reference: { mean: number; standardDeviation: number } | null): EnemyRankBandStatValues | null {
+  if (reference === null) return null
+  const { mean, standardDeviation } = reference
+  return {
+    min: (values.min - mean) / standardDeviation,
+    max: (values.max - mean) / standardDeviation,
+    width: values.width / standardDeviation,
+    mean: (values.mean - mean) / standardDeviation,
+    variance: values.variance / standardDeviation ** 2,
+    standardDeviation: values.standardDeviation / standardDeviation,
+  }
 }
 
 function statisticsForBand(

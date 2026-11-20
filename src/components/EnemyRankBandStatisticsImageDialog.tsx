@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { EnemyRankBandMetric, EnemyRankBandStatistics } from '../lib/enemyRankBandStatistics'
+import type { EnemyRankBandMetric, EnemyStandardizedRankBandStatistics } from '../lib/enemyRankBandStatistics'
 import { ENEMY_RANK_BAND_METRIC_LABELS } from '../lib/enemyRankBandStatisticsDisplay'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { createChartImageFilename, withChartImageAspect } from '../lib/chartImageFilename'
@@ -12,7 +12,7 @@ import { EnemyRankBandStatisticsPlot, getEnemyRankBandStatisticsPlotHeight } fro
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 
 export interface EnemyRankBandStatisticsChartSnapshot {
-  bands: readonly EnemyRankBandStatistics[]
+  bands: readonly EnemyStandardizedRankBandStatistics[]
   metric: EnemyRankBandMetric
   step: number
   conditions: readonly string[]
@@ -40,7 +40,10 @@ export function EnemyRankBandStatisticsImageDialog({ snapshot, onClose }: {
 }) {
   const [outputSnapshot] = useState<EnemyRankBandStatisticsChartSnapshot>(() => ({
     ...snapshot,
-    bands: snapshot.bands.map(band => ({ ...band, defense: { ...band.defense }, resistance: { ...band.resistance } })),
+    bands: snapshot.bands.map(band => ({ ...band,
+      defense: band.defense ? { ...band.defense } : null,
+      resistance: band.resistance ? { ...band.resistance } : null,
+    })),
     conditions: [...snapshot.conditions],
     filenameConditions: [...snapshot.filenameConditions],
   }))
