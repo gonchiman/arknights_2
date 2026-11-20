@@ -10,6 +10,7 @@ export interface EnemyBoxplotComparisonImageSnapshot {
   data: EnemyBoxplotComparison
   scale: EnemyBoxplotScale
   range: EnemyBoxplotRange
+  showOutlierInfo?: boolean
   scopeLabel: string
   countMode: EnemyHistogramCountMode
   aggregationVersion?: EnemyHistogramAggregationVersion
@@ -26,6 +27,7 @@ export function createEnemyBoxplotComparisonImageSnapshot(
 ): EnemyBoxplotComparisonImageSnapshot {
   return {
     ...input,
+    showOutlierInfo: input.showOutlierInfo ?? true,
     data: {
       ...input.data,
       series: input.data.series.map(series => ({
@@ -49,6 +51,7 @@ export function getEnemyBoxplotComparisonImageFilename(snapshot: EnemyBoxplotCom
     snapshot.scopeLabel,
     SCALE_LABELS[snapshot.scale],
     RANGE_LABELS[snapshot.range],
+    snapshot.showOutlierInfo !== false && '外れ値情報',
   ])
 }
 

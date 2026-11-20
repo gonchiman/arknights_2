@@ -283,6 +283,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
   const isBoxplotComparison = isRatingComparison && ratingComparisonLayout === 'BOXPLOT'
   const [boxplotScale, setBoxplotScale] = useState<EnemyBoxplotScale>('RAW')
   const [boxplotRange, setBoxplotRange] = useState<EnemyBoxplotRange>('ALL')
+  const [showBoxplotOutlierInfo, setShowBoxplotOutlierInfo] = useState(true)
   const boxplotScaleId = useId()
   const boxplotRangeId = useId()
   const [ratingComparisonRanks, setRatingComparisonRanks] = useState<string[]>(['A'])
@@ -523,7 +524,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     setImageFeedback(null)
     if (isBoxplotComparison && boxplotComparison) {
       setBoxplotComparisonImage(createEnemyBoxplotComparisonImageSnapshot({
-        data: boxplotComparison, scale: boxplotScale, range: boxplotRange,
+        data: boxplotComparison, scale: boxplotScale, range: boxplotRange, showOutlierInfo: showBoxplotOutlierInfo,
         scopeLabel, countMode: activeCountMode, aggregationVersion,
         coverage: activeCountMode === 'TYPES' ? null : countData.data?.summary,
       }))
@@ -649,6 +650,11 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
               </label>)}
           </div>
         </fieldset>
+        <label className="enemy-histogram-display-toggle">
+          <input type="checkbox" checked={showBoxplotOutlierInfo}
+            onChange={event => setShowBoxplotOutlierInfo(event.target.checked)} />
+          外れ値情報
+        </label>
       </>}
       {isRatingComparison && ratingComparisonLayout === 'MIRRORED' && <div className="statistics-bin-width-control">
         <label htmlFor={ratingSideValueId}>左右の数値</label>
@@ -907,7 +913,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           {selectedChart === 'HEATMAP' && <EnemyJointHeatmap distribution={jointDistribution}
             colorScale={heatmapColorScale} onColorScaleChange={setHeatmapColorScale} />}
           {isBoxplotComparison && boxplotComparison && <EnemyBoxplotComparisonFigure data={boxplotComparison}
-            scale={boxplotScale} range={boxplotRange} countLabel={countOption.label} countUnit={countOption.unit} />}
+            scale={boxplotScale} range={boxplotRange} showOutlierInfo={showBoxplotOutlierInfo}
+            countLabel={countOption.label} countUnit={countOption.unit} />}
           {isRatingComparison && ratingComparisonLayout !== 'BOXPLOT' && (ratingComparison?.hasData
             ? <EnemyRatingComparisonFigure data={ratingComparison} layout={ratingComparisonLayout}
                 selectedRanks={ratingComparisonRanks} sideValue={ratingSideValue}
@@ -2593,10 +2600,11 @@ function ScaleSwitch({ scale, onChange, label }: { scale: HistogramScale; onChan
   )
 }
 
-function EnemyBoxplotComparisonFigure({ data, scale, range, countLabel, countUnit }: {
+function EnemyBoxplotComparisonFigure({ data, scale, range, showOutlierInfo, countLabel, countUnit }: {
   data: EnemyBoxplotComparison
   scale: EnemyBoxplotScale
   range: EnemyBoxplotRange
+  showOutlierInfo: boolean
   countLabel: string
   countUnit: string
 }) {
@@ -2609,7 +2617,8 @@ function EnemyBoxplotComparisonFigure({ data, scale, range, countLabel, countUni
     </div></figcaption>
     <EnemyBoxplotComparisonLegend />
     <div className="enemy-rating-comparison-plot-container" ref={chartRef}>
-      <EnemyBoxplotComparisonPlot data={data} scale={scale} range={range} width={width} unit={countUnit} />
+      <EnemyBoxplotComparisonPlot data={data} scale={scale} range={range} width={width} unit={countUnit}
+        showOutlierInfo={showOutlierInfo} />
     </div>
   </figure>
 }

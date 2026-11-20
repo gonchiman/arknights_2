@@ -54,10 +54,28 @@ test('whisker range hides only outlier marks, retaining maximum bands and fracti
   const whiskers = render({ range: 'WHISKERS' })
   assert.equal((all.match(/class="enemy-boxplot-outlier"/g) ?? []).length, 3)
   assert.doesNotMatch(whiskers, /class="enemy-boxplot-outlier"/)
-  assert.match(whiskers, /ひげ外 2.5体 非表示/)
+  assert.match(whiskers, /外れ値 2.5体（&lt;0.1%） · 点は非表示/)
   assert.match(whiskers, />4,000<\/text>/)
   assert.match(whiskers, />90<\/text>/)
   assert.ok(medianPositions(whiskers)[0] > medianPositions(all)[0], 'the box grows in the narrower whisker domain')
+})
+
+test('outlier information uses weighted frequency and valid counts across units and scales', () => {
+  const weighted = structuredClone(data)
+  weighted.series[0].validCount = 12.5
+  weighted.series[0].missingCount = 87.5
+  for (const scale of ['RAW', 'MEDIAN']) {
+    for (const unit of ['体', '種類', '件']) {
+      const markup = render({ data: weighted, scale, unit })
+      assert.match(markup, new RegExp(`外れ値 2.5${unit}（20.0%）`))
+      assert.doesNotMatch(markup, /2.5%/)
+      finite(markup)
+    }
+  }
+  const hidden = render({ data: weighted, showOutlierInfo: false })
+  assert.doesNotMatch(hidden, /外れ値 /)
+  assert.equal((hidden.match(/class="enemy-boxplot-outlier"/g) ?? []).length, 3)
+  assert.match(render({ data: weighted, range: 'WHISKERS', showOutlierInfo: false }), /ひげ外 2.5体 非表示/)
 })
 
 test('zero median is unavailable only for normalization, independently of a missing series', () => {
@@ -71,8 +89,17 @@ test('zero median is unavailable only for normalization, independently of a miss
   assert.equal(marks(normalized).length, 0)
   assert.match(normalized, /換算不可（中央値0）/)
   assert.match(normalized, /データなし/)
+  assert.match(normalized, /外れ値 0体（0.0%）/)
+  assert.match(normalized, /外れ値 —/)
   finite(raw)
   finite(normalized)
+})
+
+test('zero-median normalization preserves original outlier information', () => {
+  const special = structuredClone(data)
+  special.series[0].statistics.median = 0
+  special.series[0].validCount = 25
+  assert.match(render({ data: special, scale: 'MEDIAN' }), /外れ値 2.5体（10.0%）/)
 })
 
 test('narrow and extended plots preserve finite geometry, bands, and read-only output', () => {
