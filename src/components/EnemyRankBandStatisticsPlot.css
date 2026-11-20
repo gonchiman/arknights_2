@@ -42,3 +42,4 @@
 
 .enemy-rank-band-statistics-plot.is-image .enemy-rating-comparison-gridline { stroke: #d4d4d4; }
 .enemy-rank-band-statistics-plot.is-image .enemy-rating-comparison-baseline { stroke: #888; }
+.enemy-rank-band-statistics-plot.is-image .chart-strip-fill { fill: #444; }

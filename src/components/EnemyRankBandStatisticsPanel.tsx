@@ -2,9 +2,9 @@ import { useId, useMemo, useState } from 'react'
 import type { EnemyRecord } from '../types/enemy'
 import type { EnemyHistogramCounts } from '../lib/enemyHistogramCounts'
 import {
-  buildEnemyRankBandStatistics,
+  buildStandardizedEnemyRankBandStatistics,
   type EnemyRankBandMetric,
-  type EnemyRankBandStatistics,
+  type EnemyStandardizedRankBandStatistics,
   type EnemyRankBandStatValues,
 } from '../lib/enemyRankBandStatistics'
 import { ENEMY_RANK_BAND_METRIC_LABELS, formatRankBandStatistic } from '../lib/enemyRankBandStatisticsDisplay'
@@ -39,7 +39,7 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
   const [metric, setMetric] = useState<EnemyRankBandMetric>('standardDeviation')
   const [tableImage, setTableImage] = useState<ComparisonTableImageSnapshot | null>(null)
   const [chartImage, setChartImage] = useState<EnemyRankBandStatisticsChartSnapshot | null>(null)
-  const result = useMemo(() => buildEnemyRankBandStatistics(rows, counts, step), [rows, counts, step])
+  const result = useMemo(() => buildStandardizedEnemyRankBandStatistics(rows, counts, step), [rows, counts, step])
   const columns: Column[] = [
     ...(showRange ? ['min', 'max'] as const : []), 'width', ...(showMean ? ['mean'] as const : []),
     'standardDeviation', ...(showVariance ? ['variance'] as const : []),
@@ -47,21 +47,24 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
   const table = <EnemyRankBandStatisticsTable bands={result.bands} columns={columns} />
 
   function openImage() {
-    const snapshotConditions = [...conditions, '出現回数', `順位帯幅${step}ポイント`, '母分散']
+    const snapshotConditions = [...conditions, '標準化', '出現回数', `順位帯幅${step}ポイント`, '母分散']
     if (view === 'table') {
       setTableImage({
         title: '防御力・術耐性の順位帯統計',
-        conditions: [...conditions, `有効出現回数 ${COUNT.format(result.total)}`, `順位帯幅 ${step}ポイント`, '母分散'],
+        conditions: [...conditions, '標準化（全体基準）', `有効出現回数 ${COUNT.format(result.total)}`, `順位帯幅 ${step}ポイント`, '母分散'],
         filenameConditions: [...snapshotConditions, ...columns.map(column => COLUMN_LABELS[column])],
         table,
       })
     } else {
       setChartImage({
-        bands: result.bands.map(band => ({ ...band, defense: { ...band.defense }, resistance: { ...band.resistance } })),
+        bands: result.bands.map(band => ({ ...band,
+          defense: band.defense ? { ...band.defense } : null,
+          resistance: band.resistance ? { ...band.resistance } : null,
+        })),
         metric, step,
-        conditions: [...conditions, `出現回数 ${COUNT.format(result.total)}`,
+        conditions: [...conditions, '標準化（全体基準）', `出現回数 ${COUNT.format(result.total)}`,
           ...(['variance', 'standardDeviation'].includes(metric) ? ['母分散'] : [])],
-        filenameConditions: [...conditions, '出現回数',
+        filenameConditions: [...conditions, '標準化', '出現回数',
           ...(['variance', 'standardDeviation'].includes(metric) ? ['母分散'] : [])],
       })
     }
@@ -69,7 +72,7 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
 
   return <section className="enemy-rank-statistics" aria-label="順位帯の統計">
     <div className="enemy-rank-statistics-heading">
-      <h2>順位帯ごとの統計量</h2><span>出現回数で重み付け・母分散</span>
+      <h2>順位帯ごとの統計量（標準化）</h2><span>出現回数で重み付け・全体基準・母分散</span>
     </div>
     <div className="enemy-rank-statistics-toolbar">
       <label htmlFor={`${id}-step`}>順位帯幅
@@ -107,11 +110,11 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
 }
 
 export function EnemyRankBandStatisticsTable({ bands, columns }: {
-  bands: readonly EnemyRankBandStatistics[]
+  bands: readonly EnemyStandardizedRankBandStatistics[]
   columns: readonly Column[]
 }) {
   return <table className="damage-two-table enemy-defense-resistance-table enemy-rank-statistics-table"
-    aria-label="防御力と術耐性の順位帯統計">
+    aria-label="防御力と術耐性の順位帯統計（標準化）">
     <colgroup><col /></colgroup>
     {SERIES.map(series => <colgroup key={series.key}>{columns.map(column => <col key={column} />)}</colgroup>)}
     <thead>
@@ -126,7 +129,7 @@ export function EnemyRankBandStatisticsTable({ bands, columns }: {
     <tbody>{bands.map(band => <tr key={band.from}>
       <th scope="row">上位{band.from}〜{band.to}%</th>
       {SERIES.flatMap(series => columns.map(column => <td key={`${series.key}-${column}`} data-table-image-number>
-        {formatRankBandStatistic(band[series.key][column])}
+        {formatRankBandStatistic(band[series.key]?.[column])}
       </td>))}
     </tr>)}</tbody>
   </table>
