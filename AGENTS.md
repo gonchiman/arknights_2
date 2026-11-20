@@ -17,4 +17,5 @@
 | テーブルの画像出力を作成・変更するとき | [テーブル画像出力の共通仕様](instructions/shared/table-image.md) |
 | MOD比較テーブルの画像出力・最大MOD表示を新規作成・修正するとき | [MOD比較テーブルの共通出力](docs/comparison-table-output/README.md) |
 | グラフの画像出力を作成・変更するとき | [グラフ画像出力のテンプレート](docs/chart-image/README.md) |
+| このプロジェクトのグラフ・統計などの分析出力からレポートを作成・修正するとき | [分析レポートの標準](docs/analysis-reports/README.md) |
 | MODの種類・潜在・段階を色で区別する表示を新規作成・修正するとき | [MOD共通配色の仕様と見本](docs/module-colors/README.md) |
