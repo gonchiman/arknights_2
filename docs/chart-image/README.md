@@ -234,6 +234,7 @@ await saveComparisonChartImage({
 | 敵統計：累積分布 | [enemyWeightedEcdf.ts](../../src/lib/enemyWeightedEcdf.ts) |
 | 敵統計：分布比較 | [enemyDistributionComparison.ts](../../src/lib/enemyDistributionComparison.ts) |
 | 敵統計：防御力・術耐性の評価別分布 | [EnemyRatingComparisonImage.tsx](../../src/components/EnemyRatingComparisonImage.tsx) |
+| 敵統計：防御力・術耐性の箱ひげ図 | [EnemyBoxplotComparisonImage.tsx](../../src/components/EnemyBoxplotComparisonImage.tsx) |
 | 防御力と術耐性の対応：術耐性別の散布図・棒グラフ、各グラフ＋表 | [EnemyResistanceImageDialog.tsx](../../src/components/EnemyResistanceImageDialog.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
@@ -331,6 +332,16 @@ const baseFilename = createChartImageFilename(prefix, parts)
 [横並びの確認用PNG](examples/enemy-resistance-chart-table-v12-main-16x9.png)は「防御力と術耐性の対応」で `v12`・「メインストーリー」・「術耐性別」を選び、表の「出現順位（%）」と「出現順位の境目（位）」をオンにしてから「画像を保存」→「散布図＋表」で保存したもの。図と表で術耐性50と60の値が一致し、術耐性100の欠損が表に残ることを確認できる。
 
 [幅固定の確認用PNG](examples/enemy-resistance-chart-table-v12-main-width1920-16x7.png)は、同じ集計版と集計範囲で順位の2列をオフにし、カスタム比率を16:7にして「出力幅を1,920 pxに固定」をオンにしたもの。プレビューとPNGの寸法は1,920×840 px。
+
+### 防御力・術耐性の箱ひげ図
+
+敵の統計分析の「防御力・術耐性」→「表示形式」→「箱ひげ図」で表示する。集計版、集計範囲、敵の絞り込み、種類数・登場マップ数・出現回数を共通設定から引き継ぐ。四分位数にはヒストグラムと同じ重み付き計算を使い、ひげの端は1.5IQRの境界内にある実際の観測値とする。
+
+初期表示は「元の値」「全範囲」。元の値は系列ごとに別軸、中央値＝1は各系列を自身の中央値で割った共通軸で描画する。中央値が0の系列は換算不可とし、元の値を混在させない。「箱とひげ」は外れ値の点だけを隠し、非表示の度数を示す。最小・Q1・中央値・Q3・最大の帯は表示範囲によらず全データから算出した値を保つ。
+
+画面・プレビュー・PNGは同じ描画部品と青・橙の系列色を使う。保存開始時のデータと設定を固定し、共通の画像フレーム・比率設定・PNG生成・保存先選択を使う。タイトルと既定名は「防御力・術耐性の箱ひげ図」とし、集計版・対象・集計方法・値の換算・表示範囲・比率を識別できるようにする。
+
+[確認用PNG](examples/enemy-boxplot-v12-main-raw.png)は、v12・メインストーリー・全敵・出現回数・元の値・全範囲・比率自動で、保存先だけを模擬してアプリの画像生成処理で作成したもの。防御力の四分位数85・120・220、術耐性の四分位数0・20・30、有効11,409体・値なし201体が画面と一致することを確認できる。
 
 ## 変更時の確認
 
