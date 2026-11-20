@@ -45,11 +45,13 @@ import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { HistogramCumulativeOverlay } from './HistogramCumulativeOverlay'
 import { HistogramCumulativeStrip, HistogramPercentageStrip, getHistogramCumulativeStripLayout, getHistogramPercentageStripLayout } from './HistogramCumulativeStrip'
 import { HistogramBinRangeStrip, useHistogramBinRangeStripLayout } from './HistogramBinRangeStrip'
-import { getHistogramBinRangeLabelCenters, formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
+import { formatHistogramBinRangeLines } from '../lib/histogramBinRangeLabels'
+import { HistogramRatingStrips, HISTOGRAM_RATING_STRIP_HEIGHT, HISTOGRAM_RATING_RANGE_GAP } from './HistogramRatingStrips'
+import { formatHistogramRatingRangeLines } from '../lib/histogramRatingRangeStrip'
 import { createHistogramCategoryScale } from '../lib/histogramCategoryScale'
 import { getHistogramStatRankBands } from '../lib/histogramStatRankBands'
 import { StatRankStrip, STAT_RANK_STRIP_HEIGHT } from './StatRankStrip'
-import { buildEnemyRatingHistogramBins, formatEnemyRatingHistogramRangeLines, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
+import { buildEnemyRatingHistogramBins, isEnemyRatingStat, type EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
 import { buildEnemyRatingComparison, ENEMY_RATING_COMPARISON_LAYOUTS, ENEMY_RATING_COMPARISON_METRICS, summarizeEnemyRatingSelection,
   type EnemyRatingComparison, type EnemyRatingComparisonLayout, type EnemyRatingComparisonSideValue } from '../lib/enemyRatingComparison'
 import { getEnemyStatRating } from '../lib/enemyStatRatings'
@@ -1587,37 +1589,6 @@ function useHistogramValueLabelLayout(bars: HistogramBarGeometry[], width: numbe
   return { ...avoidHistogramCumulativeLine({ layout: withReferences, points: cumulativeLine, bars }), labelsRef }
 }
 
-function useHistogramBinRangeLayout(labels: { center: number; lines: string[] }[], plotLeft: number, plotRight: number, enabled: boolean) {
-  const measureRef = useRef<SVGTextElement>(null)
-  const [measured, setMeasured] = useState<{ key: string; widths: number[] }>({ key: '', widths: [] })
-  const textKey = JSON.stringify(labels.map((label) => label.lines))
-  useLayoutEffect(() => {
-    if (!enabled) return
-    let active = true
-    const measure = () => {
-      const text = measureRef.current
-      if (!active || !text) return
-      const context = document.createElement('canvas').getContext('2d')
-      if (!context) return
-      // Use unscaled font metrics even inside the reduced-size PNG preview.
-      const style = getComputedStyle(text)
-      context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
-      const lines: string[][] = JSON.parse(textKey)
-      const widths = lines.map((parts) => Math.ceil(Math.max(0, ...parts.map((part) => context.measureText(part).width))) + 2)
-      setMeasured((current) => current.key === textKey && current.widths.every((width, index) => width === widths[index])
-        ? current : { key: textKey, widths })
-    }
-    measure()
-    void document.fonts.ready.then(measure)
-    document.fonts.addEventListener('loadingdone', measure)
-    return () => { active = false; document.fonts.removeEventListener('loadingdone', measure) }
-  }, [enabled, textKey])
-  const centers = enabled && measured.key === textKey && labels.every((label) => label.lines.length > 0)
-    ? getHistogramBinRangeLabelCenters(labels.map((label, index) => ({ center: label.center, width: measured.widths[index] })), plotLeft, plotRight, 2)
-    : null
-  return { measureRef, visible: centers !== null, centers }
-}
-
 /** The captured distribution uses the same plot, labels, and overflow measurements as enemy analysis. */
 export function EnemyHistogramSnapshotPlot({ snapshot, width, height, reservedLabelHeight = 0, onLabelOverflow }: {
   snapshot: EnemyHistogramSnapshot
@@ -1761,39 +1732,31 @@ function HistogramSvg({
     plotLeft: 0, plotRight: plotWidth, plotTop: 0, plotBottom: plotHeight,
   })
   const valueLabelLayout = useHistogramValueLabelLayout(bars, plotWidth, plotHeight, showFrequencies, referenceXs, cumulativeLine)
-  const binRangeLabels = bars.map((bar, index) => ({
-    center: plotLeft + bar.x + bar.width / 2,
-    lines: ratingBins ? [ratingBins[index].rating, ...formatEnemyRatingHistogramRangeLines(ratingBins[index])]
-      : formatHistogramBinRangeLines(statistics.bins[index]),
-  }))
-  const numericRangeStrip = useHistogramBinRangeStripLayout(binRangeLabels.map(({ lines }) => lines), plotWidth, showBinRanges && !ratingBins)
-  // Rating bins keep their existing rating-and-range labels and fallback.
-  const binRangeLayout = useHistogramBinRangeLayout(binRangeLabels, plotLeft, width - 2, showBinRanges && !!ratingBins)
-  const extraBottom = numericRangeStrip.layout
-    ? Math.max(0, 8 + numericRangeStrip.layout.height + (image ? 4 : 24) - (image ? 18 : CHART_MARGIN.bottom))
-    : binRangeLayout.visible && binRangeLabels.some((label) => label.lines.length > 1)
-      ? (Math.max(...binRangeLabels.map((label) => label.lines.length)) - 1) * 15 + 5 : 0
-  const statRankHeight = statRankBands.length ? STAT_RANK_STRIP_HEIGHT + (numericRangeStrip.layout ? 4 : 12) : 0
-  const axisLabels = binRangeLayout.centers ? binRangeLabels.map((label, index) => ({ ...label, textCenter: binRangeLayout.centers![index] }))
-    : ratingBins ? binRangeLabels.map((label, index) => ({ ...label, textCenter: label.center, lines: [ratingBins[index].rating] })) : null
+  const binRangeLabels = ratingBins ? ratingBins.map(formatHistogramRatingRangeLines)
+    : statistics.bins.map(formatHistogramBinRangeLines)
+  const rangeStrip = useHistogramBinRangeStripLayout(binRangeLabels, plotWidth, showBinRanges, ratingBins !== null)
+  const bottomStripHeight = ratingBins
+    ? HISTOGRAM_RATING_STRIP_HEIGHT + (rangeStrip.layout ? HISTOGRAM_RATING_RANGE_GAP + rangeStrip.layout.height : 0)
+    : rangeStrip.layout?.height ?? 0
+  const extraBottom = bottomStripHeight > 0
+    ? Math.max(0, 8 + bottomStripHeight + (image ? 4 : 24) - (image ? 18 : CHART_MARGIN.bottom)) : 0
+  const statRankHeight = statRankBands.length ? STAT_RANK_STRIP_HEIGHT + (rangeStrip.layout ? 4 : 12) : 0
   const extraTop = Math.ceil(valueLabelLayout.extraTop)
   useLayoutEffect(() => { onLabelOverflow?.(extraTop + extraBottom + cumulativeStripOffset + statRankHeight) },
     [extraTop, extraBottom, cumulativeStripOffset, statRankHeight, onLabelOverflow])
   const chartHeight = Math.max(height, baseHeight + extraTop + extraBottom + cumulativeStripOffset + statRankHeight)
   const plotBottom = basePlotBottom + extraTop + cumulativeStripOffset
-  const numericRangeStripTop = plotBottom + 8
-  const statRankTop = numericRangeStrip.layout
-    ? numericRangeStripTop + numericRangeStrip.layout.height + 4 : plotBottom + extraBottom + 26
+  const bottomStripTop = plotBottom + 8
+  const statRankTop = rangeStrip.layout
+    ? bottomStripTop + rangeStrip.layout.height + 4 : plotBottom + extraBottom + 26
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? binRangeLayout.visible ? 'rating-ranges' : 'ratings' : numericRangeStrip.layout ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}${statRankBands.length ? ` ${descriptionId}-ranks` : ''}`}>
+    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? rangeStrip.layout ? 'rating-ranges' : 'ratings' : rangeStrip.layout ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}${statRankBands.length ? ` ${descriptionId}-ranks` : ''}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
-      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸はE〜SSのゲーム内評価です。基準線はその値が属する評価の中央を示します。' : ''}{referenceLabels.percentile ? ` 縦線：${referenceLabels.percentile.text}。` : ''}{showFrequencies ? ` 棒上に${countOption.label}の度数を表示します。` : ''}{showPercentages && statistics.count > 0 ? ` 上部の割合帯は、有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する各階級の割合です。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showPercentages && showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯を上、各階級の割合帯を下に表示します。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? numericRangeStrip.layout ? ' 各棒の下の帯に階級の数値範囲を表示します。' : binRangeLayout.visible ? ' 各棒の下に階級の範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
+      <desc id={descriptionId}>{description}{ratingBins ? ' 横軸の帯はE〜SSのゲーム内評価です。基準線はその値が属する評価の中央を示します。範囲は下限〜上限の簡略表記で、正確な境界は各評価の読み上げラベルに示します。' : ''}{referenceLabels.percentile ? ` 縦線：${referenceLabels.percentile.text}。` : ''}{showFrequencies ? ` 棒上に${countOption.label}の度数を表示します。` : ''}{showPercentages && statistics.count > 0 ? ` 上部の割合帯は、有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する各階級の割合です。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showPercentages && showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯を上、各階級の割合帯を下に表示します。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? rangeStrip.layout ? ratingBins ? ' 評価帯の下に数値範囲の帯を表示します。' : ' 各棒の下の帯に階級の数値範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価の帯のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {statRankBands.length > 0 && <desc id={`${descriptionId}-ranks`}>横軸の下の帯は数値に対応するステータスランクです。超過階級は含み得る評価の範囲を示します。</desc>}
-      {showBinRanges && (ratingBins
-        ? <text ref={binRangeLayout.measureRef} className="enemy-chart-tick enemy-histogram-range-label" visibility="hidden" aria-hidden="true">0</text>
-        : <text ref={numericRangeStrip.measureRef} className="chart-strip-label" visibility="hidden" aria-hidden="true">0</text>)}
+      {showBinRanges && <text ref={rangeStrip.measureRef} className="chart-strip-label" visibility="hidden" aria-hidden="true">0</text>}
       {cumulativeStripLayout && <HistogramCumulativeStrip bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} top={0} layout={cumulativeStripLayout} />}
       {percentageStripLayout && <HistogramPercentageStrip bins={bins} total={statistics.count}
@@ -1841,23 +1804,15 @@ function HistogramSvg({
             x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].valueLabel}</text>
         </g>)}
       </g>
-      {numericRangeStrip.layout ? <>
-        <HistogramBinRangeStrip layout={numericRangeStrip.layout} plotLeft={plotLeft} plotRight={plotRight} top={numericRangeStripTop} />
+      {ratingBins ? <>
+        <HistogramRatingStrips bins={ratingBins} rangeLayout={rangeStrip.layout} plotLeft={plotLeft} plotRight={plotRight} top={bottomStripTop} />
+        {!image && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">
+          {metric.axisLabel}（ゲーム内評価）
+        </text>}
+      </> : rangeStrip.layout ? <>
+        <HistogramBinRangeStrip layout={rangeStrip.layout} plotLeft={plotLeft} plotRight={plotRight} top={bottomStripTop} />
         {!image && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">
           {metric.axisLabel}（階級）
-        </text>}
-      </> : axisLabels ? <>
-        <g className="enemy-histogram-range-axis">
-          {axisLabels.map((label, index) => <g key={index}>
-            <line className="enemy-chart-axis-tick" x1={label.center} x2={label.center} y1={plotBottom} y2={plotBottom + 5} />
-            <text className="enemy-chart-tick enemy-histogram-range-label" x={label.textCenter} y={plotBottom + 19} textAnchor="middle">
-              <title>{formatHistogramClassLabel(bins[index], statistics, metric)}</title>
-              {label.lines.map((line, lineIndex) => <tspan key={lineIndex} fontWeight={ratingBins && lineIndex === 0 ? 600 : undefined} x={label.textCenter} dy={lineIndex === 0 ? 0 : 15}>{line}</tspan>)}
-            </text>
-          </g>)}
-        </g>
-        {!image && <text className="enemy-chart-axis-title" x={(plotLeft + plotRight) / 2} y={chartHeight - 8} textAnchor="middle">
-          {metric.axisLabel}（{ratingBins ? 'ゲーム内評価' : '階級'}）
         </text>}
       </> : <BottomAxis
         ticks={xTicks}

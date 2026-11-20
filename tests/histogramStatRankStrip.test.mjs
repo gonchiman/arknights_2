@@ -225,7 +225,7 @@ test('合成出力の予約高を引いても帯と棒の位置に高さを重�
   assert.equal(strip(measured), strip(original))
 })
 
-test('上限超過は全スロットで評価範囲を示し、ゲーム内評価別区分では帯を抑制する', () => {
+test('上限超過は全スロットで評価範囲を示し、評価別区分には専用の評価・範囲帯を使う', () => {
   const source = snapshot({ showStatRanks: true })
   const rankStrip = strip(renderPlot(source))
   assert.match(rankStrip, /data-rank="B〜SS"/)
@@ -235,7 +235,9 @@ test('上限超過は全スロットで評価範囲を示し、ゲーム内評�
   assert.equal(strip(markup), null)
   assert.doesNotMatch(markup, /class="stat-rank-strip"/)
   assert.equal(bars(markup).length, 10)
-  assert.match(markup, /data-histogram-axis="ratings"/)
+  assert.match(markup, /data-histogram-axis="rating-ranges"/)
+  assert.ok(group(markup, 'data-histogram-evaluation-strip="bottom"'))
+  assert.ok(group(markup, 'data-histogram-range-strip="bottom"'))
 })
 
 test('含まれる上限の評価は隣接する帯のラベルにまとめ、画像右端へ独立ラベルを出さない', () => {
