@@ -175,9 +175,8 @@ function MirroredPlot({
 }: PlotBodyProps & { showRankShare: boolean }) {
   const compact = width < 460
   const columnWidth = compact ? 54 : 89
-  const columnTitle = showRankShare
-    ? (compact ? '階級（%）' : RANK_SHARE_TITLE)
-    : (compact ? '累積（%）' : CUMULATIVE_AXIS_TITLE)
+  const columnTitle = showRankShare ? RANK_SHARE_TITLE : CUMULATIVE_AXIS_TITLE
+  const columnName = showRankShare ? '階級割合' : '累積割合'
   const middle = width / 2
   const top = 54
   const bottom = height - (imageMode ? 5 : 28)
@@ -196,13 +195,16 @@ function MirroredPlot({
   return <>
     {rows.map(({ rank }, index) => selection.has(rank) && <rect key={rank} className="enemy-rating-comparison-highlight" x="0"
       y={top + step * index} width={width} height={step} data-rating-video-highlight={imageMode ? index : undefined} />)}
-    <text className="enemy-rating-comparison-label" x={middle} y="26" textAnchor="middle" {...INK}
+    <text className="chart-strip-title" x={middle} y="26" textAnchor="middle" {...INK}
       data-rating-video-heading={imageMode ? 'rank' : undefined}>評価</text>
     {sides.map(({ key, label, direction, origin, edge, labelX }) => {
       const center = (origin + edge) / 2
       return <g key={key}>
-        <text className="enemy-rating-comparison-label" x={labelX} y="26" textAnchor="middle" {...INK}
-          data-rating-video-heading={imageMode ? 'value' : undefined}>{columnTitle}</text>
+        <text className="chart-strip-title" x={labelX} y="19" textAnchor="middle" aria-label={columnTitle} {...INK}
+          data-rating-video-heading={imageMode ? 'value' : undefined}>
+          <tspan x={labelX}>{columnName}</tspan>
+          <tspan x={labelX} dy="11">（%）</tspan>
+        </text>
         <text className={`enemy-rating-comparison-series-label ${seriesClass(key)}`} x={center}
           y="17" textAnchor="middle" {...INK} data-rating-video-heading={imageMode ? 'series' : undefined}>{label}</text>
         {ticks.map((tick, index) => {
@@ -225,22 +227,38 @@ function MirroredPlot({
               y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK}
               data-rating-video-bar={imageMode ? direction : undefined}
               data-rating-video-bar-rank={imageMode ? index : undefined} />}
-            <text className={`enemy-rating-comparison-value${selection.has(row.rank) ? ' is-selected' : ''}`}
-              x={labelX} y={y + 4} textAnchor="middle" {...INK}
-              data-rating-video-value={imageMode ? index : undefined}
-              data-rating-video-metric={imageMode ? key : undefined}
-              data-rating-video-share={imageMode ? share ?? '' : undefined}
-              data-rating-video-cumulative={imageMode ? cumulativeShare ?? '' : undefined}
-              data-rating-video-value-mode={imageMode ? showRankShare ? 'rank' : 'cumulative' : undefined}>
-              {formatEnemyRatingVideoShare(showRankShare ? share : cumulativeShare)}
-            </text>
+            <ChartStripCell left={labelX - columnWidth / 2 + 5} width={columnWidth - 10}
+              top={top + index * step + 1.5} height={Math.max(0, step - 3)} labelY={y + 4}
+              label={formatEnemyRatingVideoShare(showRankShare ? share : cumulativeShare)}
+              labelClassName={`chart-strip-label enemy-rating-comparison-value${selection.has(row.rank) ? ' is-selected' : ''}`}
+              fillAttributes={{
+                'data-rating-comparison-band': 'values',
+                'data-rating-comparison-metric': key,
+                'data-rating-comparison-row': index,
+                'data-rating-video-band': imageMode ? 'values' : undefined,
+                'data-rating-video-band-row': imageMode ? index : undefined,
+              }}
+              labelAttributes={{
+                'data-rating-video-value': imageMode ? index : undefined,
+                'data-rating-video-metric': imageMode ? key : undefined,
+                'data-rating-video-share': imageMode ? share ?? '' : undefined,
+                'data-rating-video-cumulative': imageMode ? cumulativeShare ?? '' : undefined,
+                'data-rating-video-value-mode': imageMode ? showRankShare ? 'rank' : 'cumulative' : undefined,
+              }} />
           </g>
         })}
       </g>
     })}
-    {rows.map(({ rank }, index) => <text className={`enemy-rating-comparison-tick${selection.has(rank) ? ' is-selected' : ''}`}
-      key={rank} x={middle} y={top + (index + 0.5) * step + 4} textAnchor="middle"
-      data-rating-video-rank={imageMode ? index : undefined}>{rank}</text>)}
+    {rows.map(({ rank }, index) => <ChartStripCell key={rank} left={middle - 16} width={32}
+      top={top + index * step + 1.5} height={Math.max(0, step - 3)}
+      labelY={top + (index + 0.5) * step + 4} label={rank}
+      labelClassName={`chart-strip-label enemy-rating-comparison-rank${selection.has(rank) ? ' is-selected' : ''}`}
+      fillAttributes={{
+        'data-rating-comparison-band': 'ranks',
+        'data-rating-comparison-row': index,
+        'data-rating-video-band': imageMode ? 'ranks' : undefined,
+        'data-rating-video-band-row': imageMode ? index : undefined,
+      }} labelAttributes={{ 'data-rating-video-rank': imageMode ? index : undefined }} />)}
     {!imageMode && <text className="enemy-rating-comparison-axis" x={middle} y={height - 7}
       textAnchor="middle">{BAR_AXIS_TITLE}</text>}
   </>

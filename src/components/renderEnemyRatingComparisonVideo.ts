@@ -142,6 +142,12 @@ export async function prepareEnemyRatingComparisonVideo(
     const highlights = shapes('data-rating-video-highlight', (shape, style, row) => ({
       ...shape, opacity: Number(style.fillOpacity), step: step('ranks', .98 + .035 * row, .18),
     }))
+    const bands = shapes('data-rating-video-band', (shape, style) => {
+      const phase = shape.element.getAttribute('data-rating-video-band') === 'ranks' ? 'ranks' : 'values'
+      const row = Number(shape.element.getAttribute('data-rating-video-band-row'))
+      return { ...shape, opacity: Number(style.fillOpacity),
+        step: phase === 'ranks' ? step(phase, .98 + .035 * row, .18) : step(phase, 2.39 + .095 * row, .18) }
+    })
     const guides = shapes('data-rating-video-guide', (shape, style, order) => {
       const width = parseFloat(style.strokeWidth) * scaleX
       return { ...shape, color: style.stroke, box: { ...shape.box, x: shape.box.x - width / 2, width },
@@ -157,7 +163,7 @@ export async function prepareEnemyRatingComparisonVideo(
 
     // Rasterize the existing text once. The other marks keep their SVG geometry and
     // color, so drawing a frame only composites a few rectangles and text regions.
-    for (const { element } of [...highlights, ...guides, ...bars]) element.style.visibility = 'hidden'
+    for (const { element } of [...highlights, ...bands, ...guides, ...bars]) element.style.visibility = 'hidden'
     surface.style.backgroundColor = 'transparent'
     frame.style.backgroundColor = 'transparent'
     const { toCanvas } = await import('html-to-image')
@@ -166,6 +172,7 @@ export async function prepareEnemyRatingComparisonVideo(
     return {
       size, text, textImage, values,
       highlights: highlights.map(({ element: _element, ...mark }) => mark),
+      bands: bands.map(({ element: _element, ...mark }) => mark),
       guides: guides.map(({ element: _element, ...mark }) => mark),
       bars: bars.map(({ element: _element, ...mark }) => mark),
     }
@@ -179,6 +186,11 @@ export async function prepareEnemyRatingComparisonVideo(
     const linked = settings.valueMode === 'linked'
     const retime = ({ phase, start, duration }: OriginalStep) => retimeEnemyRatingVideoStep(settings, phase, start, duration)
     const highlights = scene.highlights.map(mark => ({ ...mark, step: retime(mark.step) }))
+    const bands = scene.bands.map(({ step: { phase, start, duration }, ...mark }) => ({
+      ...mark,
+      step: linked && phase === 'values' ? { start: settings.bars.start, duration: 0 }
+        : retimeEnemyRatingVideoText(settings, phase, start, duration),
+    }))
     const guides = scene.guides.map(({ order, ...mark }) => ({
       ...mark, step: settings.guideMode === 'stagger' ? instantStep(settings.axes, order) : retime(mark.step),
     }))
@@ -203,6 +215,11 @@ export async function prepareEnemyRatingComparisonVideo(
         context.fillStyle = '#fff'
         context.fillRect(0, 0, size.canvasWidth, size.canvasHeight)
         for (const { box, step, color, opacity } of highlights) {
+          context.globalAlpha = opacity * reveal(time, step)
+          context.fillStyle = color
+          context.fillRect(box.x, box.y, box.width, box.height)
+        }
+        for (const { box, step, color, opacity } of bands) {
           context.globalAlpha = opacity * reveal(time, step)
           context.fillStyle = color
           context.fillRect(box.x, box.y, box.width, box.height)
