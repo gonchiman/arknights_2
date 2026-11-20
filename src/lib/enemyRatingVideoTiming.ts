@@ -253,7 +253,7 @@ export function createEnemyRatingBarsOnlyDraft(draft: EnemyRatingVideoTimingDraf
 }
 
 export function getEnemyRatingVideoBarStep(
-  { bars, barMode }: EnemyRatingVideoTiming,
+  { bars, barMode }: Pick<EnemyRatingVideoTiming, 'bars' | 'barMode'>,
   rankIndex: number,
   rankCount: number,
 ): VideoPhaseTiming {

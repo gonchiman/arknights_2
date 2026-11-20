@@ -18,6 +18,7 @@ import { PersistentDetails } from './PersistentDetails'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ChartImageFrame } from './ChartImageFrame'
 import { EnemyHistogramOverflowHelp } from './EnemyHistogramOverflowHelp'
+import { EnemyHistogramVideoSaveDialog } from './EnemyHistogramVideoSaveDialog'
 import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
 import { EnemyRatingComparisonPlot, EnemyRatingComparisonSwatch } from './EnemyRatingComparisonPlot'
 import { EnemyRatingComparisonSaveDialog, type EnemyRatingComparisonImageSnapshot } from './EnemyRatingComparisonImage'
@@ -318,6 +319,10 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     (EnemyRatingComparisonImageSnapshot & { media: 'image' | 'video' }) | null
   >(null)
   const [imageData, setImageData] = useState<EnemyChartImageData | null>(null)
+  const [histogramVideoData, setHistogramVideoData] = useState<EnemyChartImageData | null>(null)
+  const renderHistogramVideoChart = useCallback((aspectRatio?: number, onLayout?: (size: { width: number; height: number }) => void) =>
+    histogramVideoData ? <EnemyChartImage data={histogramVideoData} aspectRatio={aspectRatio} onLayout={onLayout} /> : null,
+  [histogramVideoData])
   const [imageAspect, setImageAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [savingImage, setSavingImage] = useState(false)
   const [preparingImage, setPreparingImage] = useState(false)
@@ -511,7 +516,7 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
     onHistogramChange(currentHistogramSnapshot)
   }, [currentHistogramSnapshot, onHistogramChange])
 
-  const canOpenVideoSaveDialog = isRatingComparison && ratingComparisonLayout === 'MIRRORED'
+  const canOpenVideoSaveDialog = selectedChart === 'HISTOGRAM' || (isRatingComparison && ratingComparisonLayout === 'MIRRORED')
   const openImageSaveDialog = async (media: 'image' | 'video' = 'image') => {
     if (!canSaveImage || imageSaveInProgress.current || selectedChart === 'COMPARISON') return
     if (media === 'video' && !canOpenVideoSaveDialog) return
@@ -572,7 +577,8 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
           percentileReference: snapshot.percentileReference,
           referenceVisibility: snapshot.referenceVisibility, coverage: snapshot.countCoverage })
       snapshot.filename = getEnemyAggregationFilename(snapshot.filename, snapshot.aggregationVersionId)
-      setImageData(snapshot)
+      if (media === 'video') setHistogramVideoData(snapshot)
+      else setImageData(snapshot)
     } catch {
       setImageFeedback('failed')
     } finally {
@@ -978,6 +984,9 @@ export function EnemyStatisticsPanel({ rows, allRows, scopeLabel, controls, filt
       </CollapsibleCalculatorPanel>
       {ratingComparisonImage && <EnemyRatingComparisonSaveDialog {...ratingComparisonImage} onClose={() => setRatingComparisonImage(null)} />}
       {boxplotComparisonImage && <EnemyBoxplotComparisonSaveDialog snapshot={boxplotComparisonImage} onClose={() => setBoxplotComparisonImage(null)} />}
+      {histogramVideoData && <EnemyHistogramVideoSaveDialog renderChart={renderHistogramVideoChart}
+        initialFilename={histogramVideoData.filename!} hasCumulative={histogramVideoData.showHistogramCumulative}
+        onClose={() => setHistogramVideoData(null)} />}
       {imageData && CHART_OPTIONS.some(({ key }) => key === imageData.kind) && <ChartImageSaveDialog
         initialFilename={imageData.filename ?? getEnemyAggregationFilename(getEnemyChartImageFilename({ kind: imageData.kind, metricLabel: imageData.metric.label,
           secondaryMetricLabel: imageData.scatterMetric.label, scopeLabel: imageData.scopeLabel,
@@ -1805,7 +1814,11 @@ function HistogramSvg({
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? rangeStrip.layout ? 'rating-ranges' : 'ratings' : rangeStrip.layout ? 'ranges' : 'ticks'} viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}${statRankBands.length ? ` ${descriptionId}-ranks` : ''}`}>
+    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? rangeStrip.layout ? 'rating-ranges' : 'ratings' : rangeStrip.layout ? 'ranges' : 'ticks'}
+      data-histogram-video-total={statistics.count} data-histogram-video-count-maximum={countMaximum}
+      data-histogram-video-plot-left={plotLeft} data-histogram-video-plot-right={plotRight}
+      data-histogram-video-plot-top={plotTop + extraTop} data-histogram-video-plot-bottom={plotBottom}
+      viewBox={`0 0 ${width} ${chartHeight}`} width="100%" height={chartHeight} role={showCumulativeLine && !image ? 'group' : 'img'} aria-labelledby={`${titleId} ${descriptionId}${statRankBands.length ? ` ${descriptionId}-ranks` : ''}`}>
       <title id={titleId}>{`${metric.label}のヒストグラム`}</title>
       <desc id={descriptionId}>{description}{ratingBins ? ' 横軸の帯はE〜SSのゲーム内評価です。基準線はその値が属する評価の中央を示します。範囲は下限〜上限の簡略表記で、正確な境界は各評価の読み上げラベルに示します。' : ''}{referenceLabels.percentile ? ` 縦線：${referenceLabels.percentile.text}。` : ''}{showFrequencies ? ` 棒上に${countOption.label}の度数を表示します。` : ''}{showPercentages && statistics.count > 0 ? ` 上部の割合帯は、有効データ${formatFrequency(statistics.count)}${countOption.unit}に対する各階級の割合です。` : ''}{showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯は、それぞれの階級全体を含む累積割合です。' : ''}{showPercentages && showCumulativeStrip && statistics.count > 0 ? ' 累積割合の帯を上、各階級の割合帯を下に表示します。' : ''}{showCumulativeLine && statistics.count > 0 ? ' 右軸の折れ線は、各棒の中央に、その階級までの件数を有効データ数で割った累積割合を示します。線は最初の階級の点から始まります。' : ''}{showBinRanges ? rangeStrip.layout ? ratingBins ? ' 評価帯の下に数値範囲の帯を表示します。' : ' 各棒の下の帯に階級の数値範囲を表示します。' : ratingBins ? ' 範囲が収まらないため、評価の帯のみを表示します。' : ' 階級の範囲が収まらないため、通常の横軸目盛りを表示します。' : ''}</desc>
       {statRankBands.length > 0 && <desc id={`${descriptionId}-ranks`}>横軸の下の帯は数値に対応するステータスランクです。超過階級は含み得る評価の範囲を示します。</desc>}
@@ -1829,7 +1842,8 @@ function HistogramSvg({
         const rangeLabel = formatHistogramClassLabel(bin, statistics, metric)
         const percentage = showPercentages ? formatHistogramPercentage(bin.count, statistics.count) : null
         return (
-          <rect data-chart-image-ink="" className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
+          <rect data-chart-image-ink="" data-histogram-video-bar={index} data-histogram-video-count={bin.count}
+            className={`enemy-chart-bar${'isOverflow' in bin && bin.isOverflow ? ' overflow' : ''}`} x={plotLeft + bar.x} y={plotTop + extraTop + bar.y} width={bar.width} height={bar.height} key={index}>
             <title>{`${rangeLabel}：${bar.valueLabel}${countOption.unit}${percentage !== null ? `（${percentage}）` : ''}`}</title>
           </rect>
         )
@@ -1849,11 +1863,12 @@ function HistogramSvg({
         image={image} formatBoundary={(value) => formatHistogramSetting(value, metric.suffix)} countUnit={countOption.unit} />}
       <g ref={valueLabelLayout.labelsRef} className="enemy-histogram-values" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
         {valueLabelLayout.labels.filter((label) => label.shifted).map((label) => (
-          <line key={label.id} className="enemy-histogram-value-connector" data-chart-image-ink="" x1={label.anchorX} y1={label.anchorY - 2}
+          <line key={label.id} className="enemy-histogram-value-connector" data-chart-image-ink="" data-histogram-video-connector={label.id} x1={label.anchorX} y1={label.anchorY - 2}
             x2={label.x + label.width / 2} y2={label.y + label.height} />
         ))}
         {valueLabelLayout.labels.map((label) => <g key={label.id}>
           <text className="enemy-histogram-frequency-label" data-chart-image-ink="" data-frequency-index={label.id}
+            data-histogram-video-label-width={label.width} data-histogram-video-label-height={label.height}
             x={label.x + label.width / 2} y={label.y + label.height / 2} dominantBaseline="central" textAnchor="middle">{bars[Number(label.id)].valueLabel}</text>
         </g>)}
       </g>
