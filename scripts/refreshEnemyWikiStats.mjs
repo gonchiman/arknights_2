@@ -9,7 +9,7 @@ import { isRecord, isTimestamp, WIKI_ROOT, wikiPageTitle } from '../src/lib/oper
 import { parseOperatorWikiPage, wikiHtmlText } from './refreshOperatorWikiViews.mjs'
 import {
   commentWindow, createWikiRequester, extractPageBody, findNumberedArchives,
-  parseCommentLog, readLinkedWikiTitles,
+  parseCommentLogDetails, readLinkedWikiTitles, summarizeCommentLogs,
 } from './refreshOperatorWikiComments.mjs'
 
 const ROSTER_TITLE = '敵一覧'
@@ -108,10 +108,10 @@ export async function collectEnemyComment(row, catalog, range, request) {
     return missingComment(catalog.page && !source ? 'no-log' : 'unavailable', source)
   }
   const title = logTitle(row)
-  const parseLog = (html, pageTitle) => parseCommentLog(html, pageTitle, resolveEnemyWikiTitle,
+  const parseLog = (html, pageTitle) => parseCommentLogDetails(html, pageTitle, resolveEnemyWikiTitle,
     { enemyLogOwner: wikiPageTitle(row.wikiUrl) })
-  const dates = parseLog(await request(source), title)
-  let oldest = dates[0] ?? null
+  const logs = [parseLog(await request(source), title)]
+  let oldest = logs[0].dates[0] ?? null
   let previousNumber = catalog.archives.length > 0 ? archiveNumber(catalog.archives[0]) + 1 : 1
   let complete = true
   let recentComplete = true
@@ -124,8 +124,9 @@ export async function collectEnemyComment(row, catalog, range, request) {
     if (number !== previousNumber - 1) incompleteArchive()
     previousNumber = number
     try {
-      const archiveDates = parseLog(await request(wikiUrl(archive)), archive)
-      dates.push(...archiveDates)
+      const archived = parseLog(await request(wikiUrl(archive)), archive)
+      logs.push(archived)
+      const archiveDates = archived.dates
       if (archiveDates[0] && (oldest === null || archiveDates[0] < oldest)) oldest = archiveDates[0]
     } catch (error) {
       if (stopFor(error)) throw error
@@ -135,18 +136,15 @@ export async function collectEnemyComment(row, catalog, range, request) {
   }
   if (previousNumber !== 1) incompleteArchive()
 
-  const counts = {}
-  if (recentComplete) {
-    for (const date of dates.sort()) {
-      if (date >= range.start && date <= range.throughDate) counts[date] = (counts[date] ?? 0) + 1
-    }
-  }
+  const summary = summarizeCommentLogs(logs, range)
+  const coveredFrom = recentComplete ? summary.coveredFrom : null
+  const total = complete ? summary.total : null
   return {
-    status: recentComplete || complete ? 'available' : 'unavailable',
+    status: coveredFrom !== null || total !== null ? 'available' : 'unavailable',
     wikiUrl: source,
-    coveredFrom: recentComplete ? range.start : null,
-    counts,
-    total: complete ? dates.length : null,
+    coveredFrom,
+    counts: coveredFrom ? summary.counts : {},
+    total,
   }
 }
 

@@ -39,9 +39,11 @@ function canOmitUnsignedItem(html, parent) {
 }
 
 function readLegacySignatureDate(html) {
+  const text = wikiHtmlText(html)
+  if ([...text.matchAll(/ -- \[[^\]\s]+\]/g)].length > 1 || [...text.matchAll(/&new\{/g)].length > 1) return null
   // An old log can show the source of a signature with the seconds truncated.
   const match = / -- \[[^\]\s]+\]\s+&new\{(\d{4}-\d{2}-\d{2})\s+\([日月火水木金土]\)\s+([01]\d|2[0-3]):([0-5]\d):(?:([0-5]\d)\};)?$/
-    .exec(wikiHtmlText(html))
+    .exec(text)
   if (!match) return null
   const [, date, hour, minute, second = '00'] = match
   return isTimestamp(date + 'T' + hour + ':' + minute + ':' + second + '+09:00') ? date : null
@@ -125,10 +127,33 @@ function isEmptyEnemyLog(body, title, owner, readTitle) {
   }
 }
 
-export function parseCommentLog(html, title, readTitle, { enemyLogOwner } = {}) {
+function readUndatedItem(content, parent, hasDatedReply = false) {
+  const text = wikiHtmlText(content)
+  const signatures = [...text.matchAll(/ -- \[[^\]\s]+\]/g)]
+  const timeMarkers = [...text.matchAll(/&new\{/g)]
+  if (signatures.length > 1 || timeMarkers.length > 1) return false
+  if (signatures.length === 1) return true
+  if (timeMarkers.length || /comment_date|__plugin_new/u.test(content)
+    || /\d{4}-\d{2}-\d{2}\s+\([日月火水木金土]\)\s+\d{1,2}:/u.test(text)) return false
+  // A dated descendant confirms that its parent exists even when the parent's text is formatted.
+  const plainContent = hasDatedReply
+    ? content.replace(/<\/?(?:a|span|strong|em|b|i|u|s|del|small|sup|sub|br)\b[^>]*>/giu, '')
+    : content
+  return (!parent?.inList || hasDatedReply) && text !== '' && !/<[^>]*>/u.test(plainContent)
+}
+
+function earlierDate(a, b) {
+  if (!a || (b && b < a)) return b
+  return a
+}
+
+export function parseCommentLogDetails(html, title, readTitle, { enemyLogOwner } = {}) {
   const body = extractPageBody(html, title, false, readTitle)
-  if (enemyLogOwner && isEmptyEnemyLog(body, title, enemyLogOwner, readTitle)) return []
+  if (enemyLogOwner && isEmptyEnemyLog(body, title, enemyLogOwner, readTitle)) {
+    return { dates: [], undatedPosts: [], total: 0 }
+  }
   const dates = []
+  const undatedPosts = []
   const lists = []
   const items = []
   for (const match of body.matchAll(HTML_TAG)) {
@@ -145,16 +170,37 @@ export function parseCommentLog(html, title, readTitle, { enemyLogOwner } = {}) 
     }
     if (tag === 'li') {
       if (!closing) {
-        items.push({ inList: lists.at(-1) === true, counted: false, contentStart: match.index + markup.length })
+        items.push({
+          inList: lists.at(-1) === true, counted: false, contentStart: match.index + markup.length,
+          ownDates: [], undatedCount: 0, earliestDescendantDate: null,
+        })
       } else {
         const item = items.pop()
-        if (item?.inList && !item.counted) {
+        if (!item?.inList) continue
+        const parent = items.at(-1)
+        if (!item.counted) {
           const content = body.slice(item.contentStart, item.contentEnd ?? match.index)
           const legacyDate = readLegacySignatureDate(content)
-          if (legacyDate) dates.push(legacyDate)
-          else if (!canOmitUnsignedItem(content, items.at(-1)) && !(enemyLogOwner && isDeletedEnemyLogItem(content))) {
-            throw new Error('投稿日時のないコメントが見つかりました。')
+          if (legacyDate) {
+            dates.push(legacyDate)
+            item.ownDates.push(legacyDate)
+          } else {
+            const deleted = /^投稿者本人が削除しました[。.]?$/u.test(wikiHtmlText(content))
+              || (enemyLogOwner && isDeletedEnemyLogItem(content))
+            const hasDatedReply = item.earliestDescendantDate !== null
+            if (!deleted && (!canOmitUnsignedItem(content, parent) || hasDatedReply)) {
+              if (!readUndatedItem(content, parent, hasDatedReply)) throw new Error('投稿日時のないコメントが見つかりました。')
+              item.undatedCount = 1
+            }
           }
+        }
+        const onlyUndatedPost = item.undatedCount === 1 && item.ownDates.length === 0
+        for (let count = 0; count < item.undatedCount; count += 1) {
+          undatedPosts.push({ latestPossibleDate: onlyUndatedPost ? item.earliestDescendantDate : null })
+        }
+        if (parent?.inList) {
+          const earliest = item.ownDates.reduce(earlierDate, item.earliestDescendantDate)
+          parent.earliestDescendantDate = earlierDate(parent.earliestDescendantDate, earliest)
         }
       }
       continue
@@ -162,20 +208,29 @@ export function parseCommentLog(html, title, readTitle, { enemyLogOwner } = {}) 
     const item = items.at(-1)
     if (closing || !item?.inList || lists.at(-1) !== true) continue
     if (tag === 'br') item.lineBreakAfterTimestamp = item.counted
-    if (tag !== 'span') continue
-    if (!getClasses(attributes).includes('__plugin_new')) continue
+    if (tag !== 'span' || !getClasses(attributes).includes('__plugin_new')) continue
     const stamp = attribute(attributes, 'data-mtime')
-    if (!isTimestamp(stamp) || (item.counted && !item.lineBreakAfterTimestamp)) {
-      throw new Error('コメントの投稿日時を判別できません。')
-    }
+    if (item.counted && !item.lineBreakAfterTimestamp) throw new Error('コメントの投稿日時を判別できません。')
     item.counted = true
     item.lineBreakAfterTimestamp = false
-    dates.push(formatDate.format(new Date(stamp)))
+    if (isTimestamp(stamp)) {
+      const date = formatDate.format(new Date(stamp))
+      dates.push(date)
+      item.ownDates.push(date)
+    } else {
+      item.undatedCount += 1
+    }
   }
-  if (dates.length === 0 || items.some(item => item.inList)) {
+  if (dates.length + undatedPosts.length === 0 || items.some(item => item.inList)) {
     throw new Error('コメントログを確認できません。')
   }
-  return dates.sort()
+  return { dates: dates.sort(), undatedPosts, total: dates.length + undatedPosts.length }
+}
+
+export function parseCommentLog(html, title, readTitle, options) {
+  const details = parseCommentLogDetails(html, title, readTitle, options)
+  if (details.undatedPosts.length > 0) throw new Error('投稿日時のないコメントが見つかりました。')
+  return details.dates
 }
 
 export function readLinkedWikiTitles(body, decodeTitle = decodeURIComponent) {
@@ -234,6 +289,24 @@ function countsWithin(dates, start, end) {
   return Object.fromEntries(Object.entries(counts).sort(([left], [right]) => left.localeCompare(right)))
 }
 
+export function summarizeCommentLogs(logs, { start, throughDate }) {
+  const total = logs.reduce((count, log) => count + log.total, 0)
+  const undatedPosts = logs.flatMap(log => log.undatedPosts)
+  let coveredFrom = start
+  for (const { latestPossibleDate } of undatedPosts) {
+    if (latestPossibleDate === null || latestPossibleDate >= throughDate) {
+      return { coveredFrom: null, counts: {}, total }
+    }
+    const firstCertainDay = dateBefore(latestPossibleDate, -1)
+    if (firstCertainDay > coveredFrom) coveredFrom = firstCertainDay
+  }
+  return {
+    coveredFrom,
+    counts: countsWithin(logs.flatMap(log => log.dates), coveredFrom, throughDate),
+    total,
+  }
+}
+
 export function createWikiRequester({ userAgent = 'Arknights Analyze Tool (Wiki comment snapshot)' } = {}) {
   let nextRequestAt = 0
   async function request(url) {
@@ -268,47 +341,44 @@ export async function collectOperatorCommentEntry(entry, { start, throughDate },
   const characterTitle = wikiPageTitle(entry.wikiUrl)
   const commentTitle = 'コメント/' + characterTitle
   const source = wikiUrl(commentTitle)
-  const dates = parseCommentLog(await request(source), commentTitle)
-  let oldest = dates[0]
+  const logs = [parseCommentLogDetails(await request(source), commentTitle)]
+  let oldest = logs[0].dates[0] ?? null
   let complete = true
   let recentComplete = true
+  const incompleteArchive = () => {
+    complete = false
+    if (oldest === null || oldest >= start) recentComplete = false
+  }
   try {
     const archives = archivesFromCatalog ?? parseCommentArchives(await request(entry.wikiUrl), characterTitle, commentTitle)
     let previousNumber = archives.length > 0 ? Number(archives[0].split('/').at(-1)) + 1 : 1
     for (const title of archives) {
       const number = Number(title.split('/').at(-1))
-      if (number !== previousNumber - 1) {
-        complete = false
-        if (oldest >= start) recentComplete = false
-      }
+      if (number !== previousNumber - 1) incompleteArchive()
       previousNumber = number
       try {
-        const archivedDates = parseCommentLog(await request(wikiUrl(title)), title)
-        dates.push(...archivedDates)
-        if (archivedDates[0] < oldest) oldest = archivedDates[0]
+        const log = parseCommentLogDetails(await request(wikiUrl(title)), title)
+        logs.push(log)
+        if (log.dates[0] && (oldest === null || log.dates[0] < oldest)) oldest = log.dates[0]
       } catch (error) {
         if (error.status === 403 || error.status === 429) throw error
-        complete = false
-        if (oldest >= start) recentComplete = false
+        incompleteArchive()
         console.warn(entry.operatorId + ' の過去ログ /' + number + ' を取得できませんでした。' + error.message)
       }
     }
-    if (previousNumber !== 1) {
-      complete = false
-      if (oldest >= start) recentComplete = false
-    }
+    if (previousNumber !== 1) incompleteArchive()
   } catch (error) {
     if (error.status === 403 || error.status === 429) throw error
-    complete = false
-    recentComplete = oldest < start
+    incompleteArchive()
     console.warn(entry.operatorId + ' の過去ログ一覧を取得できませんでした。' + error.message)
   }
+  const summary = summarizeCommentLogs(logs, { start, throughDate })
   return {
     operatorId: entry.operatorId,
     wikiUrl: source,
-    coveredFrom: recentComplete ? start : null,
-    counts: recentComplete ? countsWithin(dates, start, throughDate) : {},
-    total: complete ? dates.length : null,
+    coveredFrom: recentComplete ? summary.coveredFrom : null,
+    counts: recentComplete ? summary.counts : {},
+    total: complete ? summary.total : null,
   }
 }
 
@@ -354,8 +424,7 @@ export async function collectOperatorWikiCommentSnapshot(views, {
       console.log((index + 1) + '/' + targets.length + '人処理済み（期間別 ' + succeeded + '人、累計 ' + totals + '人）')
     }
   }
-  if (succeeded === 0) throw new Error('コメントを集計できたページがないため、更新を中断しました。')
-  if (!operatorIds && totals === 0) throw new Error('累計を確認できたページがないため、更新を中断しました。')
+  if (succeeded === 0 && totals === 0) throw new Error('コメントを集計できたページがないため、更新を中断しました。')
   return { observedAt: observedAt.toISOString(), throughDate: window.throughDate, entries }
 }
 

@@ -287,3 +287,34 @@ test('an empty current enemy log contributes zero but cannot hide an unavailable
   assert.equal(complete.total, 1)
   assert.deepEqual(complete.counts, { '2026-11-03': 1 })
 })
+
+test('enemy comments count an undated old parent without blocking the recent period', async () => {
+  const name = 'Patriot'
+  const title = 'コメント/' + name
+  const html = page(title, '<ul class="list1"><li>日時のない投稿<ul class="list2"><li>返信'
+    + '<span class="__plugin_new" data-mtime="2021-01-02T12:00:00+09:00"></span></li></ul></li>'
+    + '<li>最近の投稿<span class="__plugin_new" data-mtime="2026-11-19T12:00:00+09:00"></span></li></ul>')
+  const result = await collectEnemyComment({ name, wikiUrl: url(name) },
+    { page: true, current: true, archives: [] }, { start: '2026-11-01', throughDate: '2026-11-30' }, async () => html)
+  assert.deepEqual(result, {
+    status: 'available', wikiUrl: url(title), coveredFrom: '2026-11-01', counts: { '2026-11-19': 1 }, total: 3,
+  })
+})
+
+test('enemy comments retain a known cumulative total when an undated post affects recent periods', async () => {
+  const name = 'Patriot'
+  const title = 'コメント/' + name
+  const range = { start: '2026-11-01', throughDate: '2026-11-30' }
+  const catalog = { page: true, current: true, archives: [] }
+  const dated = '<li>最近の投稿<span class="__plugin_new" data-mtime="2026-11-28T12:00:00+09:00"></span></li>'
+  const uncertain = await collectEnemyComment({ name, wikiUrl: url(name) }, catalog, range,
+    async () => page(title, '<ul class="list1"><li>日時のない投稿</li>' + dated + '</ul>'))
+  assert.deepEqual(uncertain, { status: 'available', wikiUrl: url(title), coveredFrom: null, counts: {}, total: 2 })
+
+  const bounded = await collectEnemyComment({ name, wikiUrl: url(name) }, catalog, range, async () => page(title,
+    '<ul class="list1"><li>日時のない投稿<ul class="list2"><li>返信'
+    + '<span class="__plugin_new" data-mtime="2026-11-10T12:00:00+09:00"></span></li></ul></li>' + dated + '</ul>'))
+  assert.deepEqual(bounded, {
+    status: 'available', wikiUrl: url(title), coveredFrom: '2026-11-11', counts: { '2026-11-28': 1 }, total: 3,
+  })
+})

@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-19T16:08:04.707Z",
+  "observedAt": "2026-11-20T02:43:06.607Z",
   "throughDate": "2026-11-19",
   "entries": [
     {
@@ -3651,9 +3651,12 @@
     {
       "operatorId": "char_164_nightm",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%83%8A%E3%82%A4%E3%83%88%E3%83%A1%E3%82%A2",
-      "coveredFrom": null,
-      "counts": {},
-      "total": null
+      "coveredFrom": "2026-10-21",
+      "counts": {
+        "2026-10-22": 1,
+        "2026-11-18": 1
+      },
+      "total": 551
     },
     {
       "operatorId": "char_220_grani",
