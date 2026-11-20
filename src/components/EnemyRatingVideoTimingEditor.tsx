@@ -24,6 +24,10 @@ interface ChartVideoTimingEditorProps<Phase extends string> {
   phaseLabels: Readonly<Record<Phase, string>>
   guideLabel: string
   dataEffect: 'bars' | 'points'
+  showTextEffect?: boolean
+  showGuideEffect?: boolean
+  showPhaseOrder?: boolean
+  createDefaultDraft?: () => ChartVideoTimingDraft<Phase>
   disabled: boolean
 }
 
@@ -44,6 +48,7 @@ export function EnemyRatingVideoTimingEditor({ sideValue, ...props }: Omit<Chart
 
 export function ChartVideoTimingEditor<Phase extends string>({
   draft, onChange, parsed, inputError, onInputError, activePhase, definition, phaseLabels, guideLabel, dataEffect, disabled,
+  showTextEffect = true, showGuideEffect = true, showPhaseOrder = true, createDefaultDraft,
 }: ChartVideoTimingEditorProps<Phase>) {
   const headingId = useId()
   const errorId = useId()
@@ -144,12 +149,12 @@ export function ChartVideoTimingEditor<Phase extends string>({
 
   return <section className="enemy-rating-video-timing" aria-labelledby={headingId}>
     <div className="enemy-rating-video-timing-heading">
-      <h3 id={headingId}>表示順・テンポ</h3>
+      <h3 id={headingId}>{showPhaseOrder ? '表示順・テンポ' : 'テンポ'}</h3>
       <button type="button" className="filter-reset-button" disabled={disabled} onClick={() => {
         setEditing(null)
         onInputError(null)
         setStatus('既定値に戻しました')
-        onChange({ ...createChartVideoTimingDraft(definition),
+        onChange(createDefaultDraft?.() ?? { ...createChartVideoTimingDraft(definition),
           ...(draft.valueMode !== undefined ? { valueMode: 'linked' } : {}) })
       }}>既定値に戻す</button>
     </div>
@@ -174,12 +179,12 @@ export function ChartVideoTimingEditor<Phase extends string>({
               </button>)}
             <span aria-hidden="true">長い</span>
           </div>
-          <div className="enemy-rating-video-order-actions">
+          {showPhaseOrder && <div className="enemy-rating-video-order-actions">
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を上へ'}
               disabled={disabled || Boolean(draft.animatedPhase) || followsBars(phase) || index === 0} onClick={event => movePhase(index, -1, event.currentTarget)}>↑</button>
             <button type="button" className="button secondary" aria-label={phaseLabels[phase] + 'を下へ'}
               disabled={disabled || Boolean(draft.animatedPhase) || followsBars(phase) || index === draft.order.length - 1} onClick={event => movePhase(index, 1, event.currentTarget)}>↓</button>
-          </div>
+          </div>}
         </li>
       })}
     </ol>
@@ -212,7 +217,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
         </label>
       </div>
       <div className="enemy-rating-video-effect-options">
-        <label>
+        {showTextEffect && <label>
           文字の出し方
           <select value={draft.textMode} disabled={disabled || Boolean(draft.animatedPhase)} onChange={event =>
             onChange({ ...draft, textMode: event.target.value as EnemyRatingVideoTextMode })}>
@@ -220,7 +225,7 @@ export function ChartVideoTimingEditor<Phase extends string>({
             <option value="instant">一斉に表示</option>
             <option value="stagger">順に表示</option>
           </select>
-        </label>
+        </label>}
         <label>
           {dataEffect === 'bars' ? '棒の出し方' : '点の出し方'}
           <select value={draft.barMode} disabled={disabled} onChange={event =>
@@ -230,14 +235,14 @@ export function ChartVideoTimingEditor<Phase extends string>({
             {dataEffect === 'bars' && <option value="staggerGrow">順に伸びる</option>}
           </select>
         </label>
-        <label>
+        {showGuideEffect && <label>
           {guideLabel}
           <select value={draft.guideMode} disabled={disabled || Boolean(draft.animatedPhase)} onChange={event =>
             onChange({ ...draft, guideMode: event.target.value as EnemyRatingVideoGuideMode })}>
             <option value="grow">伸びる</option>
             <option value="stagger">順に表示</option>
           </select>
-        </label>
+        </label>}
       </div>
     </div>
     {inputError?.field === 'finish' && durationError}

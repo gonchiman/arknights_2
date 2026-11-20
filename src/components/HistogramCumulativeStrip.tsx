@@ -78,6 +78,7 @@ function HistogramProportionStrip({ bins, total, plotLeft, plotRight, top, layou
         height={layout.bandHeight} leftInset={index > 0 ? cellInset : 0}
         rightInset={index < rows.length - 1 ? cellInset : 0}
         label={layout.labels[index]} showLabel={visibleIndices.has(index)} labelRotation={layout.labelRotation}
+        labelAttributes={{ 'data-histogram-video-value': kind, 'data-histogram-video-value-index': index }}
         labelY={layout.labelRotation ? bandTop + layout.bandHeight / 2 : bandTop + 16} />
     </g>)}
   </g>

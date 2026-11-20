@@ -33,7 +33,8 @@
 .enemy-rating-video-animation-options { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .enemy-rating-video-animation { font-size: 13px; }
 .enemy-rating-video-animation-options .button { min-height: 32px; }
-.enemy-rating-video-animation-options .button[aria-pressed="true"] {
+.enemy-rating-video-animation-options .button[aria-pressed="true"],
+.enemy-rating-video-animation-options .button[aria-pressed="true"]:hover:not(:disabled) {
   background: var(--text);
   border-color: var(--text);
   color: var(--surface);
