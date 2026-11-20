@@ -535,13 +535,15 @@ test('統計サマリーは選択中のステータスにかかわらず全列�
   assert.equal(readSummaryRow(mapCounts, '超過尖度')[3], '-1.36')
 })
 
-const cumulativeSelect = markup => [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
-  .find(match => clean(match[1]).startsWith('累積割合'))?.[1]
-const selectedCumulativeDisplay = markup => {
-  const select = cumulativeSelect(markup)
-  assert.ok(select, '累積割合の選択欄がある')
-  return [...select.matchAll(/<option\b([^>]*)>([^<]*)<\/option>/g)]
-    .find(match => /\bselected=""/.test(match[1]))?.[2]
+const cumulativeCheckboxes = markup => {
+  const group = markup.match(/<div\b[^>]*aria-label="累積割合"[^>]*>([\s\S]*?)<\/div>/)
+  assert.ok(group, '累積割合の設定グループがある')
+  assert.match(group[0], /role="group"/)
+  assert.doesNotMatch(group[1], /<select\b/)
+  const labels = [...group[1].matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)].map(([, label]) => label)
+  assert.deepEqual(labels.map(clean), ['折れ線', '帯'])
+  for (const label of labels) assert.match(label, /<input\b[^>]*type="checkbox"/)
+  return { line: /\bchecked=""/.test(labels[0]), strip: /\bchecked=""/.test(labels[1]) }
 }
 
 test('指定した集計版の出現数だけを描画し、別版のキャッシュへフォールバックしない', () => {
@@ -685,24 +687,22 @@ test('画像モードは棒の度数・割合帯・平均・中央値と累積�
   assert.deepEqual(cumulativePoints(small).map(point => point.proportion), [0.25, 0.75, 1])
 })
 
-test('累積割合の選択は初期なしで、保存された4表示形式・旧設定を復元する', () => {
+test('累積割合の折れ線と帯のチェックは初期OFFで、保存された4表示形式・旧設定を復元する', () => {
   const normal = renderPanel({})
-  assert.equal(selectedCumulativeDisplay(normal), 'なし')
-  assert.deepEqual([...cumulativeSelect(normal).matchAll(/<option\b[^>]*>([^<]*)<\/option>/g)].map(match => match[1]),
-    ['なし', '折れ線', '上部の帯', '折れ線＋上部の帯'])
+  assert.deepEqual(cumulativeCheckboxes(normal), { line: false, strip: false })
   assert.doesNotMatch(normal, /data-histogram-cumulative/)
   const editor = renderPanel({ initialSnapshot: snapshot(), editor: true })
-  assert.equal(selectedCumulativeDisplay(editor), '折れ線')
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'strip' }), editor: true })), '上部の帯')
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'strip' }), editor: true })), 'なし')
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'both' }), editor: true })), '折れ線＋上部の帯')
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'both' }), editor: true })), 'なし')
+  assert.deepEqual(cumulativeCheckboxes(editor), { line: true, strip: false })
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'strip' }), editor: true })), { line: false, strip: true })
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'strip' }), editor: true })), { line: false, strip: false })
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: snapshot({ cumulativeDisplay: 'both' }), editor: true })), { line: true, strip: true })
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: snapshot({ showCumulative: false, cumulativeDisplay: 'both' }), editor: true })), { line: false, strip: false })
   const legacy = JSON.parse(JSON.stringify(snapshot({ showCumulative: false })))
   delete legacy.showCumulative
   delete legacy.cumulativeDisplay
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: legacy, editor: true })), 'なし')
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: legacy, editor: true })), { line: false, strip: false })
   legacy.showCumulative = true
-  assert.equal(selectedCumulativeDisplay(renderPanel({ initialSnapshot: legacy, editor: true })), '折れ線')
+  assert.deepEqual(cumulativeCheckboxes(renderPanel({ initialSnapshot: legacy, editor: true })), { line: true, strip: false })
 })
 
 test('度数を表示と割合の帯のチェックは初期ONで、編集時は別々の保存設定を復元する', () => {

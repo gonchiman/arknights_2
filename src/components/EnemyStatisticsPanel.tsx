@@ -1346,6 +1346,12 @@ function HistogramDisplayControls({
   percentileControl: HistogramPercentileControl
 }) {
   const percentileErrorId = useId()
+  const showCumulativeLine = showCumulative && cumulativeDisplay !== 'strip'
+  const showCumulativeStrip = showCumulative && cumulativeDisplay !== 'line'
+  const changeCumulativeDisplay = (line: boolean, strip: boolean) => {
+    onShowCumulativeChange(line || strip)
+    if (line || strip) onCumulativeDisplayChange(line && strip ? 'both' : line ? 'line' : 'strip')
+  }
   return <div className="enemy-histogram-display-controls">
     <label className="enemy-histogram-display-toggle">
       <input type="checkbox" checked={showFrequencies} onChange={(event) => onShowFrequenciesChange(event.target.checked)} />
@@ -1355,19 +1361,19 @@ function HistogramDisplayControls({
       <input type="checkbox" checked={showPercentages} onChange={(event) => onShowPercentagesChange(event.target.checked)} />
       割合の帯
     </label>
-    <label className="enemy-histogram-display-toggle">
-      累積割合
-      <select value={showCumulative ? cumulativeDisplay : 'none'} onChange={(event) => {
-        const display = event.target.value
-        onShowCumulativeChange(display !== 'none')
-        if (display === 'line' || display === 'strip' || display === 'both') onCumulativeDisplayChange(display)
-      }}>
-        <option value="none">なし</option>
-        <option value="line">折れ線</option>
-        <option value="strip">上部の帯</option>
-        <option value="both">折れ線＋上部の帯</option>
-      </select>
-    </label>
+    <div className="enemy-histogram-cumulative-controls" role="group" aria-label="累積割合">
+      <span>累積割合</span>
+      <label className="enemy-histogram-display-toggle">
+        <input type="checkbox" checked={showCumulativeLine}
+          onChange={(event) => changeCumulativeDisplay(event.target.checked, showCumulativeStrip)} />
+        折れ線
+      </label>
+      <label className="enemy-histogram-display-toggle">
+        <input type="checkbox" checked={showCumulativeStrip}
+          onChange={(event) => changeCumulativeDisplay(showCumulativeLine, event.target.checked)} />
+        帯
+      </label>
+    </div>
     <label className="enemy-histogram-display-toggle" title={ratingMode ? '範囲が収まらない場合は評価のみを表示します' : '文字が収まらない場合は通常の目盛りを表示します'}>
       <input type="checkbox" checked={showBinRanges} onChange={(event) => onShowBinRangesChange(event.target.checked)} />
       階級の範囲を表示
