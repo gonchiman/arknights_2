@@ -1,0 +1,24 @@
+# ページ内の場所をコピー
+
+対象パネルの見出し帯の右端にコピーアイコンを置き、表示名による階層を1行でコピーする。
+
+```text
+防御力と術耐性の対応 / 順位帯の統計 / グラフ
+```
+
+- 共通部品は [ElementLocationCopyButton](../../src/components/ElementLocationCopyButton.tsx)。`segments` にページ名・タブ名・表示形式などを順に渡し、前後に半角スペースを置いた `/` で区切る。
+- ページ見出し・切替ボタンとコピー文には同じラベル定義を使い、表示中の状態から組み立てる。DOM上の見出し探索やURLからの推測は行わない。
+- コピー処理は既存の [writeClipboardText](../../src/lib/clipboard.ts) を使う。コピー内容にはURL・表示条件・内部IDを追加しない。
+- 通常はコピーマーク、成功時はチェック、失敗時は警告で表示し、結果は読み上げでも通知する。状態によってボタンの幅を変えない。対象の場所が変わったら前の結果を持ち越さず、失敗後も再試行できる。
+- アイコンは16px、見た目は28pxとする。幅760px以下またはタッチ操作では、透明な押下領域を44px確保して内側の表示を28pxに保つ。見出し帯には文字・条件と分かれた右側の列を確保する。
+- グラフの外に操作を置き、表・グラフの画像にはボタンを含めない。操作列には重ねて表示せず、コピー内容を常時表示する欄やツールチップは追加しない。
+
+## 適用先
+
+[防御力と術耐性の対応](../../src/components/EnemyDefenseResistancePage.tsx)の「順位帯の統計」にある表・グラフ。[統計パネル](../../src/components/EnemyRankBandStatisticsPanel.tsx)が、親から受け取った階層に現在の「表／グラフ」を加える。
+
+```tsx
+<ElementLocationCopyButton segments={[pageTitle, selectedTabLabel, selectedViewLabel]} />
+```
+
+ほかの要素へ追加する場合も、この部品に対応する階層を渡す。
