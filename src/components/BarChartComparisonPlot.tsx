@@ -1,4 +1,5 @@
 import { useId } from 'react'
+import type { CSSProperties } from 'react'
 import {
   getBarChartComparisonAxis, getBarChartComparisonBand, getBarChartSelectionSummary,
 } from '../lib/barChartDocument'
@@ -7,6 +8,7 @@ import {
   getBarChartNaturalHeight, BAR_CHART_MIRRORED_HEADER_HEIGHT, BAR_CHART_MIRRORED_BOTTOM_HEIGHT, BAR_CHART_MIRRORED_SELECTION_HEIGHT,
 } from '../lib/barChartLayout'
 import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY } from '../lib/statMetricColors'
 import { ChartStripCell } from './ChartStripCell'
 import type { BarChartPlotProps } from './BarChartPlot'
 import { useBarChartTextWidths } from './useBarChartTextWidths'
@@ -38,6 +40,9 @@ export function BarChartComparisonPlot({ document: data, settings, width, height
   const describe = series.map(item => `${item.label}：有効${item.population.valid}、値なし${item.population.missing}。`
     + item.bins.map((bin, index) => `${data.bins[index].label}：${formatShare(bin.share)}%`).join('。')).join('。')
   return <svg className={`bar-chart-plot bar-chart-comparison${imageMode ? ' is-image' : ''}`}
+    style={{ '--bar-chart-left': getStatMetricColor(series[0]?.metricKey),
+      '--bar-chart-right': getStatMetricColor(series[1]?.metricKey),
+      '--bar-chart-bar-opacity': STAT_METRIC_BAR_OPACITY } as CSSProperties}
     width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}
     role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{data.title}</title>
@@ -50,7 +55,7 @@ export function BarChartComparisonPlot({ document: data, settings, width, height
       const direction = side === 0 ? -1 : 1
       const origin = middle + direction * gap / 2
       const labelX = side === 0 ? column / 2 : svgWidth - column / 2
-      return <g key={item.id} data-bar-chart-side={item.id}>
+      return <g key={item.id} data-bar-chart-side={item.id} data-bar-chart-metric={item.metricKey}>
         <text {...INK} className={`bar-chart-comparison-series-label is-${item.id}`} x={origin + direction * track / 2}
           y="17" textAnchor="middle">{item.label}</text>
         {band !== 'none' && <text {...INK} className="chart-strip-title" x={labelX} y="19" textAnchor="middle">

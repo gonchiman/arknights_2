@@ -99,7 +99,7 @@ function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDoc
     return createBarChartDocument({
       xKind: 'interval', bins, fractionDigits: fractionDigits(ratingBins.map(bin => bin.count)),
       secondaryAxisBand: { title: '範囲', labels: ratingBins.map(formatHistogramRatingRangeLines) },
-      semantics: { kind: 'histogram', subject: metric.label, xLabel: metric.label, xUnit: metric.suffix || undefined,
+      semantics: { kind: 'histogram', subject: metric.label, metricKey: statKey, xLabel: metric.label, xUnit: metric.suffix || undefined,
         xQualifier: 'ゲーム内評価', xBandTitle: '評価',
         yLabel: ENEMY_HISTOGRAM_COUNT_MODES.find(item => item.key === countMode)!.axisLabel, yUnit: source.countUnit },
       source, filenameParts: filenameParts(source), capabilities: { percentages: true, cumulative: true, rankBands: false },
@@ -125,7 +125,7 @@ function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDoc
   return createBarChartDocument({
     xKind: 'interval', bins, fractionDigits: fractionDigits(statistics.bins.map(bin => bin.count)),
     ...(rankBands !== undefined ? { rankBands } : {}),
-    semantics: { kind: 'histogram', subject: metric.label, xLabel: metric.label, xUnit: metric.suffix || undefined,
+    semantics: { kind: 'histogram', subject: metric.label, metricKey: statKey, xLabel: metric.label, xUnit: metric.suffix || undefined,
       yLabel: ENEMY_HISTOGRAM_COUNT_MODES.find(item => item.key === countMode)!.axisLabel, yUnit: source.countUnit },
     source, filenameParts: filenameParts(source), capabilities: { percentages: true, cumulative: true, rankBands: rankBands !== undefined },
   })
@@ -149,7 +149,7 @@ function createDefenseResistance(context: BarChartProviderContext): BarChartDocu
       value: row.defense, rankPercentage: row.percentage, rankCutoff: row.rankCutoff,
     })),
     fractionDigits: fractionDigits(result.resistanceThresholds.flatMap(row => row.defense === null ? [] : [row.defense])),
-    semantics: { kind: 'correspondence', subject: '防御力と術耐性', xLabel: '術耐性', yLabel: '防御力' },
+    semantics: { kind: 'correspondence', subject: '防御力と術耐性', metricKey: 'defense', xLabel: '術耐性', yLabel: '防御力' },
     source, filenameParts: filenameParts(source), capabilities: { percentages: false, cumulative: false, rankBands: false },
   })
 }

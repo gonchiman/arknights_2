@@ -1,10 +1,12 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { BarChartDisplaySettings, BarChartDocument } from '../lib/barChartDocument'
 import { getBarChartBarWidth, getBarChartItemKind } from '../lib/barChartPresentation'
 import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { avoidHistogramCumulativeLine, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY, STAT_CUMULATIVE_COLOR, STAT_CUMULATIVE_DASH_ARRAY } from '../lib/statMetricColors'
 import { ChartStripCell } from './ChartStripCell'
 import { StatRankStrip } from './StatRankStrip'
 import { BarChartComparisonPlot } from './BarChartComparisonPlot'
@@ -111,6 +113,10 @@ function VerticalBarChartPlot({ document: data, settings, width, height, imageMo
     return `${interval.start === null ? '' : `${format(interval.start)}${interval.includesMinimum ? '以上' : '超'}`}${interval.end === null ? '' : `${format(interval.end)}${interval.includesMaximum ? '以下' : '未満'}`}`
   }
   return <svg className={`bar-chart-plot${imageMode ? ' is-image' : ''}`} width={svgWidth} height={svgHeight}
+    data-bar-chart-metric={data.semantics.metricKey}
+    style={{ '--bar-chart-bar': getStatMetricColor(data.semantics.metricKey),
+      '--bar-chart-bar-opacity': STAT_METRIC_BAR_OPACITY, '--bar-chart-cumulative': STAT_CUMULATIVE_COLOR,
+      '--bar-chart-cumulative-dash': STAT_CUMULATIVE_DASH_ARRAY } as CSSProperties}
     viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{data.title}</title>
     <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}${describeRange(bin) ? `（${describeRange(bin)}）` : ''}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}</desc>

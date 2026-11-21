@@ -48,6 +48,8 @@ export type BarChartItemKind = 'interval' | 'point' | 'category'
 export interface BarChartSemantics {
   readonly kind: 'histogram' | 'correspondence' | 'comparison'
   readonly subject: string
+  /** Metric represented by single-series bars; display labels never determine appearance. */
+  readonly metricKey?: string
   /** Meaning of the axis arranging bars, independent of drawing orientation and category alignment. */
   readonly itemKind?: BarChartItemKind
   readonly xLabel: string
@@ -179,6 +181,10 @@ function invalidInterval(interval: BarChartInterval | undefined): boolean {
 
 /** Freeze a detached JSON snapshot so later source edits cannot change a preview or export. */
 export function createBarChartDocument(input: DocumentInput): BarChartDocument {
+  if (input.semantics.metricKey !== undefined
+    && (typeof input.semantics.metricKey !== 'string' || !input.semantics.metricKey.trim())) {
+    throw new Error('棒グラフのステータスを確認できませんでした。')
+  }
   if (input.semantics.itemKind !== undefined && !['interval', 'point', 'category'].includes(input.semantics.itemKind)) {
     throw new Error('棒グラフの階級の意味を確認できませんでした。')
   }

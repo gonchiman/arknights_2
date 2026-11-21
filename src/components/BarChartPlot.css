@@ -30,26 +30,22 @@
   overflow: visible;
   font-family: "Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  --bar-chart-bar: #777;
-  --bar-chart-cumulative: #d66a20;
 }
 .bar-chart-plot.is-image {
   --text-muted: #666;
   --text-soft: #444;
-  --bar-chart-bar: #777;
-  --bar-chart-cumulative: #d66a20;
   --border: #d4d4d4;
   --border-strong: #999;
 }
 .bar-chart-guide { fill: none; stroke: var(--border, #d4d4d4); stroke-width: 1; }
 .bar-chart-guide.is-zero { stroke: var(--border-strong, #999); }
-.bar-chart-bar { fill: var(--bar-chart-bar); }
+.bar-chart-bar { fill: var(--bar-chart-bar); fill-opacity: var(--bar-chart-bar-opacity); }
 .bar-chart-tick { fill: var(--text-muted, #555); font-size: 11px; }
 .bar-chart-value, .bar-chart-missing { fill: var(--text-soft, #444); font-size: 11px; }
 .bar-chart-value-connector { stroke: var(--text-muted, #777); stroke-width: .7; opacity: .6; }
 .bar-chart-axis-title { fill: var(--text-soft, #444); font-size: 12px; font-weight: 700; }
 .bar-chart-axis-title.is-cumulative { fill: var(--bar-chart-cumulative); }
-.bar-chart-cumulative { fill: none; stroke: var(--bar-chart-cumulative); stroke-width: 2; }
+.bar-chart-cumulative { fill: none; stroke: var(--bar-chart-cumulative); stroke-width: 2; stroke-dasharray: var(--bar-chart-cumulative-dash); }
 .bar-chart-cumulative-point { fill: var(--bar-chart-cumulative); stroke: var(--surface, #fff); stroke-width: 1; }
 .bar-chart-plot.is-image .bar-chart-cumulative-point { stroke: #fff; }
 .bar-chart-x-title {
@@ -61,7 +57,7 @@
   text-align: center;
   overflow-wrap: anywhere;
 }
-.bar-chart-comparison { --bar-chart-left: #39778f; --bar-chart-right: #a7582b; }
+.bar-chart-comparison-bar { fill-opacity: var(--bar-chart-bar-opacity); }
 .bar-chart-comparison-bar.is-left { fill: var(--bar-chart-left); }
 .bar-chart-comparison-bar.is-right { fill: var(--bar-chart-right); }
 .bar-chart-comparison-series-label { font-size: 12px; font-weight: 600; }

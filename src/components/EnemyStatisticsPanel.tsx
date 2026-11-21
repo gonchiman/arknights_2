@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import {
   MAX_CUSTOM_LINEAR_BIN_COUNT,
   calculateBoxPlotStatistics,
@@ -53,6 +53,7 @@ import {
 import { avoidHistogramCumulativeLine, avoidHistogramReferenceLines, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { buildHistogramCumulativeRows, getHistogramCumulativePoints, type HistogramCumulativeDisplay } from '../lib/histogramCumulative'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY, STAT_CUMULATIVE_COLOR, STAT_CUMULATIVE_DASH_ARRAY } from '../lib/statMetricColors'
 import { HistogramCumulativeOverlay } from './HistogramCumulativeOverlay'
 import { HistogramCumulativeStrip, HistogramPercentageStrip, getHistogramCumulativeStripLayout, getHistogramPercentageStripLayout } from './HistogramCumulativeStrip'
 import { HistogramBinRangeStrip, useHistogramBinRangeStripLayout } from './HistogramBinRangeStrip'
@@ -1804,7 +1805,9 @@ function HistogramSvg({
   const y = (value: number) => plotBottom - ((value / countMaximum) * plotHeight)
 
   return (
-    <svg className="enemy-stat-chart" data-histogram-axis={ratingBins ? rangeStrip.layout ? 'rating-ranges' : 'ratings' : rangeStrip.layout ? 'ranges' : 'ticks'}
+    <svg className="enemy-stat-chart enemy-stat-histogram"
+      style={{ '--enemy-histogram-stat-color': getStatMetricColor(metric.key), '--enemy-histogram-bar-opacity': STAT_METRIC_BAR_OPACITY } as CSSProperties}
+      data-histogram-axis={ratingBins ? rangeStrip.layout ? 'rating-ranges' : 'ratings' : rangeStrip.layout ? 'ranges' : 'ticks'}
       data-histogram-video-total={statistics.count} data-histogram-video-count-maximum={countMaximum}
       data-histogram-video-plot-left={plotLeft} data-histogram-video-plot-right={plotRight}
       data-histogram-video-plot-top={plotTop + extraTop} data-histogram-video-plot-bottom={plotBottom}
@@ -1850,6 +1853,7 @@ function HistogramSvg({
       </g>}
       {showCumulativeLine && <HistogramCumulativeOverlay bins={bins} total={statistics.count}
         plotLeft={plotLeft} plotRight={plotRight} plotTop={plotTop + extraTop} plotBottom={plotBottom}
+        lineColor={STAT_CUMULATIVE_COLOR} lineDasharray={STAT_CUMULATIVE_DASH_ARRAY}
         image={image} formatBoundary={(value) => formatHistogramSetting(value, metric.suffix)} countUnit={countOption.unit} />}
       <g ref={valueLabelLayout.labelsRef} className="enemy-histogram-values" transform={`translate(${plotLeft} ${plotTop + extraTop})`} aria-hidden="true">
         {valueLabelLayout.labels.filter((label) => label.shifted).map((label) => (

@@ -15,6 +15,7 @@
 | このサイトのテーブルを新規作成・修正するとき | [テーブルの表示方針](instructions/table-ui.md) |
 | このサイトのグラフの追加・修正について、案を提示するとき、設計するとき、または実装するとき | [グラフの操作方針](instructions/chart-ui.md) |
 | 共通の棒グラフ作成ページ、その提供元、共通描画を追加・変更するとき | [共通の棒グラフ作成仕様](docs/bar-chart-workbench/README.md) |
+| ステータス指標を色で区別するグラフを追加・変更するとき | [ステータス指標の共通配色](docs/stat-metric-colors/README.md) |
 | テーブルの画像出力を作成・変更するとき | [テーブル画像出力の共通仕様](instructions/shared/table-image.md) |
 | MOD比較テーブルの画像出力・最大MOD表示を新規作成・修正するとき | [MOD比較テーブルの共通出力](docs/comparison-table-output/README.md) |
 | グラフの画像出力を作成・変更するとき | [グラフ画像出力のテンプレート](docs/chart-image/README.md) |
