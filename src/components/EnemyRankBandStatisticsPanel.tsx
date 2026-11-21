@@ -8,6 +8,7 @@ import {
   type EnemyRankBandStatValues,
 } from '../lib/enemyRankBandStatistics'
 import { ENEMY_RANK_BAND_METRIC_LABELS, formatRankBandStatistic } from '../lib/enemyRankBandStatisticsDisplay'
+import { ENEMY_RANK_BAND_IMAGE_STEP_OPTIONS } from '../lib/enemyRankBandStatisticsImage'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import {
   EnemyRankBandStatisticsImageDialog,
@@ -65,6 +66,9 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, locatio
           resistance: band.resistance ? { ...band.resistance } : null,
         })),
         metric, step,
+        stepBands: ENEMY_RANK_BAND_IMAGE_STEP_OPTIONS.map(({ key }) => ({
+          step: key, bands: key === step ? result.bands : buildStandardizedEnemyRankBandStatistics(rows, counts, key).bands,
+        })),
         conditions: [...conditions, '標準化（全体基準）', `出現回数 ${COUNT.format(result.total)}`,
           ...(['variance', 'standardDeviation'].includes(metric) ? ['母分散'] : [])],
         filenameConditions: [...conditions, '標準化', '出現回数',
