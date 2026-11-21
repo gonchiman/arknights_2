@@ -218,7 +218,8 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
   // Keep supplied range lines horizontal instead of shrinking the natural data area.
   const sidePadding = secondaryLabels.length ? Math.max(62, ...axis.ticks.map(tick => estimatedWidth(number.format(tick)) + 34))
     + (settings.cumulative && data.capabilities.cumulative ? 70 : 14) : 90
-  const plotWidth = Math.max(MINIMUM_WIDTH, width, sidePadding + data.bins.length * slot)
+  const plotWidth = data.layout === 'mirrored' ? Math.max(MINIMUM_WIDTH, width)
+    : Math.max(MINIMUM_WIDTH, width, sidePadding + data.bins.length * slot)
   return <figure className={`bar-chart-figure${data.layout === 'mirrored' ? ' is-comparison' : ''}`} aria-label={data.title}>
     <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
     <div className="bar-chart-scroll" ref={ref}>

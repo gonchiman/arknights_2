@@ -4,7 +4,7 @@
 
 `#/charts/bar` で、データの提供元を選び、共通描画から単系列の縦棒、左右2系列の横棒とPNGを作る。タイトル、軸名、単位、条件は提供元の計算結果に含め、利用者にX・Yの列を組み立てさせない。
 
-接続するデータは、敵のステータス分布、出現順位による術耐性の下限に対応する防御力、敵ステータスの評価別比較。ステータス分布ではHP、攻撃力、防御力、術耐性、移動速度、攻撃間隔、重量を選ぶ。7種すべてに数値階級を提供し、HP・攻撃力・防御力・術耐性ではゲーム内評価を階級にする方式も選べる。評価別比較は同じ4種から左右を個別に選ぶ。既存ページの置換、登場ステージ数の分布、DC3の接続、3系列以上、動画、任意の式の入力は対象外。
+接続するデータは、敵のステータス分布、出現順位による術耐性の下限に対応する防御力、敵ステータスの評価別比較、防御力・術耐性の順位帯統計。ステータス分布ではHP、攻撃力、防御力、術耐性、移動速度、攻撃間隔、重量を選ぶ。7種すべてに数値階級を提供し、HP・攻撃力・防御力・術耐性ではゲーム内評価を階級にする方式も選べる。評価別比較は同じ4種から左右を個別に選ぶ。順位帯統計は既存の表と同じ全体基準で標準化した計算結果を使い、最小・最大・幅・平均・標準偏差・分散を選ぶ。標準偏差は独立した提供元にしない。既存ページの置換、登場ステージ数の分布、DC3の接続、3系列以上、動画、任意の式の入力は対象外。
 
 ## 保存場所と役割
 
@@ -16,11 +16,13 @@
 | [barChartProviders.ts](../../src/lib/barChartProviders.ts) | 提供元の一覧、既存の計算結果から共通データへの変換 |
 | [enemyStatMetrics.ts](../../src/lib/enemyStatMetrics.ts) | 敵統計と共有するステータス名・単位・書式・階級設定の定義 |
 | [statMetricColors.ts](../../src/lib/statMetricColors.ts) | 単体と比較で共有する指標色、不透明度、累積割合線の色と破線 |
+| [enemyRankBandStatistics.ts](../../src/lib/enemyRankBandStatistics.ts) | 出現回数で重み付けした順位帯の統計と、選択範囲全体を基準にした標準化 |
+| [enemyRankBandStatisticsDisplay.ts](../../src/lib/enemyRankBandStatisticsDisplay.ts) | 既存の表・グラフと共有する統計量の名称と数値書式 |
 | [buildEnemyRatingHistogramBins](../../src/lib/enemyRatingHistogram.ts) / [formatHistogramRatingRangeLines](../../src/lib/histogramRatingRangeStrip.ts) | 元の観測値をゲーム内評価で集計する処理と、評価の範囲を帯へ示す簡略表記 |
 | [getHistogramStatRankBands](../../src/lib/histogramStatRankBands.ts) / [StatRankBand](../../src/lib/statRankBands.ts) | 元の数値階級から評価境界を情報帯の位置へ変換する処理と、受け渡す評価帯データ |
 | [StatRankStrip](../../src/components/StatRankStrip.tsx) / [ChartStripCell](../../src/components/ChartStripCell.tsx) | 評価帯と、割合・累積割合・階級の情報帯に使う共通描画 |
 | [BarChartPlot.tsx](../../src/components/BarChartPlot.tsx) / [CSS](../../src/components/BarChartPlot.css) | データの意味に依存しない棒、目盛り、数値、情報帯の描画と画面用の外枠 |
-| [BarChartComparisonPlot.tsx](../../src/components/BarChartComparisonPlot.tsx) | 同じカテゴリに揃った2系列の左右配置、共通軸、外側の帯、強調と選択合計 |
+| [BarChartComparisonPlot.tsx](../../src/components/BarChartComparisonPlot.tsx) | 同じカテゴリに揃った2系列の割合または値の左右配置、共通軸、外側の帯、強調と割合の選択合計 |
 | [useBarChartTextWidths.ts](../../src/components/useBarChartTextWidths.ts) | 縦棒と左右比較で共有する文字幅の計測 |
 | [BarChartWorkbenchPage.tsx](../../src/components/BarChartWorkbenchPage.tsx) | 提供元・ステータス・集計版・範囲・表示設定の操作と、自動設定値の表示 |
 | [BarChartImageDialog.tsx](../../src/components/BarChartImageDialog.tsx) | 表示時点のデータと設定をPNG用の共通フレームに渡す |
@@ -40,6 +42,7 @@
 | 敵のステータス分布（`enemy-stat-histogram`） | [enemyStatMetrics.ts](../../src/lib/enemyStatMetrics.ts) / [buildEnemyHistogramObservations](../../src/lib/enemyHistogramCounts.ts) / [calculateWeightedHistogram](../../src/lib/enemyWeightedHistogram.ts) / [buildEnemyRatingHistogramBins](../../src/lib/enemyRatingHistogram.ts) | 選択ステータスの数値階級またはゲーム内評価の階級と、その階級に属する度数 |
 | 防御力・術耐性の対応 | [buildEnemyDefenseResistanceBands](../../src/lib/enemyDefenseResistance.ts) の `resistanceThresholds` | 術耐性の下限を10刻みで取り、同じ出現順位の防御力を返す |
 | 敵ステータスの評価別比較（`enemy-stat-rating-comparison`） | 既存の `enemy-stat-histogram` のゲーム内評価方式 | 左右で選んだステータスそれぞれの評価別度数・割合・累積割合 |
+| 防御力・術耐性の順位帯統計（`enemy-rank-band-statistics`） | [buildStandardizedEnemyRankBandStatistics](../../src/lib/enemyRankBandStatistics.ts) | ステータスの高い順の順位帯と、帯内の最小・最大・幅・平均・標準偏差・分散から選んだ標準化統計量 |
 
 ステータス分布は `BarChartProviderContext.statKey` に [EnemyStatKey](../../src/lib/enemyStatMetrics.ts) の7種のキーを受け取る。省略時は `magicResistance`（術耐性）。旧提供元の `enemy-resistance-histogram` は `enemy-stat-histogram` に統合した。
 
@@ -67,7 +70,9 @@
 
 `BarChartDocument` はJSONで受け渡せる、元の入力から切り離した固定スナップショット。`bins` に階級・点・値を、`semantics` にラベルの意味を、`source` に提供元・集計版・範囲・集計方法・母集団・欠損・収録状況を保存する。横軸の単位は任意の `semantics.xUnit` に渡す。攻撃間隔は `xLabel: '攻撃間隔'` と `xUnit: '秒'` から「攻撃間隔（階級・秒）」を生成し、単位を含む表示済みラベルを分解しない。表示ラベルは共通の `getBarChartLabels` と `getBarChartConditions` で作る。描画関数、JSX、DOM参照、ページの状態をデータへ含めない。
 
-左右比較では `layout: 'mirrored'`、`xKind: 'category'`、`semantics.kind: 'comparison'` とする。ルートの `bins` は共通のカテゴリIDとラベルを保持し、値は `null`。棒を並べる項目の意味は `semantics.itemKind: 'interval'` で別に宣言する。`series` は左・右の順の2要素で、固定ID `left`／`right`、ラベル、選択キー、カテゴリ順に揃った `bins`、個別の `population` を持つ。各系列には元の度数・正の割合・累積割合・正確な数値境界を保持する。ルートの `source.population` は `null` とし、共通の分母を示さない。左へ伸ばすために入力値を負数へ変換しない。
+左右比較では `layout: 'mirrored'`、`xKind: 'category'`、`semantics.kind: 'comparison'` とする。ルートの `bins` は共通のカテゴリIDとラベルを保持し、値は `null`。棒を並べる項目の意味は `semantics.itemKind: 'interval'` で別に宣言する。`series` は左・右の順の2要素で、固定ID `left`／`right`、ラベル、選択キー、カテゴリ順に揃った `bins`、個別の `population` を持つ。評価別比較の各系列には元の度数・正の割合・累積割合・正確な数値境界を、順位帯統計には選択した統計量の標準化値を保持する。ルートの `source.population` は `null` とし、共通の割合の分母を示さない。左へ伸ばすために入力値を負数へ変換せず、標準化平均などの実際の負値は符号を保つ。
+
+左右配置で何を棒の長さにするかは `semantics.comparisonValue: 'share' | 'value'` で宣言する。省略時は従来どおり `share` とし、系列の `bins[].share` を割合として使う。`value` は `bins[].value` の値を直接使い、100倍や割合への換算を行わない。`semantics.comparisonLabel` はタイトル末尾の名称で、省略時の「評価別分布」に代わる「順位帯別標準偏差」などを提供元から渡す。描画側が提供元名で分岐しない。
 
 ### 左右2系列の評価別比較
 
@@ -82,6 +87,24 @@
 `selectedRanks` は表示名ではなくカテゴリIDの配列。グラフ外のチェックで複数選択し、空なら強調と合計欄を描かない。`getBarChartSelectionSummary` が元の度数を合算して各系列の有効度数で割る。丸めた割合は足し合わせず、有効度数0は合計割合も `null` とする。連続する選択は「E〜C」のようにまとめて表示する。
 
 画面・保存プレビュー・PNGは同じ `BarChartPlot` から左右配置の描画へ渡す。自然な高さは [barChartLayout.ts](../../src/lib/barChartLayout.ts) の見出し・行・選択合計の共通定義から求め、合計欄の追加で棒を縮めない。保存開始時に系列データと選択配列も固定する。PNGの幅と比率、保存操作は既存の共通出力を使う。保存名は左右の順序、集計条件、帯の種類、強調する評価、比率を識別し、単系列用の持ち越し設定を含めない。
+
+### 防御力・術耐性の順位帯統計
+
+提供元 `enemy-rank-band-statistics` は、「防御力と術耐性の対応 → 順位帯の統計 → 表」と同じ [buildStandardizedEnemyRankBandStatistics](../../src/lib/enemyRankBandStatistics.ts) の結果を共通データへ変換する。データは順位帯の統計であり、標準偏差はグラフに使う統計量の1つとして選択する。集計対象は防御力と術耐性の両方が有効な出現、集計方法は出現回数。`BarChartProviderContext.rankBandStep` は `5 | 10 | 20` ポイント、初期値は10。順位はステータスの高い順とし、それぞれの指標を独立に並べる。集計版・全体／メインストーリーの範囲は共通設定から渡す。
+
+`rankBandMetric` は `keyof EnemyRankBandStatValues` の `min | max | width | mean | standardDeviation | variance`、初期値は `standardDeviation`。画面の「統計量」で表と同じ6種から選ぶ。名称は [enemyRankBandStatisticsDisplay.ts](../../src/lib/enemyRankBandStatisticsDisplay.ts) の共通定義を使う。幅は帯内の最大−最小。平均、標準偏差、分散も既存の出現回数による重み付き計算を使い、分散は母分散とする。同じ値の全出現回数を各帯へ重複して入れず、その順位帯と重なる出現重みだけを使う。
+
+尺度は元の表と同じ全体基準の標準化に固定する。標準化の基準となる全体平均μ・母標準偏差σは、選択中の集計版・範囲で両ステータスが有効な集合から指標ごとに求める。最小・最大・平均は `(値−μ)/σ`、幅・標準偏差は `値/σ`、分散は `値/σ²`。帯ごとに基準を求め直したり、標本分散へ置き換えたりしない。
+
+`semantics.comparisonValue: 'value'` とし、`comparisonLabel` と `semantics.xLabel` に選択した統計量の名称を渡す。タイトル・軸名・外側の帯の見出しは同じ選択から自動生成する。`xQualifier: '標準化'` から「平均（標準化）」などの軸名を生成し、元のステータスの単位や `%` を付けない。分散を標準偏差と同じ値・名称で扱わない。
+
+2系列は既存の左右配置の共通描画へ渡す。左右・全順位帯に同じ数値範囲を使い、同じ絶対値を同じ棒の長さで表す。非負の統計量はゼロ始まりの共通軸。標準化平均などに負値がある場合は両側に同じ負領域を確保し、各トラック内の0の基線から符号に沿って描く。絶対値へ置き換えて符号を消さず、目盛り・帯・直接表示にも元の符号を保持する。順位帯は連続する数値範囲なので `semantics.itemKind: 'interval'` とし、区間型の共通棒幅を使う。色はそれぞれの `series.metricKey` から共通の指標色を取得し、負値でも統計量を変えても指標色を維持する。
+
+外側の帯は `comparisonBand: 'value' | 'none'` の数値／なしだけを使う。評価別比較の割合・累積割合の設定が残っていても統計量から割合を作らない。`selectedRanks` のカテゴリIDによる複数行の強調はできるが、統計量の選択合計は定義せず、合計欄もその予約高も追加しない。
+
+帯内が同値で、全体の標準偏差は有効な場合の幅・標準偏差・分散0は、真の0として保持する。全体の標準偏差が0などで標準化できない系列は `null` とし、棒を描かず「—」で表す。0に置き換えず、もう一方の有効な系列は表示する。
+
+保存する固定スナップショットには値、順位帯、指標ID、比較値の方式、統計量、見出し、集計版・範囲・出現回数・順位帯幅・全体基準の標準化の条件を保持する。標準偏差・分散では母分散も条件に保持する。条件と保存名も同じデータから生成し、統計量・帯の表示・強調・幅・比率を実際の表示状態に合わせる。共通有効集合の件数・欠損は条件欄へ1回だけ示す。旧ページの表とグラフは引き続き使い、この提供元への置換は行わない。
 
 ### 割合と累積割合
 
@@ -105,7 +128,7 @@
 
 | 棒を並べる軸の意味 | 例 | 棒間の隙間 |
 | --- | --- | --- |
-| 連続する数値範囲を区切った階級 | 術耐性0〜10、10〜20、20〜30 | 小さくする |
+| 連続する数値範囲を区切った階級 | 術耐性0〜10、10〜20、ステータス順位帯の上位0〜10% | 小さくする |
 | 個別に指定した数値の点 | 術耐性0・20・50でのDPS、術耐性の下限に対応する防御力 | 通常の隙間を空ける |
 | 独立したカテゴリ | OP名、職業、MOD | 通常の隙間を空ける |
 
@@ -131,7 +154,7 @@
 
 描画方式と棒幅は `getBarChartItemKind(document)` が返す項目の意味と [barChartPresentation.ts](../../src/lib/barChartPresentation.ts) の共通定義で決める。画面の「自動設定」も同じ定義から描画方式・棒幅・上限を表示し、提供元名や値の大小、0や欠損から型を推定しない。区間型は1項目の区画の96%、点型とカテゴリ型は60%で上限48px。区画は縦棒では描画領域の幅を、横棒では高さを**すべてのbins**で割った大きさであり、0や欠損の項目も含む。48pxは**PNG拡大前のCSS/SVG座標**で、保存画像の1,920pxへの拡大率を掛ける前の値。画面とPNGで別の棒幅を定義しない。
 
-利用ごとに変更するのは提供元、ステータス、階級方式、集計版、集計範囲、表示設定。「敵のステータス分布」では単体のステータス選択、「敵ステータスの評価別比較」では左右の選択を表示する。単系列の表示設定は `values`（棒の値）、`axisBand`（横軸の帯。ゲーム内評価方式では評価・範囲の2段）、`percent`（割合帯）、`cumulative`（累積割合線）、任意の `cumulativeBand`（累積割合帯）・`rankBand`（評価帯）。追加した2項目は初期値 `false` とし、従来の4項目だけを持つ設定も表示を変えずに扱う。提供元の能力に合わない設定は無効化する。コード上の既定値と各寸法は共通部品・定義を正とし、別のページへコピーしない。画面の初期集計は数値階級・術耐性・最新版・メインストーリー・出現回数。対応値の提供元は出現回数だけを使う。
+利用ごとに変更するのは提供元、ステータス、階級方式、順位帯幅、統計量、集計版、集計範囲、表示設定。「敵のステータス分布」では単体のステータス選択、「敵ステータスの評価別比較」では左右の選択、順位帯統計では「順位帯幅」「統計量」を表示する。単系列の表示設定は `values`（棒の値）、`axisBand`（横軸の帯。ゲーム内評価方式では評価・範囲の2段）、`percent`（割合帯）、`cumulative`（累積割合線）、任意の `cumulativeBand`（累積割合帯）・`rankBand`（評価帯）。追加した2項目は初期値 `false` とし、従来の4項目だけを持つ設定も表示を変えずに扱う。提供元の能力に合わない設定は無効化する。コード上の既定値と各寸法は共通部品・定義を正とし、別のページへコピーしない。画面の初期集計は数値階級・術耐性・最新版・メインストーリー・出現回数。対応値と順位帯統計の提供元は出現回数だけを使う。
 
 画面・保存プレビュー・PNGには同じデータと設定を渡す。評価帯・従段の範囲・階級方式のデータも固定スナップショットへ含め、保存ダイアログを開いた後の編集で、既に開いているプレビューの計算結果や帯を差し替えない。PNGの幅は1,920px、保存ダイアログの初期比率は16:9とし、自動比率とカスタム比率も共通の保存UIから選べる。設定を識別する保存名は `getBarChartFilename` で生成し、ゲーム内評価の階級方式や、有効にした累積割合帯・評価帯も識別する。未対応の提供元やゲーム内評価方式で残った設定など、実際に表示しない割合・評価帯を名前に含めない。
 
@@ -178,6 +201,20 @@ const comparison = createBarChartFromProvider('enemy-stat-rating-comparison', {
 
 `DEFAULT_BAR_CHART_DISPLAY_SETTINGS` は [barChartDocument.ts](../../src/lib/barChartDocument.ts) から読み込む。集計版・集計範囲・出現回数は既存の共通設定を使い、ステータスの選択によって母数を共通化しない。
 
+順位帯統計も同じ描画へ渡す。提供元が既存の表と同じ標準化計算を呼び出し、`rankBandMetric` でグラフに使う統計量を選ぶ。利用側や共通描画で統計量や割合を計算し直さない。
+
+```tsx
+const rankBandStatistics = createBarChartFromProvider('enemy-rank-band-statistics', {
+  data, version, scope: 'all', countMode: 'SPAWNS', rankBandStep: 10,
+  rankBandMetric: 'standardDeviation',
+})
+
+<BarChartFigure document={rankBandStatistics} settings={{
+  ...DEFAULT_BAR_CHART_DISPLAY_SETTINGS,
+  comparisonBand: 'value',
+}} />
+```
+
 提供元を追加するときは、提供元一覧へ変換処理を登録し、タイトル・軸・単位・集計条件・対応可能な表示をデータに含める。提供元別・ステータス別の描画分岐を `BarChartPlot` へ追加しない。現在の契約が表現しない3系列以上や範囲値が必要な場合は、既存の意味を保てる契約と描画を先に検討する。
 
 ## 見本と更新方法
@@ -208,11 +245,15 @@ const comparison = createBarChartFromProvider('enemy-stat-rating-comparison', {
 
 左右比較の見本は「敵ステータスの評価別比較」を選び、集計版v12・メインストーリー・出現回数、左を防御力、右を術耐性、外側の帯を累積割合、強調なしにする。「画像を保存」で幅1,920px・16:9のPNGを生成し、`stat-rating-comparison-v12-main.png` として保存する。E〜SSの全評価、区間型の共通定義による棒幅、左右共通の目盛り、中央と外側の帯の行位置、各母数を確認する。HP／防御力のように母数が異なる組合せ、同一ステータス、左右の入替、帯なし、複数評価の強調と選択合計も画面・プレビュー・実PNGで確認する。
 
+[順位帯別標準偏差の確認用PNG](examples/rank-band-standard-deviation-v12-all.png)は、順位帯統計で選べる統計量の1つである標準偏差の実出力。集計版v12・全体・出現回数・10ポイント刻み・外側の数値帯あり・強調なし・幅1,920px・16:9から生成した。アプリと同じ固定スナップショット・`getBarChartImageFrame`・`ChartImageFrame`・`saveComparisonChartImage`を使い、保存先だけを受け取って生成した。再生成は提供元「防御力・術耐性の順位帯統計」で「統計量：標準偏差」を選ぶ。条件欄では、同じ共通有効集合を使う2系列の件数と欠損を1回だけ示す。全体基準の標準化と母分散の条件、共通の数値軸、0と標準化不能の区別、割合や合計欄がないことを確認する。最小・最大・幅・平均・分散への切り替え、平均・最小・最大の負値、5・20ポイント刻み、メインストーリー、帯なし、行の強調も画面・プレビュー・PNGで照合する。
+
+[順位帯別平均の確認用PNG](examples/rank-band-mean-v12-all.png)は、上記の標準偏差と同じ条件で「統計量：平均」へ切り替え、同じ共通の画像保存処理から生成した実出力。左右の負値と0の基線、同じ値に対する共通の長さを確認する。
+
 新しい提供元や配置変更の見本は、画面のスクリーンショットや手描きの図に置き換えず、実際のPNG保存から作る。画面・プレビュー・保存画像が同じデータを示していることを併せて確認する。
 
 ## 適用状況
 
-共通ページ `#/charts/bar` の7ステータスの数値階級の分布、4ステータスのゲーム内評価の分布、防御力と術耐性の対応、4ステータスの左右評価別比較と、そのページのPNG出力へ適用する。数値階級に添える4種の評価帯も引き続き利用できる。既存の敵分布はステータス定義と指標の配色を共有するが、グラフ自体は共通描画へ未移行。配色の適用先は[ステータス指標の共通配色](../stat-metric-colors/README.md)を参照し、集計・階級・棒幅・初期値などは維持する。対応表・対応式、DC3、GG、スルトの出力を一括変更しない。
+共通ページ `#/charts/bar` の7ステータスの数値階級の分布、4ステータスのゲーム内評価の分布、防御力と術耐性の対応、4ステータスの左右評価別比較、防御力・術耐性の順位帯統計と、そのページのPNG出力へ適用する。数値階級に添える4種の評価帯も引き続き利用できる。既存の敵分布はステータス定義と指標の配色を共有するが、グラフ自体は共通描画へ未移行。配色の適用先は[ステータス指標の共通配色](../stat-metric-colors/README.md)を参照し、集計・階級・棒幅・初期値などは維持する。対応表・対応式、DC3、GG、スルトの出力を一括変更しない。旧ページの順位帯統計も残し、同じ表の計算結果にある6種の統計量を共通描画へ渡す。
 
 棒間の隙間を軸の意味で判断する基準は、本仕様の「棒間の隙間を決める基準」で定める。単系列の数値階級・ゲーム内評価と、左右評価別比較のE〜SSに同じ区間型の棒幅を適用する。左右比較の確認用PNGも、この共通定義による見本とする。適用範囲は共通の棒グラフ作成ページであり、既存の敵統計ページにある評価別分布など、別の描画部品は移行しない。
 
@@ -237,11 +278,15 @@ const comparison = createBarChartFromProvider('enemy-stat-rating-comparison', {
 - 左右比較の全16通りで既存の単体評価ヒストグラムと度数・個別母数・境界が一致する。同一ステータスでも2系列を残す。
 - 左右比較は同じ割合を同じ棒の長さにし、外側の帯3形式、複数評価の強調、元の度数からの選択合計、母数0の欠損表示を保つ。
 - 左右の順序・有効な帯・強調が保存名に反映され、単系列用の持ち越し設定は含まれない。選択配列も保存スナップショットから切り離される。
+- 順位帯統計は6種の統計量、5・10・20ポイント刻み、両集計範囲で既存の表の標準化計算と一致し、同値の重みを各帯へ重複して入れない。帯内と全体で母分散を使い、全体基準を帯ごとに作り直さない。
+- 値の左右比較は生の `value` を共通軸へ直接描き、標準化した平均・最小・最大の負値と、各トラックの0の基線を保持する。同じ絶対値は左右同じ長さになる。非負の統計量と従来の評価別割合はゼロ始まりの軸を維持する。
+- 外側は数値／なしだけ、割合・累積割合・統計量の選択合計を表示しない。行の強調による高さの増加や無効設定の保存名への混入がない。
+- 真の0、空データ、全体の標準偏差0などによる標準化不能を区別する。比較値の方式・統計量・順位帯幅・全体基準の標準化・該当する母分散・集計条件を固定スナップショットと条件・保存名へ保持する。
 - 狭い画面、長い名称、画像の自動比率と16:9で、ラベルと帯が欠けたり重なったりしない。
 - 関連テスト、ビルド、`npm run rules:check`を確認する。実際に生成したPNGも開いて確認する。
 
 ```sh
-node --experimental-strip-types --test tests/barChartProviders.test.mjs tests/barChartPresentation.test.mjs tests/barChartWorkbench.test.mjs tests/barChartComparison.test.mjs tests/routes.test.ts
+node --experimental-strip-types --test tests/barChartProviders.test.mjs tests/barChartPresentation.test.mjs tests/barChartWorkbench.test.mjs tests/barChartComparison.test.mjs tests/barChartRankStatistics.test.mjs tests/enemyRankBandStatistics.test.ts tests/routes.test.ts
 npm run build
 npm run rules:check
 ```

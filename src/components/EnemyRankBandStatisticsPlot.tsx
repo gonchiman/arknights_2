@@ -2,6 +2,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { getHpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
 import type { EnemyRankBandMetric, EnemyStandardizedRankBandStatistics } from '../lib/enemyRankBandStatistics'
 import { ENEMY_RANK_BAND_METRIC_LABELS, formatRankBandStatistic } from '../lib/enemyRankBandStatisticsDisplay'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY } from '../lib/statMetricColors'
 import { ChartStripCell } from './ChartStripCell'
 import './EnemyRatingComparisonPlot.css'
 import './EnemyRankBandStatisticsPlot.css'
@@ -108,6 +109,7 @@ export function EnemyRankBandStatisticsPlot({ bands, metric, width, height, imag
         * Math.max(0, Math.min(1, (value - axis.lowerLimit) / span))
       const zeroX = valueX(0)
       return <g key={key} className={`enemy-rating-comparison-series ${colorClass}`}
+        style={{ color: getStatMetricColor(colorClass) }}
         data-rank-band-domain-min={axis.lowerLimit} data-rank-band-domain-max={axis.upperLimit}
         data-rank-band-zero-x={zeroX}>
         <text {...INK} x={trackCenter} y="20" textAnchor="middle" className="enemy-rank-band-series-label">{label}</text>
@@ -129,7 +131,7 @@ export function EnemyRankBandStatisticsPlot({ bands, metric, width, height, imag
             {value !== null && <rect {...INK} className="enemy-rank-band-statistics-bar" data-rank-band-series={key}
               data-rank-band-from={band.from} data-rank-band-to={band.to} data-rank-band-statistic={value}
               x={Math.min(zeroX, endpoint)} y={y - barHeight / 2}
-              width={Math.abs(endpoint - zeroX)} height={barHeight} fill="currentColor" />}
+              width={Math.abs(endpoint - zeroX)} height={barHeight} fill="currentColor" fillOpacity={STAT_METRIC_BAR_OPACITY} />}
             <ChartStripCell left={valueLeft} width={valueColumnWidth} top={top + rowIndex * rowStep + 2}
               height={Math.max(0, rowStep - 4)} labelY={y + 4} label={formatValue(value)}
               labelClassName="chart-strip-label enemy-rank-band-value"

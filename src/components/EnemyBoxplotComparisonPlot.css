@@ -4,6 +4,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+.enemy-boxplot-comparison-plot .enemy-rating-comparison-series.defense { color: #387590; }
+.enemy-boxplot-comparison-plot .enemy-rating-comparison-series.magicResistance { color: #a85b2e; }
+
 .enemy-boxplot-series-label { fill: currentColor; font-size: 12px; font-weight: 600; }
 .enemy-boxplot-status { fill: var(--text-muted, #555); font-size: 11px; }
 .enemy-boxplot-axis-title { fill: var(--text-soft, #444); font-size: 12px; font-weight: 700; }
