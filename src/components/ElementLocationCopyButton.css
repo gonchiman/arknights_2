@@ -1,0 +1,53 @@
+.element-location-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.element-location-copy-button .element-location-copy-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  color: inherit;
+}
+
+.element-location-copy-face svg { display: block; flex: 0 0 16px; }
+
+.element-location-copy-button:hover:not(:disabled):not([aria-disabled="true"]) .element-location-copy-face {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.element-location-copy-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.element-location-copy-button:disabled { cursor: default; }
+.element-location-copy-button:disabled .element-location-copy-face,
+.element-location-copy-button[data-copy-state="copying"] .element-location-copy-face { opacity: .45; }
+
+@media (max-width: 760px), (pointer: coarse) {
+  .element-location-copy-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+}

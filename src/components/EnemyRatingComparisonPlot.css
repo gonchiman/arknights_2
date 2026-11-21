@@ -4,6 +4,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Preserve the colors of plots that still use these shared series classes. */
+.enemy-rating-comparison-series.defense { color: #387590; }
+.enemy-rating-comparison-series.magicResistance { color: #a85b2e; }
+
 .enemy-rating-comparison-gridline { stroke: var(--border, #d4d4d4); }
 .enemy-rating-comparison-baseline { stroke: var(--border-strong, #888); }
 .enemy-rating-comparison-highlight { fill: var(--text, #222); fill-opacity: .07; }
