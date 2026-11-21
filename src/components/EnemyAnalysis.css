@@ -434,6 +434,12 @@
 .enemy-chart-bar.overflow { fill: var(--danger); fill-opacity: .62; }
 .enemy-chart-bar.overflow:hover { fill-opacity: .88; }
 
+.enemy-stat-histogram .enemy-chart-bar:not(.overflow) { fill: var(--enemy-histogram-stat-color); }
+.enemy-stat-histogram .enemy-chart-bar,
+.enemy-stat-histogram .enemy-chart-bar:hover,
+.enemy-stat-histogram .enemy-chart-bar.overflow,
+.enemy-stat-histogram .enemy-chart-bar.overflow:hover { fill-opacity: var(--enemy-histogram-bar-opacity); }
+
 .enemy-chart-overflow-tick {
   fill: var(--danger);
   font-weight: 700;

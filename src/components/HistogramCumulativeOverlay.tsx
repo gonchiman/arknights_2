@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { HistogramBin } from '../lib/enemyStatistics'
 import type { EnemyRatingHistogramBin } from '../lib/enemyRatingHistogram'
 import { buildHistogramCumulativeRows, getHistogramCumulativePoints } from '../lib/histogramCumulative'
@@ -18,6 +18,9 @@ export interface HistogramCumulativeOverlayProps {
   image?: boolean
   formatBoundary?: (value: number) => string
   countUnit?: string
+  /** A caller may style a supplementary line without changing other cumulative plots. */
+  lineColor?: string
+  lineDasharray?: string
 }
 
 const number = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 12 })
@@ -26,7 +29,7 @@ const ticks = [0, 0.25, 0.5, 0.75, 1] as const
 
 /** Display each whole-bin cumulative proportion at its equal-width bar's center. */
 export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, plotTop, plotBottom,
-  image = false, formatBoundary = value => number.format(value), countUnit = '体' }: HistogramCumulativeOverlayProps) {
+  image = false, formatBoundary = value => number.format(value), countUnit = '体', lineColor, lineDasharray }: HistogramCumulativeOverlayProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [focused, setFocused] = useState(false)
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null)
@@ -71,7 +74,8 @@ export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, p
   const axisLabelX = plotRight + 54
   const axisLabelY = (plotTop + plotBottom) / 2
 
-  return <g className="enemy-histogram-cumulative" data-histogram-cumulative="true">
+  return <g className="enemy-histogram-cumulative" data-histogram-cumulative="true"
+    style={lineColor ? { '--histogram-cumulative-color': lineColor } as CSSProperties : undefined}>
     <g className="enemy-histogram-cumulative-axis" aria-hidden="true">
       <line className="enemy-chart-axis-tick" x1={plotRight} x2={plotRight} y1={plotTop} y2={plotBottom} />
       {ticks.map(tick => <g key={tick}>
@@ -81,7 +85,8 @@ export function HistogramCumulativeOverlay({ bins, total, plotLeft, plotRight, p
       <text className="enemy-chart-axis-title enemy-histogram-cumulative-axis-title" x={axisLabelX} y={axisLabelY}
         textAnchor="middle" transform={`rotate(-90 ${axisLabelX} ${axisLabelY})`}>累積割合</text>
     </g>
-    {points.length > 1 && <path className="enemy-histogram-cumulative-line" data-chart-image-ink="" d={path} aria-hidden="true" />}
+    {points.length > 1 && <path className="enemy-histogram-cumulative-line" data-chart-image-ink="" d={path}
+      strokeDasharray={lineDasharray} aria-hidden="true" />}
     <g className="enemy-histogram-cumulative-points" tabIndex={image ? undefined : 0}
       role={image ? undefined : 'slider'} aria-label={image ? undefined : '累積割合の確認。左右キーで階級を移動'}
       aria-valuemin={image ? undefined : 1} aria-valuemax={image ? undefined : rows.length}

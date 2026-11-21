@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { after, afterEach, before, beforeEach, test } from 'node:test'
 import { createServer } from 'vite'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY, STAT_CUMULATIVE_COLOR, STAT_CUMULATIVE_DASH_ARRAY } from '../src/lib/statMetricColors.ts'
 
 const fixtureId = '\0histogram-video-renderer-fixture'
 const fixtureSource = `
@@ -55,7 +56,8 @@ function matches(element, selector) {
   return attribute && attribute[1] in element.attributes
     && (attribute[2] === undefined || element.attributes[attribute[1]] === attribute[2])
 }
-function makeSurface({ counts = [20, 30, 50], frequencies = true, strips = true, cumulative = true, references = false } = {}) {
+function makeSurface({ counts = [20, 30, 50], frequencies = true, strips = true, cumulative = true, references = false,
+  barColor = '#767676', barOpacity = '.72', cumulativeColor = '#cf6b1f', cumulativeDash = 'none' } = {}) {
   const elements = []
   const make = (attributes, extra) => { const result = element(attributes, extra); elements.push(result); return result }
   const total = counts.reduce((sum, count) => sum + count, 0)
@@ -74,7 +76,7 @@ function makeSurface({ counts = [20, 30, 50], frequencies = true, strips = true,
     const center = 20 + (index + .5) * 160 / counts.length
     make({ 'data-histogram-video-bar': String(index), 'data-histogram-video-count': String(count),
       x: String(center - 160 / counts.length / 2 + 1), y: String(180 - count / 100 * 160),
-      width: String(160 / counts.length - 2), height: String(count / 100 * 160), 'data-fill': '#767676' })
+      width: String(160 / counts.length - 2), height: String(count / 100 * 160), 'data-fill': barColor, 'data-fill-opacity': barOpacity })
     if (frequencies) make({ 'data-frequency-index': String(index),
       'data-histogram-video-label-width': '22', 'data-histogram-video-label-height': '20', x: String(center - 20), y: '0' }, {
       textContent: String(count), getScreenCTM: () => new Matrix(1, 0, 0, 1, 20, 20),
@@ -84,9 +86,9 @@ function makeSurface({ counts = [20, 30, 50], frequencies = true, strips = true,
       make({ 'data-histogram-video-value': kind, 'data-histogram-video-value-index': String(index), x: String(center), y: String(y) })
     }
     if (cumulative) make({ class: 'enemy-histogram-cumulative-point', cx: String(center),
-      cy: String(180 - cumulativeCount / total * 160), r: '2.75', 'data-fill': '#cf6b1f' })
+      cy: String(180 - cumulativeCount / total * 160), r: '2.75', 'data-fill': cumulativeColor })
   }
-  if (cumulative && counts.length > 1) make({ class: 'enemy-histogram-cumulative-line', 'data-stroke': '#cf6b1f' })
+  if (cumulative && counts.length > 1) make({ class: 'enemy-histogram-cumulative-line', 'data-stroke': cumulativeColor, 'data-stroke-dasharray': cumulativeDash })
   if (references) {
     make({ class: 'enemy-chart-reference', x1: '100', x2: '100', y1: '20', y2: '180', 'data-stroke': '#217050' })
     make({ class: 'enemy-chart-reference-label', x: '100', y: '4' }, { textContent: '平均 100' })
@@ -99,9 +101,9 @@ function makeSurface({ counts = [20, 30, 50], frequencies = true, strips = true,
 beforeEach(() => {
   originalGlobals = Object.fromEntries(['getComputedStyle', 'document'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
   Object.defineProperty(globalThis, 'getComputedStyle', { configurable: true, value: element => ({
-    fill: element.getAttribute('data-fill') ?? '#222', fillOpacity: element.getAttribute('data-histogram-video-bar') !== null ? '.72' : '1',
+    fill: element.getAttribute('data-fill') ?? '#222', fillOpacity: element.getAttribute('data-fill-opacity') ?? '1',
     stroke: element.getAttribute('data-stroke') ?? '#ccc', strokeWidth: '1', strokeOpacity: '1', opacity: '1',
-    strokeDasharray: 'none', strokeLinecap: 'round', strokeLinejoin: 'round',
+    strokeDasharray: element.getAttribute('data-stroke-dasharray') ?? 'none', strokeLinecap: 'round', strokeLinejoin: 'round',
     fontSize: '12px', fontStyle: 'normal', fontWeight: '400', fontFamily: 'sans-serif', textAnchor: 'middle', dominantBaseline: 'central',
   }) })
   Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElementNS: () => element({}) } })
@@ -127,7 +129,7 @@ function draw(animation, seconds) {
     restore() { Object.assign(this, stack.pop()) },
     setTransform(...args) { this.matrix = new Matrix(...args) },
     transform(...args) { this.matrix = this.matrix.multiply(new Matrix(...args)) },
-    setLineDash() {}, beginPath() {}, moveTo() {},
+    setLineDash(dash) { operations.push({ kind: 'dash', dash: [...dash] }) }, beginPath() {}, moveTo() {},
     lineTo(x, y) { operations.push({ kind: 'line', x, y }) }, stroke() { operations.push({ kind: 'stroke', color: this.strokeStyle }) },
     arc(x, y, radius) { operations.push({ kind: 'point', x, y, radius }) }, fill() {},
     measureText(text) { return { width: text.length * 8 } },
@@ -168,6 +170,19 @@ test('Aは固定した総数を分母に棒・度数・割合・累積線を連�
   assert.deepEqual(midway.filter(op => op.kind === 'text' && op.y === 16).map(op => op.text), ['10', '25', '50'])
   assert.deepEqual(midway.filter(op => op.kind === 'point').map(op => op.y), [164, 140, 100])
   assert.equal(midway.filter(op => op.kind === 'text' && op.y !== 8 && op.y !== 16).length, 3, '度数も全て更新する')
+})
+
+test('動画の途中フレームにもステータスの不透明色と補助累積線の灰色・破線を引き継ぐ', async () => {
+  makeSurface({ barColor: getStatMetricColor('magicResistance'), barOpacity: String(STAT_METRIC_BAR_OPACITY),
+    cumulativeColor: STAT_CUMULATIVE_COLOR, cumulativeDash: STAT_CUMULATIVE_DASH_ARRAY })
+  const animation = await prepare(null, { ...timing, bars: { start: 0, duration: 4 },
+    values: { start: 0, duration: 4 }, valueMode: 'linked' }, { width: 400 })
+  const frame = draw(animation, 2)
+  const bars = frame.filter(operation => operation.kind === 'bar')
+  assert.equal(bars.length, 3)
+  assert.ok(bars.every(operation => operation.color === getStatMetricColor('magicResistance') && operation.opacity === 1))
+  assert.ok(frame.some(operation => operation.kind === 'stroke' && operation.color === STAT_CUMULATIVE_COLOR))
+  assert.ok(frame.some(operation => operation.kind === 'dash' && operation.dash.join(' ') === STAT_CUMULATIVE_DASH_ARRAY))
 })
 
 test('Bは棒の後に累積線と累積帯を左から同時に表示する', async () => {

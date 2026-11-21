@@ -9,6 +9,7 @@ import {
   type EnemyRatingComparisonSideValue,
 } from '../lib/enemyRatingComparison'
 import { formatEnemyRatingVideoShare } from '../lib/enemyRatingVideoValues'
+import { getStatMetricColor, STAT_METRIC_BAR_OPACITY } from '../lib/statMetricColors'
 import { ChartStripCell } from './ChartStripCell'
 import './EnemyRatingComparisonPlot.css'
 
@@ -32,7 +33,7 @@ export function EnemyRatingComparisonSwatch({ metric, layout, imageMode = false 
   imageMode?: boolean
 }) {
   return <svg className={`enemy-rating-comparison-swatch ${seriesClass(metric)}${imageMode ? ' is-image chart-image-frame-legend-swatch' : ''}`}
-    width="18" height="12" aria-hidden="true">
+    style={{ color: getStatMetricColor(metric) }} width="18" height="12" aria-hidden="true">
     {layout === 'CUMULATIVE'
       ? <line x1="0" x2="18" y1="6" y2="6" stroke="currentColor" strokeWidth="2"
         strokeDasharray={metric === 'magicResistance' ? DASH : undefined} />
@@ -116,7 +117,8 @@ function VerticalPlot({ rows, selection, width, height, axis, imageMode, cumulat
       {ENEMY_RATING_COMPARISON_METRICS.map(({ key, label }, seriesIndex) => {
         const y = bandTop + seriesIndex * (bandHeight + 2)
         return <g key={key}>
-          <rect className={seriesClass(key)} x="3" y={y + bandHeight / 2 - 4} width="8" height="8" fill="currentColor" {...INK} />
+          <rect className={seriesClass(key)} style={{ color: getStatMetricColor(key) }} fillOpacity={STAT_METRIC_BAR_OPACITY}
+            x="3" y={y + bandHeight / 2 - 4} width="8" height="8" fill="currentColor" {...INK} />
           <text className="enemy-rating-comparison-label" x="15" y={y + bandHeight / 2 + 4} {...INK}>{label}</text>
           {rows.map((row, index) => <ChartStripCell key={row.rank} left={left + index * step} width={step}
             top={y} label={formatEnemyRatingVideoShare(row.stats[key].cumulativeShare)} height={bandHeight}
@@ -138,7 +140,7 @@ function VerticalPlot({ rows, selection, width, height, axis, imageMode, cumulat
       })
       if (points.length === 0) return null
       const secondary = key === 'magicResistance'
-      return <g className={seriesClass(key)} key={key}>
+      return <g className={seriesClass(key)} style={{ color: getStatMetricColor(key) }} key={key}>
         <polyline points={points.map(({ x, y }) => `${x},${y}`).join(' ')} fill="none" stroke="currentColor"
           strokeWidth="2" strokeDasharray={secondary ? DASH : undefined} {...INK} />
         {points.map((point) => secondary
@@ -155,7 +157,8 @@ function VerticalPlot({ rows, selection, width, height, axis, imageMode, cumulat
         const barWidth = step * 0.32
         const offset = seriesIndex === 0 ? -barWidth - 1 : 1
         const barTop = y(share * 100)
-        return <rect className={seriesClass(key)} key={key} x={center(index) + offset} y={barTop}
+        return <rect className={seriesClass(key)} style={{ color: getStatMetricColor(key) }} fillOpacity={STAT_METRIC_BAR_OPACITY}
+          key={key} x={center(index) + offset} y={barTop}
           width={barWidth} height={bottom - barTop} fill="currentColor" {...INK} />
       })}
     </g>)}
@@ -205,7 +208,7 @@ function MirroredPlot({
           <tspan x={labelX}>{columnName}</tspan>
           <tspan x={labelX} dy="11">（%）</tspan>
         </text>
-        <text className={`enemy-rating-comparison-series-label ${seriesClass(key)}`} x={center}
+        <text className={`enemy-rating-comparison-series-label ${seriesClass(key)}`} style={{ color: getStatMetricColor(key) }} x={center}
           y="17" textAnchor="middle" {...INK} data-rating-video-heading={imageMode ? 'series' : undefined}>{label}</text>
         {ticks.map((tick, index) => {
           const x = origin + direction * trackWidth * tick / axis.maximum
@@ -223,7 +226,8 @@ function MirroredPlot({
           const extent = share === null ? 0 : trackWidth * 100 * share / axis.maximum
           const barHeight = step * 0.58
           return <g key={row.rank}>
-            {extent > 0 && <rect className={seriesClass(key)} x={direction === -1 ? origin - extent : origin}
+            {extent > 0 && <rect className={seriesClass(key)} style={{ color: getStatMetricColor(key) }} fillOpacity={STAT_METRIC_BAR_OPACITY}
+              x={direction === -1 ? origin - extent : origin}
               y={y - barHeight / 2} width={extent} height={barHeight} fill="currentColor" {...INK}
               data-rating-video-bar={imageMode ? direction : undefined}
               data-rating-video-bar-rank={imageMode ? index : undefined} />}
