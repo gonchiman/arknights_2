@@ -155,6 +155,10 @@ await saveComparisonChartImage({
 
 保存時は画面の設定とデータをひとまとまりで保持し、プレビューと実際のPNGに同じ内容を渡す。ファイル名と縦横比は `ChartImageSaveDialog` を使い、既存の保存先選択とダウンロードの処理を再利用する。
 
+### 共通の棒グラフ作成ページ
+
+`#/charts/bar` の単系列の縦棒と左右2系列の評価別比較は、[共通の棒グラフ作成仕様](../bar-chart-workbench/README.md)のデータ契約・共通描画を使い、画像の外枠と保存操作にこのテンプレートを併用する。[BarChartImageDialog](../../src/components/BarChartImageDialog.tsx) は項目の意味 `semantics.itemKind` を含む固定スナップショットを画面と同じ `BarChartPlot` に渡し、幅1,920px・初期比率16:9で保存する。数値範囲を区切ったE〜SSの左右比較も、縦棒の数値階級と同じ区間型の棒幅を使う。左右比較の母数・順序・帯・強調の扱いと、実PNGの見本・更新方法は棒グラフ作成仕様を参照する。この棒幅の適用は共通の棒グラフ作成ページの範囲とし、下記の既存敵統計の評価別分布などを一括変更しない。
+
 ### 二段の横軸を持つ集合棒
 
 [CategoryGroupedBarChart.tsx](../../src/components/CategoryGroupedBarChart.tsx) は、各 `groups` の `parent: { id, label }` を指定すると、内側の目盛りと外側のカテゴリ名を二段で表示する。全グループに `parent` がある場合だけ有効とし、連続する同じ `parent.id` を一つの区分にまとめる。`group.label` は内側の目盛り、`parent.label` は下段の区分名とする。親を省略した従来の集合棒は単段のまま表示する。
@@ -237,6 +241,7 @@ await saveComparisonChartImage({
 | 敵統計：防御力・術耐性の箱ひげ図 | [EnemyBoxplotComparisonImage.tsx](../../src/components/EnemyBoxplotComparisonImage.tsx) |
 | 防御力と術耐性の対応：術耐性別の散布図・棒グラフ、各グラフ＋表 | [EnemyResistanceImageDialog.tsx](../../src/components/EnemyResistanceImageDialog.tsx) |
 | 敵統計：ヒートマップ | [enemyJointImage.ts](../../src/lib/enemyJointImage.ts) |
+| 共通の棒グラフ作成ページ：縦棒・左右の横棒 | [barChartDocument.ts](../../src/lib/barChartDocument.ts) の `getBarChartFilename` |
 | 敵統計：術耐性の円グラフ・100%横棒 | [enemyThresholdComparison.ts](../../src/lib/enemyThresholdComparison.ts) |
 | DC3属性比較：評価別の範囲、出現順位の折れ線・集合棒 | [DamageCalculatorThreeAttributePage.tsx](../../src/components/DamageCalculatorThreeAttributePage.tsx) |
 | 物理・術ダメージ比較：防御力・術耐性の折れ線／攻撃力別の折れ線 | [PhysicalArtsComparisonPage.tsx](../../src/components/PhysicalArtsComparisonPage.tsx)・[PhysicalArtsAttackSweepPanel.tsx](../../src/components/PhysicalArtsAttackSweepPanel.tsx) |

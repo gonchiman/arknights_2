@@ -34,7 +34,9 @@ const ratingOrder = ['E', 'D', 'C', 'B', 'B+', 'A', 'A+', 'S', 'S+', 'SS']
 test('提供元は既存の度数と階級の意味を保持し、同じ入力から同じタイトルとデータを返す', () => {
   const original = structuredClone(context)
   const document = histogram()
-  assert.equal(BAR_CHART_PROVIDERS.length, 2)
+  assert.deepEqual(BAR_CHART_PROVIDERS.map(provider => provider.id), [
+    'enemy-stat-histogram', 'enemy-defense-resistance', 'enemy-stat-rating-comparison',
+  ])
   assert.deepEqual(histogram(), document)
   assert.equal(document.title, '術耐性のヒストグラム')
   assert.equal(document.xAxisTitle, '術耐性（階級）')

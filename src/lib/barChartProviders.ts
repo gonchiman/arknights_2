@@ -1,4 +1,4 @@
-import { createBarChartDocument, type BarChartBin, type BarChartDocument, type BarChartSource } from './barChartDocument.ts'
+import { createBarChartDocument, type BarChartBin, type BarChartDocument, type BarChartSeries, type BarChartSource } from './barChartDocument.ts'
 import { getEnemyMainStoryScope, type EnemyAggregationData } from './enemyAggregationData.ts'
 import type { EnemyAggregationVersion } from './enemyAggregationContract.ts'
 import { buildEnemyDefenseResistanceBands } from './enemyDefenseResistance.ts'
@@ -13,8 +13,9 @@ import { ENEMY_STAT_METRICS, type EnemyStatKey } from './enemyStatMetrics.ts'
 import { buildEnemyRatingHistogramBins, isEnemyRatingStat } from './enemyRatingHistogram.ts'
 import { getHistogramStatRankBands } from './histogramStatRankBands.ts'
 import { formatHistogramRatingRangeLines } from './histogramRatingRangeStrip.ts'
+import type { EnemyRatingStat } from './enemyStatRatings.ts'
 
-export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance'
+export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance' | 'enemy-stat-rating-comparison'
 
 export interface BarChartProviderContext {
   readonly data: EnemyAggregationData
@@ -23,6 +24,8 @@ export interface BarChartProviderContext {
   readonly countMode?: EnemyHistogramCountMode
   readonly statKey?: EnemyStatKey
   readonly histogramBinning?: 'numeric' | 'rating'
+  readonly leftStatKey?: EnemyRatingStat
+  readonly rightStatKey?: EnemyRatingStat
 }
 
 export interface BarChartProvider {
@@ -151,10 +154,38 @@ function createDefenseResistance(context: BarChartProviderContext): BarChartDocu
   })
 }
 
+/** Rating aggregation remains the same operation used by the single-series provider. */
+function createEnemyStatRatingComparison(context: BarChartProviderContext): BarChartDocument {
+  const leftKey = context.leftStatKey ?? 'defense'
+  const rightKey = context.rightStatKey ?? 'magicResistance'
+  if (!isEnemyRatingStat(leftKey) || !isEnemyRatingStat(rightKey)) {
+    throw new Error('このステータスはゲーム内評価に対応していません。')
+  }
+  const documents = [leftKey, rightKey].map(statKey => createEnemyStatHistogram({
+    ...context, statKey, histogramBinning: 'rating',
+  }))
+  const [left, right] = documents
+  const makeSeries = (document: BarChartDocument, id: 'left' | 'right', metricKey: EnemyRatingStat): BarChartSeries => ({
+    id, label: document.semantics.subject, metricKey, bins: document.bins, population: document.source.population!,
+  })
+  const series: [BarChartSeries, BarChartSeries] = [makeSeries(left, 'left', leftKey), makeSeries(right, 'right', rightKey)]
+  const source: BarChartSource = { ...left.source, providerId: 'enemy-stat-rating-comparison', population: null, parameters: [] }
+  return createBarChartDocument({
+    layout: 'mirrored', xKind: 'category',
+    bins: left.bins.map(bin => ({ id: bin.id, label: bin.label, value: null })), series,
+    fractionDigits: Math.max(left.fractionDigits, right.fractionDigits),
+    semantics: { kind: 'comparison', itemKind: 'interval', subject: leftKey === rightKey ? left.semantics.subject
+      : `${left.semantics.subject}・${right.semantics.subject}`, xLabel: '評価別割合', xUnit: '%', yLabel: '評価' },
+    source, capabilities: { percentages: true, cumulative: true, rankBands: false },
+    filenameParts: [`左${left.semantics.subject}`, `右${right.semantics.subject}`, ...filenameParts(source), '左右の横棒'],
+  })
+}
+
 /** Providers consume their own calculated snapshot; they never inspect another page's state. */
 export const BAR_CHART_PROVIDERS: readonly BarChartProvider[] = Object.freeze([
   Object.freeze({ id: 'enemy-stat-histogram', label: '敵のステータス分布', createDocument: createEnemyStatHistogram }),
   Object.freeze({ id: 'enemy-defense-resistance', label: '防御力と術耐性の対応', createDocument: createDefenseResistance }),
+  Object.freeze({ id: 'enemy-stat-rating-comparison', label: '敵ステータスの評価別比較', createDocument: createEnemyStatRatingComparison }),
 ])
 
 export function createBarChartFromProvider(id: BarChartProviderId, context: BarChartProviderContext): BarChartDocument {

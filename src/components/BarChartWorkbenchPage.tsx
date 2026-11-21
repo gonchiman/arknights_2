@@ -1,10 +1,14 @@
 import { useId, useMemo, useState } from 'react'
 import { BAR_CHART_PROVIDERS, createBarChartFromProvider, type BarChartProviderId } from '../lib/barChartProviders'
-import { DEFAULT_BAR_CHART_DISPLAY_SETTINGS, type BarChartDisplaySettings } from '../lib/barChartDocument'
+import {
+  DEFAULT_BAR_CHART_DISPLAY_SETTINGS, getBarChartComparisonAxis, getBarChartComparisonBand,
+  type BarChartDisplaySettings,
+} from '../lib/barChartDocument'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
-import { getBarChartPresentationLabels } from '../lib/barChartPresentation'
+import { getBarChartPresentationLabels, getBarChartItemKind } from '../lib/barChartPresentation'
 import { ENEMY_STAT_METRICS, type EnemyStatKey } from '../lib/enemyStatMetrics'
 import { isEnemyRatingStat } from '../lib/enemyRatingHistogram'
+import type { EnemyRatingStat } from '../lib/enemyStatRatings'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -18,8 +22,12 @@ export function BarChartWorkbenchPage() {
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const [sourceId, setSourceId] = useState<BarChartProviderId>('enemy-stat-histogram')
   const [statKey, setStatKey] = useState<EnemyStatKey>('magicResistance')
+  const [leftStatKey, setLeftStatKey] = useState<EnemyRatingStat>('defense')
+  const [rightStatKey, setRightStatKey] = useState<EnemyRatingStat>('magicResistance')
+  const isComparison = sourceId === 'enemy-stat-rating-comparison'
   const [binning, setBinning] = useState<'numeric' | 'rating'>('numeric')
   const binningName = useId()
+  const comparisonBandName = useId()
   const supportsRating = sourceId === 'enemy-stat-histogram' && isEnemyRatingStat(statKey)
   const histogramBinning = supportsRating ? binning : 'numeric'
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
@@ -28,12 +36,13 @@ export function BarChartWorkbenchPage() {
   const { data, version, loading, error } = aggregation
   const result = useMemo(() => {
     if (!data || !version || loading || error) return null
-    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning }), error: null } }
+    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey }), error: null } }
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
-  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning])
+  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey])
   const document = result?.document
-  const presentation = document ? getBarChartPresentationLabels(document.xKind) : null
-  const update = (key: keyof BarChartDisplaySettings, checked: boolean) => setSettings(current => ({ ...current, [key]: checked }))
+  const presentation = document ? getBarChartPresentationLabels(getBarChartItemKind(document), document.layout) : null
+  const update = (key: 'values' | 'axisBand' | 'percent' | 'cumulative' | 'cumulativeBand' | 'rankBand', checked: boolean) =>
+    setSettings(current => ({ ...current, [key]: checked }))
 
   return <section className="calculator-page enemy-analysis-route bar-chart-workbench">
     <header className="page-intro bar-chart-workbench-intro">
@@ -42,7 +51,7 @@ export function BarChartWorkbenchPage() {
         onClick={() => document && setSnapshot(createBarChartImageSnapshot(document, settings))}>画像を保存</button>
     </header>
     <section className="bar-chart-workbench-data" aria-label="グラフに渡すデータ">
-      <div className="bar-chart-data-selectors">
+      <div className={`bar-chart-data-selectors${isComparison ? ' is-comparison' : ''}`}>
         <label className="bar-chart-source">データ
           <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => setSourceId(event.target.value as BarChartProviderId)}>
             {BAR_CHART_PROVIDERS.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
@@ -53,6 +62,16 @@ export function BarChartWorkbenchPage() {
             {ENEMY_STAT_METRICS.map(metric => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
           </select>
         </label>}
+        {isComparison && <div className="bar-chart-pair-selectors">
+          {([{ side: 'left', label: '左側', value: leftStatKey, change: setLeftStatKey },
+            { side: 'right', label: '右側', value: rightStatKey, change: setRightStatKey }] as const).map(item =>
+            <label key={item.side} className="bar-chart-source">{item.label}
+              <select aria-label={`${item.label}のステータス`} value={item.value} onChange={event => item.change(event.target.value as EnemyRatingStat)}>
+                {ENEMY_STAT_METRICS.filter(metric => isEnemyRatingStat(metric.key)).map(metric =>
+                  <option key={metric.key} value={metric.key}>{metric.label}</option>)}
+              </select>
+            </label>)}
+        </div>}
       </div>
       <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
         <EnemyAggregationSelector state={aggregation} />
@@ -68,10 +87,14 @@ export function BarChartWorkbenchPage() {
       {document && presentation && <div className="bar-chart-auto-labels" aria-live="polite">
         <span>自動設定</span>
         <dl className="bar-chart-auto-values">
-          <div><dt>横軸</dt><dd><strong>{document.xAxisTitle}</strong></dd></div>
-          <div><dt>縦軸</dt><dd><strong>{document.yAxisTitle}</strong></dd></div>
+          <div><dt>{isComparison ? '棒の長さ' : '横軸'}</dt><dd><strong>{document.xAxisTitle}</strong></dd></div>
+          <div><dt>{isComparison ? '並び' : '縦軸'}</dt><dd><strong>{document.yAxisTitle}</strong></dd></div>
           <div><dt>描画方式</dt><dd><strong>{presentation.type}</strong><span className="bar-chart-auto-mark">自動</span></dd></div>
           <div><dt>棒幅</dt><dd><strong>{presentation.width}</strong>{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
+          {document.layout === 'mirrored' && <>
+            <div><dt>系列数</dt><dd><strong>{document.series?.length}</strong></dd></div>
+            <div><dt>目盛り</dt><dd><strong>左右共通・0〜{getBarChartComparisonAxis(document).maximum}%</strong></dd></div>
+          </>}
           {document.semantics.kind === 'histogram' && document.source.parameters.map(parameter =>
             <div key={parameter.label}><dt>{parameter.label}</dt><dd><strong>{parameter.value}</strong></dd></div>)}
         </dl>
@@ -80,7 +103,23 @@ export function BarChartWorkbenchPage() {
     <EnemyDataContent loading={loading} error={error} onRetry={aggregation.retry}>
       {result?.error && <p role="status">{result.error}</p>}
       {document && <>
-        <div className="bar-chart-workbench-options" role="group" aria-label="共通の表示設定">
+        {document.layout === 'mirrored' ? <div className="bar-chart-comparison-options">
+          <fieldset className="bar-chart-workbench-options"><legend>外側の帯</legend>
+            {(['cumulative', 'rank', 'none'] as const).map(mode => <label key={mode}>
+              <input type="radio" name={comparisonBandName} checked={getBarChartComparisonBand(settings) === mode}
+                onChange={() => setSettings(current => ({ ...current, comparisonBand: mode }))} />
+              {mode === 'cumulative' ? '累積割合' : mode === 'rank' ? '階級割合' : 'なし'}
+            </label>)}
+          </fieldset>
+          <fieldset className="bar-chart-workbench-options"><legend>強調</legend>
+            {document.bins.map(bin => <label key={bin.id}>
+              <input type="checkbox" checked={settings.selectedRanks?.includes(bin.id) ?? false} onChange={event =>
+                setSettings(current => ({ ...current, selectedRanks: event.target.checked
+                  ? [...(current.selectedRanks ?? []), bin.id] : current.selectedRanks?.filter(id => id !== bin.id) ?? [] }))} />
+              {bin.label}
+            </label>)}
+          </fieldset>
+        </div> : <div className="bar-chart-workbench-options" role="group" aria-label="共通の表示設定">
           <span>表示</span>
           <label><input type="checkbox" checked={settings.values} onChange={event => update('values', event.target.checked)} />数値</label>
           <label><input type="checkbox" checked={settings.axisBand} onChange={event => update('axisBand', event.target.checked)} />横軸の帯</label>
@@ -90,7 +129,7 @@ export function BarChartWorkbenchPage() {
             <label><input type="checkbox" checked={Boolean(settings.cumulativeBand)} onChange={event => update('cumulativeBand', event.target.checked)} />累積割合帯</label>
           </>}
           {document.capabilities.rankBands && <label><input type="checkbox" checked={Boolean(settings.rankBand)} onChange={event => update('rankBand', event.target.checked)} />評価帯</label>}
-        </div>
+        </div>}
         <BarChartFigure document={document} settings={settings} />
       </>}
     </EnemyDataContent>
