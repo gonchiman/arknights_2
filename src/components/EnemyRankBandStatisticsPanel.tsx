@@ -14,6 +14,7 @@ import {
   type EnemyRankBandStatisticsChartSnapshot,
 } from './EnemyRankBandStatisticsImageDialog'
 import { EnemyRankBandStatisticsPlot } from './EnemyRankBandStatisticsPlot'
+import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import './EnemyRankBandStatisticsPanel.css'
 
 type Step = 5 | 10 | 20
@@ -23,12 +24,14 @@ const COLUMN_LABELS: Record<Column, string> = {
   min: '最小', max: '最大', width: '幅', mean: '平均', standardDeviation: '標準偏差', variance: '分散',
 }
 const METRICS: EnemyRankBandMetric[] = ['standardDeviation', 'width', 'mean', 'variance']
+const VIEW_LABELS = { table: '表', chart: 'グラフ' } as const
 const COUNT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
-export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
+export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, locationPath }: {
   rows: readonly EnemyRecord[]
   counts: EnemyHistogramCounts
   conditions: readonly string[]
+  locationPath: readonly string[]
 }) {
   const id = useId()
   const [step, setStep] = useState<Step>(10)
@@ -72,7 +75,10 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
 
   return <section className="enemy-rank-statistics" aria-label="順位帯の統計">
     <div className="enemy-rank-statistics-heading">
-      <h2>順位帯ごとの統計量（標準化）</h2><span>出現回数で重み付け・全体基準・母分散</span>
+      <div className="enemy-rank-statistics-heading-text">
+        <h2>順位帯ごとの統計量（標準化）</h2><span>出現回数で重み付け・全体基準・母分散</span>
+      </div>
+      <ElementLocationCopyButton segments={[...locationPath, VIEW_LABELS[view]]} className="enemy-rank-statistics-location-copy" />
     </div>
     <div className="enemy-rank-statistics-toolbar">
       <label htmlFor={`${id}-step`}>順位帯幅
@@ -82,7 +88,7 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
       </label>
       <div className="enemy-chart-scale-switch" role="group" aria-label="順位帯統計の表示形式">
         {(['table', 'chart'] as const).map(key => <button key={key} type="button" aria-pressed={view === key}
-          className={view === key ? 'active' : ''} onClick={() => setView(key)}>{key === 'table' ? '表' : 'グラフ'}</button>)}
+          className={view === key ? 'active' : ''} onClick={() => setView(key)}>{VIEW_LABELS[key]}</button>)}
       </div>
       {view === 'chart' && <label htmlFor={`${id}-metric`}>統計量
         <select id={`${id}-metric`} aria-label="統計量" value={metric} onChange={event => setMetric(event.target.value as EnemyRankBandMetric)}>
@@ -90,7 +96,7 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions }: {
         </select>
       </label>}
       <button type="button" className="button secondary enemy-rank-statistics-save" aria-haspopup="dialog"
-        aria-label={`順位帯統計の${view === 'table' ? '表' : 'グラフ'}をPNG画像で保存`}
+        aria-label={`順位帯統計の${VIEW_LABELS[view]}をPNG画像で保存`}
         disabled={result.bands.length === 0} onClick={openImage}>画像を保存</button>
     </div>
     {view === 'table' && <div className="enemy-rank-statistics-columns" role="group" aria-label="追加表示する統計量">
