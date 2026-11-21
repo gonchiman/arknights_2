@@ -38,7 +38,7 @@ export function getBarChartPresentationLabels(kind: BarChartDocument['xKind'], l
   const percentage = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(presentation.widthRatio * 100)
   return {
     type: layout === 'mirrored' ? `左右の横棒・${presentation.label}` : presentation.label,
-    width: layout === 'mirrored' ? `1評価の高さの${percentage}%` : `1項目幅の${percentage}%`,
+    width: layout === 'mirrored' ? `1項目の高さの${percentage}%` : `1項目幅の${percentage}%`,
     limit: presentation.maximumWidth === null ? null : `上限${presentation.maximumWidth}px（PNG拡大前）`,
   }
 }

@@ -45,7 +45,7 @@ test('左右の横棒でも区間96%・独立項目60%上限48pxの同じ規則�
     }
     const labels = getBarChartPresentationLabels(kind, 'mirrored')
     assert.equal(labels.type, `左右の横棒・${normal.label}`)
-    assert.equal(labels.width, `1評価の高さの${kind === 'interval' ? 96 : 60}%`)
+    assert.equal(labels.width, `1項目の高さの${kind === 'interval' ? 96 : 60}%`)
     assert.equal(labels.limit, getBarChartPresentationLabels(kind).limit)
   }
 })

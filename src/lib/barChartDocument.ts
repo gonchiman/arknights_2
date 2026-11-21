@@ -1,6 +1,7 @@
 import { createChartImageFilename, withChartImageAspect } from './chartImageFilename.ts'
 import type { StatRankBand } from './statRankBands.ts'
 import { createZeroBasedValueAxis } from './chartValueAxis.ts'
+import { getHpChartValueAxis } from './goldenglowTargetSwitchHpAxis.ts'
 
 export interface BarChartDisplaySettings {
   values: boolean
@@ -9,7 +10,7 @@ export interface BarChartDisplaySettings {
   cumulative: boolean
   cumulativeBand?: boolean
   rankBand?: boolean
-  comparisonBand?: 'cumulative' | 'rank' | 'none'
+  comparisonBand?: 'cumulative' | 'rank' | 'value' | 'none'
   /** Stable category IDs; never recover identity from a displayed label. */
   selectedRanks?: readonly string[]
 }
@@ -48,6 +49,10 @@ export type BarChartItemKind = 'interval' | 'point' | 'category'
 export interface BarChartSemantics {
   readonly kind: 'histogram' | 'correspondence' | 'comparison'
   readonly subject: string
+  /** Numeric statistics use their signed values, rather than a frequency percentage. */
+  readonly comparisonValue?: 'share' | 'value'
+  /** Source-provided comparison title suffix; omitted rating documents retain their title. */
+  readonly comparisonLabel?: string
   /** Metric represented by single-series bars; display labels never determine appearance. */
   readonly metricKey?: string
   /** Meaning of the axis arranging bars, independent of drawing orientation and category alignment. */
@@ -137,7 +142,7 @@ export function getBarChartLabels(semantics: BarChartSemantics, xKind: BarChartD
   const yLabel = `${semantics.kind === 'correspondence' ? '対応する' : ''}${semantics.yLabel}`
   const xDetails = [xQualifier, semantics.xUnit].filter(Boolean).join('・')
   return {
-    title: semantics.kind === 'comparison' ? `${semantics.subject}の評価別分布`
+    title: semantics.kind === 'comparison' ? `${semantics.subject}の${semantics.comparisonLabel ?? '評価別分布'}`
       : semantics.kind === 'histogram' ? `${semantics.subject}のヒストグラム`
       : `${semantics.yLabel}と${semantics.xLabel}の対応（${semantics.xLabel}別）`,
     xAxisTitle: `${semantics.xLabel}${xDetails ? `（${xDetails}）` : ''}`,
@@ -147,14 +152,21 @@ export function getBarChartLabels(semantics: BarChartSemantics, xKind: BarChartD
 
 const formatCount = (value: number) => value.toLocaleString('ja-JP', { maximumFractionDigits: 12 })
 
-export function getBarChartConditions(source: BarChartSource, series?: readonly BarChartSeries[]): string {
+export function getBarChartConditions(source: BarChartSource, series?: readonly BarChartSeries[], semantics?: BarChartSemantics): string {
+  // Numeric statistics may share one explicitly paired cohort. Describe it once,
+  // while keeping per-series denominators for independently aggregated frequencies.
+  const first = series?.[0]?.population
+  const paired = source.population === null && semantics?.comparisonValue === 'value' && series?.length === 2
+    && first?.basis === 'paired-stats' && series.every(item => item.population.basis === 'paired-stats'
+      && item.population.total === first.total && item.population.valid === first.valid && item.population.missing === first.missing)
+  const population = source.population ?? (paired ? first : null)
   return [
     source.aggregationVersion.label || `集計版 ${source.aggregationVersion.id}`,
     source.scopeLabel,
-    source.countLabel + (source.population ? ` ${formatCount(source.population.valid)}${source.countUnit}` : ''),
-    source.population && source.population.missing > 0 ? `値なし ${formatCount(source.population.missing)}${source.countUnit}を除外` : '',
+    source.countLabel + (population ? ` ${formatCount(population.valid)}${source.countUnit}` : ''),
+    population && population.missing > 0 ? `値なし ${formatCount(population.missing)}${source.countUnit}を除外` : '',
     source.population?.basis === 'paired-stats' ? '防御力・術耐性の両方が有効' : '',
-    ...(series ?? []).map(item => `${item.id === 'left' ? '左' : '右'} ${item.label} ${formatCount(item.population.valid)}${source.countUnit}`
+    ...(paired ? [] : series ?? []).map(item => `${item.id === 'left' ? '左' : '右'} ${item.label} ${formatCount(item.population.valid)}${source.countUnit}`
       + (item.population.missing > 0 ? `（値なし ${formatCount(item.population.missing)}${source.countUnit}）` : '')),
     source.coverageLabel,
     ...source.parameters.map(({ label, value }) => `${label} ${value}`),
@@ -181,6 +193,12 @@ function invalidInterval(interval: BarChartInterval | undefined): boolean {
 
 /** Freeze a detached JSON snapshot so later source edits cannot change a preview or export. */
 export function createBarChartDocument(input: DocumentInput): BarChartDocument {
+  if ((input.semantics.comparisonValue !== undefined
+    && (!['share', 'value'].includes(input.semantics.comparisonValue) || input.layout !== 'mirrored'))
+    || (input.semantics.comparisonLabel !== undefined
+      && (typeof input.semantics.comparisonLabel !== 'string' || !input.semantics.comparisonLabel.trim()))) {
+    throw new Error('棒グラフの比較値の意味を確認できませんでした。')
+  }
   if (input.semantics.metricKey !== undefined
     && (typeof input.semantics.metricKey !== 'string' || !input.semantics.metricKey.trim())) {
     throw new Error('棒グラフのステータスを確認できませんでした。')
@@ -202,12 +220,15 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
         || !Array.isArray(series.bins) || series.bins.length !== input.bins.length
         || series.bins.some((bin, binIndex) => !bin || bin.id !== input.bins[binIndex].id
           || bin.label !== input.bins[binIndex].label
-          || (bin.value !== null && (!Number.isFinite(bin.value) || bin.value < 0))
+          || (bin.value !== null && (!Number.isFinite(bin.value)
+            || (input.semantics.comparisonValue !== 'value' && bin.value < 0)))
           || (bin.point !== undefined && (!Number.isFinite(bin.point) || bin.interval !== undefined))
           || invalidInterval(bin.interval)
-          || [bin.share, bin.cumulativeShare].some(value => value !== null
-            && (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1))
-          || (series.population.valid === 0 && (bin.share !== null || bin.cumulativeShare !== null))))) {
+          || (input.semantics.comparisonValue === 'value'
+            ? bin.share !== undefined || bin.cumulativeShare !== undefined
+            : [bin.share, bin.cumulativeShare].some(value => value !== null
+                && (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1))
+              || (series.population.valid === 0 && (bin.share !== null || bin.cumulativeShare !== null)))))) {
       throw new Error('棒グラフの比較系列を確認できませんでした。')
     }
   } else if (input.series !== undefined || input.source.population === null || input.semantics.kind === 'comparison') {
@@ -256,7 +277,7 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
   }
   const detached = JSON.parse(JSON.stringify(input)) as DocumentInput
   const content = { schemaVersion: 1 as const, ...detached,
-    ...getBarChartLabels(detached.semantics, detached.xKind), conditions: getBarChartConditions(detached.source, detached.series) }
+    ...getBarChartLabels(detached.semantics, detached.xKind), conditions: getBarChartConditions(detached.source, detached.series, detached.semantics) }
   let hash = 2166136261
   for (const character of JSON.stringify(content)) hash = Math.imul(hash ^ character.codePointAt(0)!, 16777619) >>> 0
   return freezeDeep({ ...content, id: `bar-chart-${hash.toString(16).padStart(8, '0')}` })
@@ -264,12 +285,14 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
 
 export function getBarChartFilename(document: BarChartDocument, settings: BarChartDisplaySettings, aspectRatio?: number): string {
   if (document.layout === 'mirrored') {
-    const selection = getBarChartSelectionSummary(document, settings.selectedRanks ?? [])
+    const selectedLabel = getBarChartSelectedLabel(document, settings.selectedRanks ?? [])
+    const band = getBarChartComparisonBand(settings, document)
     return withChartImageAspect(createChartImageFilename(document.title, [
       ...document.filenameParts, '幅1920px',
-      getBarChartComparisonBand(settings) === 'cumulative' && '累積割合帯',
-      getBarChartComparisonBand(settings) === 'rank' && '階級割合帯',
-      selection && `評価${selection.label}強調`,
+      band === 'cumulative' && '累積割合帯',
+      band === 'rank' && '階級割合帯',
+      band === 'value' && `${document.semantics.xLabel}帯`,
+      selectedLabel && `${document.semantics.comparisonValue === 'value' ? '' : '評価'}${selectedLabel}強調`,
     ]), aspectRatio)
   }
   const filename = createChartImageFilename(document.title, [
@@ -285,21 +308,32 @@ export function getBarChartFilename(document: BarChartDocument, settings: BarCha
   return withChartImageAspect(filename, aspectRatio)
 }
 
-export function getBarChartComparisonBand(settings: BarChartDisplaySettings): 'cumulative' | 'rank' | 'none' {
+export function getBarChartComparisonBand(settings: BarChartDisplaySettings, document?: BarChartDocument): 'cumulative' | 'rank' | 'value' | 'none' {
+  if (document?.semantics.comparisonValue === 'value') return settings.comparisonBand === 'none' ? 'none' : 'value'
   return settings.comparisonBand === 'rank' || settings.comparisonBand === 'none' ? settings.comparisonBand : 'cumulative'
 }
 
-/** Both series use one positive percentage scale; mirroring is a drawing operation only. */
-export function getBarChartComparisonAxis(document: BarChartDocument) {
-  return createZeroBasedValueAxis(Math.max(0, ...(document.series ?? []).flatMap(series =>
-    series.bins.map(bin => bin.share === null || bin.share === undefined ? 0 : bin.share * 100))))
+/** Keep observed zero and missing separate for both supported measure types. */
+export function getBarChartComparisonValue(document: BarChartDocument, bin: BarChartBin): number | null {
+  const value = document.semantics.comparisonValue === 'value' ? bin.value
+    : bin.share == null ? null : bin.share * 100
+  return typeof value === 'number' && Number.isFinite(value)
+    && (document.semantics.comparisonValue === 'value' || value >= 0) ? value : null
 }
 
-export function getBarChartSelectionSummary(document: BarChartDocument, selectedRanks: readonly string[]): {
-  label: string
-  series: { id: 'left' | 'right'; label: string; count: number; share: number | null }[]
-} | null {
-  if (document.layout !== 'mirrored' || !document.series) return null
+/** Both series share one signed domain including zero; percentage axes retain their scale. */
+export function getBarChartComparisonAxis(document: BarChartDocument) {
+  const values = (document.series ?? []).flatMap(series =>
+    series.bins.flatMap(bin => { const value = getBarChartComparisonValue(document, bin); return value === null ? [] : [value] }))
+  if (document.semantics.comparisonValue === 'value' && values.some(value => value < 0)) {
+    const axis = getHpChartValueAxis(values, { mode: 'zero' })
+    return { minimum: axis.lowerLimit, maximum: axis.upperLimit, step: axis.valueStep, ticks: axis.yTicks }
+  }
+  return { minimum: 0, ...createZeroBasedValueAxis(Math.max(0, ...values),
+    document.semantics.comparisonValue === 'value' ? 10 ** -document.fractionDigits : 1) }
+}
+
+export function getBarChartSelectedLabel(document: BarChartDocument, selectedRanks: readonly string[]): string | null {
   const selected = new Set(selectedRanks)
   const categories = document.bins.filter(bin => selected.has(bin.id))
   if (!categories.length) return null
@@ -310,8 +344,19 @@ export function getBarChartSelectionSummary(document: BarChartDocument, selected
     if (range) range.last = bin.label
     else { range = { first: bin.label, last: bin.label }; ranges.push(range) }
   }
+  return ranges.map(({ first, last }) => first === last ? first : `${first}〜${last}`).join('・')
+}
+
+export function getBarChartSelectionSummary(document: BarChartDocument, selectedRanks: readonly string[]): {
+  label: string
+  series: { id: 'left' | 'right'; label: string; count: number; share: number | null }[]
+} | null {
+  if (document.layout !== 'mirrored' || !document.series || document.semantics.comparisonValue === 'value') return null
+  const label = getBarChartSelectedLabel(document, selectedRanks)
+  if (!label) return null
+  const selected = new Set(selectedRanks)
   return {
-    label: ranges.map(({ first, last }) => first === last ? first : `${first}〜${last}`).join('・'),
+    label,
     series: document.series.map(series => {
       const count = series.bins.reduce((sum, bin) => sum + (selected.has(bin.id) ? bin.value ?? 0 : 0), 0)
       return { id: series.id, label: series.label, count, share: series.population.valid > 0 ? count / series.population.valid : null }

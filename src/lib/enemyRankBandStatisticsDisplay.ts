@@ -1,4 +1,4 @@
-import type { EnemyRankBandMetric } from './enemyRankBandStatistics.ts'
+import type { EnemyRankBandMetric, EnemyRankBandStatValues } from './enemyRankBandStatistics.ts'
 
 export const ENEMY_RANK_BAND_METRIC_LABELS: Record<EnemyRankBandMetric, string> = {
   width: '幅（最大−最小）',
@@ -6,6 +6,11 @@ export const ENEMY_RANK_BAND_METRIC_LABELS: Record<EnemyRankBandMetric, string> 
   standardDeviation: '標準偏差',
   variance: '分散',
 }
+
+/** All numeric columns in the rank-band table, including its optional bounds. */
+export const ENEMY_RANK_BAND_STATISTIC_LABELS: Readonly<Record<keyof EnemyRankBandStatValues, string>> = Object.freeze({
+  min: '最小', max: '最大', ...ENEMY_RANK_BAND_METRIC_LABELS,
+})
 
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const SMALL_NUMBER = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 3 })

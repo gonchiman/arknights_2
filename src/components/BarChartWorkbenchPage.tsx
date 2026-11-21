@@ -9,6 +9,8 @@ import { getBarChartPresentationLabels, getBarChartItemKind } from '../lib/barCh
 import { ENEMY_STAT_METRICS, type EnemyStatKey } from '../lib/enemyStatMetrics'
 import { isEnemyRatingStat } from '../lib/enemyRatingHistogram'
 import type { EnemyRatingStat } from '../lib/enemyStatRatings'
+import type { EnemyRankBandStatValues } from '../lib/enemyRankBandStatistics'
+import { ENEMY_RANK_BAND_STATISTIC_LABELS } from '../lib/enemyRankBandStatisticsDisplay'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -24,7 +26,11 @@ export function BarChartWorkbenchPage() {
   const [statKey, setStatKey] = useState<EnemyStatKey>('magicResistance')
   const [leftStatKey, setLeftStatKey] = useState<EnemyRatingStat>('defense')
   const [rightStatKey, setRightStatKey] = useState<EnemyRatingStat>('magicResistance')
-  const isComparison = sourceId === 'enemy-stat-rating-comparison'
+  const isRatingComparison = sourceId === 'enemy-stat-rating-comparison'
+  const isRankStatistics = sourceId === 'enemy-rank-band-statistics'
+  const isComparison = isRatingComparison || isRankStatistics
+  const [rankBandStep, setRankBandStep] = useState<5 | 10 | 20>(10)
+  const [rankBandMetric, setRankBandMetric] = useState<keyof EnemyRankBandStatValues>('standardDeviation')
   const [binning, setBinning] = useState<'numeric' | 'rating'>('numeric')
   const binningName = useId()
   const comparisonBandName = useId()
@@ -36,9 +42,9 @@ export function BarChartWorkbenchPage() {
   const { data, version, loading, error } = aggregation
   const result = useMemo(() => {
     if (!data || !version || loading || error) return null
-    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey }), error: null } }
+    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric }), error: null } }
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
-  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey])
+  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric])
   const document = result?.document
   const presentation = document ? getBarChartPresentationLabels(getBarChartItemKind(document), document.layout) : null
   const update = (key: 'values' | 'axisBand' | 'percent' | 'cumulative' | 'cumulativeBand' | 'rankBand', checked: boolean) =>
@@ -62,7 +68,7 @@ export function BarChartWorkbenchPage() {
             {ENEMY_STAT_METRICS.map(metric => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
           </select>
         </label>}
-        {isComparison && <div className="bar-chart-pair-selectors">
+        {isRatingComparison && <div className="bar-chart-pair-selectors">
           {([{ side: 'left', label: '左側', value: leftStatKey, change: setLeftStatKey },
             { side: 'right', label: '右側', value: rightStatKey, change: setRightStatKey }] as const).map(item =>
             <label key={item.side} className="bar-chart-source">{item.label}
@@ -72,6 +78,11 @@ export function BarChartWorkbenchPage() {
               </select>
             </label>)}
         </div>}
+        {isRankStatistics && <label className="bar-chart-source">順位帯幅
+          <select aria-label="順位帯幅" value={rankBandStep} onChange={event => setRankBandStep(Number(event.target.value) as 5 | 10 | 20)}>
+            {([5, 10, 20] as const).map(step => <option key={step} value={step}>{step}ポイント</option>)}
+          </select>
+        </label>}
       </div>
       <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
         <EnemyAggregationSelector state={aggregation} />
@@ -93,9 +104,9 @@ export function BarChartWorkbenchPage() {
           <div><dt>棒幅</dt><dd><strong>{presentation.width}</strong>{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
           {document.layout === 'mirrored' && <>
             <div><dt>系列数</dt><dd><strong>{document.series?.length}</strong></dd></div>
-            <div><dt>目盛り</dt><dd><strong>左右共通・0〜{getBarChartComparisonAxis(document).maximum}%</strong></dd></div>
+            <div><dt>目盛り</dt><dd><strong>左右共通・{getBarChartComparisonAxis(document).minimum}〜{getBarChartComparisonAxis(document).maximum}{document.semantics.comparisonValue === 'value' ? document.semantics.xUnit ?? '' : '%'}</strong></dd></div>
           </>}
-          {document.semantics.kind === 'histogram' && document.source.parameters.map(parameter =>
+          {(document.semantics.kind === 'histogram' || isRankStatistics) && document.source.parameters.map(parameter =>
             <div key={parameter.label}><dt>{parameter.label}</dt><dd><strong>{parameter.value}</strong></dd></div>)}
         </dl>
       </div>}
@@ -103,12 +114,18 @@ export function BarChartWorkbenchPage() {
     <EnemyDataContent loading={loading} error={error} onRetry={aggregation.retry}>
       {result?.error && <p role="status">{result.error}</p>}
       {document && <>
+        {isRankStatistics && <label className="bar-chart-source bar-chart-statistic-option">統計量
+          <select aria-label="グラフの統計量" value={rankBandMetric} onChange={event => setRankBandMetric(event.target.value as keyof EnemyRankBandStatValues)}>
+            {(Object.keys(ENEMY_RANK_BAND_STATISTIC_LABELS) as (keyof EnemyRankBandStatValues)[]).map(key =>
+              <option key={key} value={key}>{ENEMY_RANK_BAND_STATISTIC_LABELS[key]}</option>)}
+          </select>
+        </label>}
         {document.layout === 'mirrored' ? <div className="bar-chart-comparison-options">
           <fieldset className="bar-chart-workbench-options"><legend>外側の帯</legend>
-            {(['cumulative', 'rank', 'none'] as const).map(mode => <label key={mode}>
-              <input type="radio" name={comparisonBandName} checked={getBarChartComparisonBand(settings) === mode}
+            {(document.semantics.comparisonValue === 'value' ? ['value', 'none'] as const : ['cumulative', 'rank', 'none'] as const).map(mode => <label key={mode}>
+              <input type="radio" name={comparisonBandName} checked={getBarChartComparisonBand(settings, document) === mode}
                 onChange={() => setSettings(current => ({ ...current, comparisonBand: mode }))} />
-              {mode === 'cumulative' ? '累積割合' : mode === 'rank' ? '階級割合' : 'なし'}
+              {mode === 'value' ? document.semantics.xLabel : mode === 'cumulative' ? '累積割合' : mode === 'rank' ? '階級割合' : 'なし'}
             </label>)}
           </fieldset>
           <fieldset className="bar-chart-workbench-options"><legend>強調</legend>

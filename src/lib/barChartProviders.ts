@@ -14,8 +14,11 @@ import { buildEnemyRatingHistogramBins, isEnemyRatingStat } from './enemyRatingH
 import { getHistogramStatRankBands } from './histogramStatRankBands.ts'
 import { formatHistogramRatingRangeLines } from './histogramRatingRangeStrip.ts'
 import type { EnemyRatingStat } from './enemyStatRatings.ts'
+import { buildStandardizedEnemyRankBandStatistics, type EnemyRankBandStatValues } from './enemyRankBandStatistics.ts'
+import { ENEMY_RANK_BAND_STATISTIC_LABELS } from './enemyRankBandStatisticsDisplay.ts'
 
 export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance' | 'enemy-stat-rating-comparison'
+  | 'enemy-rank-band-statistics'
 
 export interface BarChartProviderContext {
   readonly data: EnemyAggregationData
@@ -26,6 +29,8 @@ export interface BarChartProviderContext {
   readonly histogramBinning?: 'numeric' | 'rating'
   readonly leftStatKey?: EnemyRatingStat
   readonly rightStatKey?: EnemyRatingStat
+  readonly rankBandStep?: 5 | 10 | 20
+  readonly rankBandMetric?: keyof EnemyRankBandStatValues
 }
 
 export interface BarChartProvider {
@@ -181,11 +186,52 @@ function createEnemyStatRatingComparison(context: BarChartProviderContext): BarC
   })
 }
 
+/** Consume the existing whole-distribution standardization and tied-rank weighting. */
+function createEnemyRankBandStatistics(context: BarChartProviderContext): BarChartDocument {
+  if (context.countMode !== undefined && context.countMode !== 'SPAWNS') {
+    throw new Error('順位帯の統計は出現回数で集計します。')
+  }
+  const metric = context.rankBandMetric ?? 'standardDeviation'
+  if (!Object.hasOwn(ENEMY_RANK_BAND_STATISTIC_LABELS, metric)) throw new Error('順位帯の統計量を確認できませんでした。')
+  const label = ENEMY_RANK_BAND_STATISTIC_LABELS[metric]
+  const scoped = scopeData(context, 'SPAWNS')
+  const step = context.rankBandStep ?? 10
+  const result = buildStandardizedEnemyRankBandStatistics(scoped.rows, scoped.counts, step)
+  const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats.defense, 'SPAWNS', scoped.counts)
+  const total = observations.reduce((sum, { weight }) => sum + (Number.isFinite(weight) && weight > 0 ? weight : 0), 0)
+  const population = { total, valid: result.total, missing: Math.max(0, total - result.total), basis: 'paired-stats' as const }
+  const categoryId = (band: { from: number; to: number }) => `rank-band-${band.from}-${band.to}`
+  const categoryLabel = (band: { from: number; to: number }) => `上位${band.from}〜${band.to}%`
+  const makeSeries = (id: 'left' | 'right', key: 'defense' | 'resistance', metricKey: string, label: string): BarChartSeries => ({
+    id, metricKey, label, population,
+    bins: result.bands.map(band => ({ id: categoryId(band), label: categoryLabel(band),
+      value: band[key]?.[metric] ?? null })),
+  })
+  const source = sourceMetadata(context, 'enemy-rank-band-statistics', 'SPAWNS', scoped.counts, null, [
+    { label: '標準化', value: '全体基準' },
+    ...(['variance', 'standardDeviation'].includes(metric) ? [{ label: '分散', value: '母分散' }] : []),
+    { label: '順位帯', value: `${step}ポイント` },
+    { label: '対象', value: '防御力・術耐性の両方が有効' },
+  ])
+  return createBarChartDocument({
+    layout: 'mirrored', xKind: 'category', fractionDigits: 2,
+    bins: result.bands.map(band => ({ id: categoryId(band), label: categoryLabel(band), value: null })),
+    series: [makeSeries('left', 'defense', 'defense', '防御力'), makeSeries('right', 'resistance', 'magicResistance', '術耐性')],
+    semantics: { kind: 'comparison', comparisonValue: 'value', comparisonLabel: `順位帯別${label}`, itemKind: 'interval',
+      subject: '防御力・術耐性', xLabel: label, xQualifier: '標準化', yLabel: 'ステータス順位帯' },
+    source, capabilities: { percentages: false, cumulative: false, rankBands: false },
+    filenameParts: [`集計${source.aggregationVersion.id}`, source.scopeLabel, source.countLabel,
+      '標準化(全体基準)', ...(['variance', 'standardDeviation'].includes(metric) ? ['母分散'] : []),
+      `順位帯${step}ポイント`, '左右の横棒'],
+  })
+}
+
 /** Providers consume their own calculated snapshot; they never inspect another page's state. */
 export const BAR_CHART_PROVIDERS: readonly BarChartProvider[] = Object.freeze([
   Object.freeze({ id: 'enemy-stat-histogram', label: '敵のステータス分布', createDocument: createEnemyStatHistogram }),
   Object.freeze({ id: 'enemy-defense-resistance', label: '防御力と術耐性の対応', createDocument: createDefenseResistance }),
   Object.freeze({ id: 'enemy-stat-rating-comparison', label: '敵ステータスの評価別比較', createDocument: createEnemyStatRatingComparison }),
+  Object.freeze({ id: 'enemy-rank-band-statistics', label: '防御力・術耐性の順位帯統計', createDocument: createEnemyRankBandStatistics }),
 ])
 
 export function createBarChartFromProvider(id: BarChartProviderId, context: BarChartProviderContext): BarChartDocument {
