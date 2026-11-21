@@ -1,12 +1,14 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { BarChartDisplaySettings, BarChartDocument } from '../lib/barChartDocument'
-import { getBarChartBarWidth } from '../lib/barChartPresentation'
+import { getBarChartBarWidth, getBarChartItemKind } from '../lib/barChartPresentation'
 import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { avoidHistogramCumulativeLine, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { ChartStripCell } from './ChartStripCell'
 import { StatRankStrip } from './StatRankStrip'
+import { BarChartComparisonPlot } from './BarChartComparisonPlot'
+import { estimatedBarChartTextWidth as estimatedWidth, useBarChartTextWidths as useTextWidths } from './useBarChartTextWidths'
 import './BarChartPlot.css'
 
 export interface BarChartPlotProps {
@@ -17,37 +19,9 @@ export interface BarChartPlotProps {
   imageMode?: boolean
 }
 
-const FONT = '"Yu Gothic", "YuGothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif'
 const INK = { 'data-chart-image-ink': 'true' }
 const MINIMUM_WIDTH = 620
 const VALUE_HEIGHT = 16
-
-function estimatedWidth(text: string): number {
-  return Array.from(text).reduce((sum, character) => sum + (/[^\x00-\xff]/.test(character) ? 11 : 6.5), 0)
-}
-
-/** Measure with the same fixed-size font used by the SVG, including deferred fonts. */
-function useTextWidths(texts: readonly string[]) {
-  const key = JSON.stringify(texts)
-  const [widths, setWidths] = useState<Record<string, number>>({})
-  useLayoutEffect(() => {
-    let active = true
-    const measure = () => {
-      if (!active) return
-      const context = window.document.createElement('canvas').getContext('2d')
-      if (!context) return
-      context.font = `600 11px ${FONT}`
-      const next: Record<string, number> = {}
-      for (const text of JSON.parse(key) as string[]) next[text] = Math.ceil(context.measureText(text).width)
-      setWidths(current => JSON.stringify(current) === JSON.stringify(next) ? current : next)
-    }
-    measure()
-    void window.document.fonts.ready.then(measure)
-    window.document.fonts.addEventListener('loadingdone', measure)
-    return () => { active = false; window.document.fonts.removeEventListener('loadingdone', measure) }
-  }, [key])
-  return (text: string) => widths[text] ?? estimatedWidth(text)
-}
 
 function wrapLabel(label: string, available: number, measure: (text: string) => number): string[] {
   if (measure(label) <= available) return [label]
@@ -67,6 +41,12 @@ function percentage(share: number | null | undefined): string {
 
 /** One read-only drawing is shared by the page and PNG output. */
 export function BarChartPlot({ document: data, settings, width, height, imageMode = false }: BarChartPlotProps) {
+  return data.layout === 'mirrored'
+    ? <BarChartComparisonPlot document={data} settings={settings} width={width} height={height} imageMode={imageMode} />
+    : <VerticalBarChartPlot document={data} settings={settings} width={width} height={height} imageMode={imageMode} />
+}
+
+function VerticalBarChartPlot({ document: data, settings, width, height, imageMode = false }: BarChartPlotProps) {
   const titleId = useId(), descriptionId = useId()
   const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: data.fractionDigits })
   const format = (value: number) => number.format(value)
@@ -107,7 +87,7 @@ export function BarChartPlot({ document: data, settings, width, height, imageMod
   const plotHeight = bottom - top
   const y = (value: number) => plotHeight * (1 - value / axis.maximum)
   const centerX = (index: number) => (index + .5) * slot
-  const barWidth = getBarChartBarWidth(data.xKind, slot)
+  const barWidth = getBarChartBarWidth(getBarChartItemKind(data), slot, data.layout)
   const bars = bins.map((bin, index) => ({ ...bin, text: texts[index], x: centerX(index) - barWidth / 2,
     y: y(bin.value ?? 0), width: barWidth, height: bin.value === null ? 0 : plotHeight - y(bin.value),
   }))
@@ -213,7 +193,8 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
     const host = ref.current
     if (!host) return
     const measure = () => {
-      const next = Math.floor(host.clientWidth)
+      // Reserve one CSS pixel for fractional Windows display scaling.
+      const next = Math.max(1, Math.floor(host.getBoundingClientRect().width) - 1)
       if (next > 0) setWidth(current => current === next ? current : next)
     }
     measure()
@@ -232,7 +213,7 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
   const sidePadding = secondaryLabels.length ? Math.max(62, ...axis.ticks.map(tick => estimatedWidth(number.format(tick)) + 34))
     + (settings.cumulative && data.capabilities.cumulative ? 70 : 14) : 90
   const plotWidth = Math.max(MINIMUM_WIDTH, width, sidePadding + data.bins.length * slot)
-  return <figure className="bar-chart-figure" aria-label={data.title}>
+  return <figure className={`bar-chart-figure${data.layout === 'mirrored' ? ' is-comparison' : ''}`} aria-label={data.title}>
     <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
     <div className="bar-chart-scroll" ref={ref}>
       <BarChartPlot document={data} settings={settings} width={plotWidth} height={getBarChartNaturalHeight(data, settings)} />

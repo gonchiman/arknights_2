@@ -17,7 +17,9 @@ export interface BarChartImageSnapshot {
 }
 
 export function createBarChartImageSnapshot(document: BarChartDocument, settings: BarChartDisplaySettings): BarChartImageSnapshot {
-  return Object.freeze({ document, settings: Object.freeze({ ...settings }) })
+  return Object.freeze({ document, settings: Object.freeze({ ...settings,
+    ...(settings.selectedRanks ? { selectedRanks: Object.freeze([...settings.selectedRanks]) } : {}),
+  }) })
 }
 
 export function getBarChartImageFrame(snapshot: BarChartImageSnapshot, aspectRatio?: number,
