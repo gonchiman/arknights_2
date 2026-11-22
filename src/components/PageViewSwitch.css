@@ -1,0 +1,25 @@
+.page-view-switch { justify-self: start; }
+
+.page-view-switch,
+.enemy-chart-scale-switch {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+}
+
+:is(.page-view-switch, .enemy-chart-scale-switch) button {
+  min-height: 32px;
+  border: 0;
+  background: var(--surface);
+  color: var(--text-soft);
+  padding: 3px 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+:is(.page-view-switch, .enemy-chart-scale-switch) button + button { border-left: 1px solid var(--border-strong); }
+:is(.page-view-switch, .enemy-chart-scale-switch) button:hover { background: var(--surface-hover); }
+:is(.page-view-switch, .enemy-chart-scale-switch) button.active { background: var(--text); color: var(--surface); }
+
+@media (pointer: coarse) {
+  :is(.page-view-switch, .enemy-chart-scale-switch) button { min-height: 44px; }
+}

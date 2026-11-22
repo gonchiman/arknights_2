@@ -1,7 +1,7 @@
 import type { KeyboardEvent, ReactNode } from 'react'
 import './AnalysisTabs.css'
 
-interface Props<T extends string> {
+export interface AnalysisTabsProps<T extends string> {
   tabs: readonly (readonly [T, string])[]
   activeTab: T
   onChange: (tab: T) => void
@@ -10,8 +10,7 @@ interface Props<T extends string> {
   appearance?: 'boxed' | 'underline'
 }
 
-/** Shared with enemy regression: equal-width tabs and the same keyboard operation. */
-export function AnalysisTabs<T extends string>({ tabs, activeTab, onChange, idPrefix, label, appearance = 'boxed' }: Props<T>) {
+export function AnalysisTabs<T extends string>({ tabs, activeTab, onChange, idPrefix, label, appearance = 'boxed' }: AnalysisTabsProps<T>) {
   function changeWithKeyboard(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
       : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length

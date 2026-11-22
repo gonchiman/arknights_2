@@ -10,7 +10,7 @@ import {
 import { ENEMY_RANK_BAND_METRIC_LABELS, formatRankBandStatistic } from '../lib/enemyRankBandStatisticsDisplay'
 import { ENEMY_RANK_BAND_IMAGE_STEP_OPTIONS } from '../lib/enemyRankBandStatisticsImage'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
-import { EnemyDefenseResistanceViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './EnemyDefenseResistanceViewSwitch'
+import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
 import {
   EnemyRankBandStatisticsImageDialog,
   type EnemyRankBandStatisticsChartSnapshot,
@@ -78,7 +78,7 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, view, o
 
   return <div className="enemy-rank-statistics">
     <div className="enemy-rank-statistics-toolbar">
-      <EnemyDefenseResistanceViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange} label="順位帯統計の表示形式" />
+      <PageViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange} label="順位帯統計の表示形式" />
       <label htmlFor={`${id}-step`}>順位帯幅
         <select id={`${id}-step`} aria-label="順位帯幅" value={step} onChange={event => setStep(Number(event.target.value) as Step)}>
           {[5, 10, 20].map(value => <option key={value} value={value}>{value}ポイント</option>)}

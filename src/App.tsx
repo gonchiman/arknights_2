@@ -52,7 +52,7 @@ import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
 import { createDamageCalculatorThreeHash, createDamageCalculatorThreeAttributeHash, createOperatorDetailHash, parseHashRoute, type AppRoute } from './lib/routes'
-import { APP_NAV_ITEMS, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
+import { APP_NAV_ITEMS, getStandardPageTitle, GOLDENGLOW_ANALYSIS_ITEMS, GOLDENGLOW_HOME_LINK, HOME_LINK, SURTR_ANALYSIS_ITEMS, SURTR_HOME_LINK, type NavigationPage } from './lib/navigation'
 import { GOLDENGLOW_OPERATOR_ID } from './lib/goldenglowExplosion'
 import { PanelStateScope } from './lib/PanelStateScope'
 import {
@@ -289,7 +289,8 @@ export default function App() {
           ? 'surtr-home'
           : displayedRoute.view
   const activeNavigationItem = activeNavigationPage === 'home' ? HOME_LINK : APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
-  const TopbarTitle = displayedRoute.view === 'enemy-defense-resistance' ? 'h1' : 'span'
+  const pageTitle = getStandardPageTitle(displayedRoute.view)
+  const TopbarTitle = pageTitle ? 'h1' : 'span'
 
   return (
     <div className="app-shell">
@@ -308,7 +309,7 @@ export default function App() {
             <span className="sidebar-toggle-icon" aria-hidden="true"><i /><i /><i /></span>
             <span>Menu</span>
           </button>
-          <TopbarTitle className="app-topbar-title">{activeNavigationItem?.label}</TopbarTitle>
+          <TopbarTitle className="app-topbar-title">{pageTitle ?? activeNavigationItem?.label}</TopbarTitle>
           <a className="app-topbar-brand" href={HOME_LINK.href} aria-label="Arknights Analyze Tool ホーム" aria-current={activeNavigationPage === 'home' ? 'page' : undefined}>A</a>
         </header>
 

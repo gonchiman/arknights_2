@@ -1,3 +1,5 @@
+@import './PageViewSwitch.css';
+
 .enemy-analysis-route .page-intro { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; }
 .enemy-analysis-page-actions,
 .enemy-analysis-aggregation { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
@@ -394,25 +396,6 @@
   align-items: center;
   gap: 12px;
 }
-
-.enemy-chart-scale-switch {
-  display: inline-flex;
-  border: 1px solid var(--border-strong);
-}
-
-.enemy-chart-scale-switch button {
-  min-height: 26px;
-  border: 0;
-  background: #fff;
-  color: var(--text-soft);
-  padding: 3px 7px;
-  font-size: 9px;
-  cursor: pointer;
-}
-
-.enemy-chart-scale-switch button + button { border-left: 1px solid var(--border-strong); }
-.enemy-chart-scale-switch button:hover { background: var(--surface-hover); }
-.enemy-chart-scale-switch button.active { background: #222; color: #fff; }
 
 .enemy-chart-container {
   width: 100%;
@@ -1010,7 +993,6 @@
 .enemy-table tbody tr:hover .enemy-identity-cell { background: var(--surface-hover); }
 .enemy-chart-visibility label.active input { accent-color: var(--surface); }
 .enemy-chart-visibility label,
-.enemy-chart-scale-switch button,
 .enemy-chart-select-label select,
 .statistics-bin-width-input-row input,
 .statistics-bin-width-input-row button { min-height: 32px; font-size: 10px; }
@@ -1086,7 +1068,6 @@
   .enemy-metric-selector button,
   .enemy-chart-visibility label,
   .enemy-chart-select-label select,
-  .enemy-chart-scale-switch button,
   .statistics-bin-width-input-row input,
   .statistics-bin-width-input-row button,
   .enemy-frequency-details summary,

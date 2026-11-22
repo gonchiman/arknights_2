@@ -1,0 +1,31 @@
+.standard-page {
+  width: min(100%, 960px);
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.standard-page > * { min-width: 0; max-width: 100%; }
+
+.standard-page-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.page-output-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-output-heading { min-width: 0; }
+
+.page-output-header > .element-location-copy-button {
+  grid-column: 2;
+  align-self: center;
+}

@@ -5,15 +5,14 @@ import {
   type EnemyResistanceThreshold,
 } from '../lib/enemyDefenseResistance'
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
-import { ENEMY_DEFENSE_RESISTANCE_TITLE } from '../lib/navigation'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
-import { AnalysisTabPanel, AnalysisTabs } from './AnalysisTabs'
+import { AnalysisTabPanel } from './AnalysisTabs'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
-import { ElementLocationCopyButton } from './ElementLocationCopyButton'
+import { PageLayout, PageOutputTabs } from './PageLayout'
 import { EnemyAggregationScopeSelector, ENEMY_MAIN_STORY_LABEL, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
-import { EnemyDefenseResistanceViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './EnemyDefenseResistanceViewSwitch'
+import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot, type EnemyResistanceScatterSnapshot } from './EnemyResistanceImageDialog'
 import { EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
@@ -60,9 +59,6 @@ export function EnemyDefenseResistancePage() {
     resistance: viewLabel(RESISTANCE_VIEWS, resistanceView),
     statistics: viewLabel(TABLE_CHART_VIEWS, statisticsView),
   }
-  const location = [ENEMY_DEFENSE_RESISTANCE_TITLE, viewLabel(TABS, tab)]
-  const format = formats[tab]
-  if (format) location.push(format)
   const resistanceTable = result
     ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
         showRankCutoff={showRankCutoff} estimatedRanks={Boolean(scopedData?.counts.summary.expectedMapCount)} />
@@ -97,8 +93,8 @@ export function EnemyDefenseResistancePage() {
     })
   }
 
-  return <section className="calculator-page enemy-analysis-route enemy-defense-resistance-page">
-    <div className="enemy-defense-resistance-settings">
+  return <PageLayout page="enemy-defense-resistance" className="enemy-analysis-route enemy-defense-resistance-page"
+    settings={<>
       <div className="enemy-analysis-aggregation" role="group" aria-label="集計設定">
         <EnemyAggregationSelector state={aggregation} />
         <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
@@ -106,17 +102,14 @@ export function EnemyDefenseResistancePage() {
       {result && !aggregation.loading && !aggregation.error &&
         <p className="enemy-defense-resistance-count" role="status">{appearances}</p>}
       <a className="button secondary enemy-page-link" href={`#/analysis/enemies/defense-resistance/formula?aggregationVersion=${encodeURIComponent(aggregation.selectedId)}`}>対応式へ</a>
-    </div>
+    </>}>
     <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
       {unavailable && <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>}
       {result && <>
         {result.bands.length > 0 ? <>
-          <div className="enemy-defense-resistance-tabs">
-            <AnalysisTabs {...tabProps} tabs={TABS} onChange={setTab} label="分析項目" appearance="underline" />
-            <ElementLocationCopyButton segments={location} />
-          </div>
+          <PageOutputTabs {...tabProps} tabs={TABS} onChange={setTab} label="分析項目" format={formats[tab]} />
           <AnalysisTabPanel {...tabProps} tab="range">
-            <EnemyDefenseResistanceViewSwitch views={TABLE_CHART_VIEWS} selected={rangeView} onChange={setRangeView} label="順位帯の範囲の表示形式" />
+            <PageViewSwitch views={TABLE_CHART_VIEWS} selected={rangeView} onChange={setRangeView} label="順位帯の範囲の表示形式" />
             {rangeView === 'table' ? <EnemyDefenseResistanceTable bands={result.bands} /> : <EnemyDefenseResistanceChart bands={result.bands} />}
           </AnalysisTabPanel>
           <AnalysisTabPanel {...tabProps} tab="rank">
@@ -125,7 +118,7 @@ export function EnemyDefenseResistancePage() {
           </AnalysisTabPanel>
           <AnalysisTabPanel {...tabProps} tab="resistance">
             <div className="enemy-defense-resistance-rank-controls">
-              <EnemyDefenseResistanceViewSwitch views={RESISTANCE_VIEWS} selected={resistanceView} onChange={setResistanceView} label="術耐性別の表示形式" />
+              <PageViewSwitch views={RESISTANCE_VIEWS} selected={resistanceView} onChange={setResistanceView} label="術耐性別の表示形式" />
               {resistanceView === 'table' && <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
                 <label>
                   <input type="checkbox" checked={showRankPercentage} onChange={event => setShowRankPercentage(event.target.checked)} />
@@ -157,7 +150,7 @@ export function EnemyDefenseResistancePage() {
     {rankImage && <ComparisonTableImageDialog snapshot={rankImage} onClose={() => setRankImage(null)} />}
     {resistanceImage && <EnemyResistanceImageDialog snapshot={resistanceImage} onClose={() => setResistanceImage(null)} />}
     {resistanceVideo && <EnemyResistanceScatterVideoDialog snapshot={resistanceVideo} onClose={() => setResistanceVideo(null)} />}
-  </section>
+  </PageLayout>
 }
 
 function EnemyResistanceThresholdGrid({ rows, showRankPercentage, showRankCutoff, estimatedRanks }: {

@@ -1,3 +1,5 @@
+import type { AppRoute } from './routes'
+
 export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-wiki-views' | 'skills' | 'skill-classification' | 'talent-classification' | 'trait-classification' | 'trait-structure' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'structure-coverage' | 'skill-json' | 'skill-kmeans' | 'skill-hdbscan' | 'skill-hierarchical' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-three-comparison' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-wiki-stats' | 'enemy-regression' | 'enemy-immunities' | 'enemy-defense-resistance' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'roguelike' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
   | 'operator-pca-two'
   | 'damage-three-attribute-comparison'
@@ -23,7 +25,14 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 ]
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
-export const ENEMY_DEFENSE_RESISTANCE_TITLE = '防御力と術耐性の対応'
+export const STANDARD_PAGE_TITLES = {
+  'enemy-defense-resistance': '防御力と術耐性の対応',
+} satisfies Partial<Record<AppRoute['view'], string>>
+
+export function getStandardPageTitle(view: AppRoute['view']): string | undefined {
+  const titles: Partial<Record<AppRoute['view'], string>> = STANDARD_PAGE_TITLES
+  return titles[view]
+}
 export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
 export const SURTR_HOME_LINK = { label: 'スルト', href: '#/analysis/surtr' } as const
 
@@ -365,7 +374,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'enemy-defense-resistance',
     href: '#/analysis/enemies/defense-resistance',
-    label: ENEMY_DEFENSE_RESISTANCE_TITLE,
+    label: STANDARD_PAGE_TITLES['enemy-defense-resistance'],
     description: '',
     section: 'analysis',
   },
