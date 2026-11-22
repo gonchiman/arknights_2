@@ -1,6 +1,6 @@
 # ページ内の場所をコピー
 
-対象パネルの見出し帯の右端にコピーアイコンを置き、表示名による階層を1行でコピーする。
+表示名による階層を1行でコピーする。パネルでは見出し帯の右端、タブで結果を切り替えるページではタブ列の右端にコピーアイコンを置く。
 
 ```text
 防御力と術耐性の対応 / 順位帯の統計 / グラフ
@@ -15,7 +15,7 @@
 
 ## 適用先
 
-[防御力と術耐性の対応](../../src/components/EnemyDefenseResistancePage.tsx)の「順位帯の統計」にある表・グラフ。[統計パネル](../../src/components/EnemyRankBandStatisticsPanel.tsx)が、親から受け取った階層に現在の「表／グラフ」を加える。
+[防御力と術耐性の対応](../../src/components/EnemyDefenseResistancePage.tsx)では、タブ列の右端にある1つのボタンが、選択中のタブとその表示形式をコピーする。「順位表」のように表示形式が1つだけのタブではタブ名までを使う。
 
 ```tsx
 <ElementLocationCopyButton segments={[pageTitle, selectedTabLabel, selectedViewLabel]} />

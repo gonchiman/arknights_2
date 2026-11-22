@@ -1,11 +1,40 @@
+.calculator-page.enemy-defense-resistance-page {
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.enemy-defense-resistance-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.enemy-defense-resistance-settings .enemy-page-link {
+  margin-inline-start: auto;
+}
+
 .enemy-defense-resistance-count {
   margin: 0;
   color: var(--text-soft);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+  text-align: left;
 }
 
-.enemy-defense-resistance-view-switch {
+.enemy-defense-resistance-tabs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.enemy-defense-resistance-tabs .element-location-copy-button {
+  align-self: center;
+}
+
+.enemy-defense-resistance-page .analysis-tab-content > .enemy-chart-scale-switch {
   justify-self: start;
 }
 

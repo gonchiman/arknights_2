@@ -3,6 +3,10 @@
 .analysis-tabs .detail-tab + .detail-tab { border-left: 1px solid var(--border); }
 .analysis-tabs .detail-tab:hover { color: var(--text); background: var(--surface-hover); }
 .analysis-tabs .detail-tab.active { background: var(--text); color: var(--surface); }
+.analysis-tabs-underline.detail-tabs { flex-wrap: wrap; gap: 0 16px; padding: 0; border: 0; background: transparent; }
+.analysis-tabs-underline .detail-tab { flex: 0 0 auto; min-height: 38px; padding: 7px 2px; color: var(--text-soft); font-size: 13px; font-weight: 500; }
+.analysis-tabs-underline .detail-tab.active { border-bottom-color: var(--link); color: var(--link); }
+.analysis-tab-content:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 12px; }
 .analysis-tab-panel { min-width: 0; border: 1px solid var(--border); background: var(--surface); }
 .analysis-tab-panel[hidden] { display: none; }
 .analysis-tab-panel > h2,
@@ -10,4 +14,4 @@
 .analysis-tab-panel-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
 .analysis-tab-panel-header > h2 { margin: 0; font: inherit; }
 .analysis-panel-body { min-width: 0; padding: 16px; }
-@media (max-width: 760px), (pointer: coarse) { .analysis-tabs .detail-tab { min-height: 44px; } }
+@media (max-width: 760px), (pointer: coarse) { :is(.analysis-tabs, .analysis-tabs-underline) .detail-tab { min-height: 44px; } }

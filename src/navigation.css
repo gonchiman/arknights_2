@@ -1,8 +1,11 @@
+:root {
+  --app-topbar-height: 52px;
+  scroll-padding-top: var(--app-topbar-height);
+}
+
 .app-shell {
   min-width: 0;
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
   margin: 0;
   padding: 0;
   background: #fff;
@@ -16,16 +19,27 @@
 }
 
 .app-sidebar {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  inset: 0 auto 0 0;
   z-index: 30;
   min-width: 0;
-  height: 100vh;
+  width: min(84vw, 292px);
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   border-right: 1px solid var(--border-strong);
   background: #fff;
+  box-shadow: 10px 0 28px rgb(0 0 0 / 16%);
+  transform: translateX(-105%);
+  visibility: hidden;
+  transition: transform 180ms ease, visibility 180ms linear;
+}
+
+.app-sidebar.open {
+  transform: translateX(0);
+  visibility: visible;
+  transition-property: transform;
 }
 
 .sidebar-header {
@@ -48,7 +62,7 @@
 }
 
 .brand-mark,
-.mobile-brand-mark {
+.app-topbar-brand {
   display: grid;
   place-items: center;
   background: #222;
@@ -89,7 +103,7 @@
   width: 36px;
   height: 36px;
   flex: 0 0 36px;
-  display: none;
+  display: grid;
   place-items: center;
   border: 1px solid var(--border-strong);
   border-radius: 0;
@@ -200,9 +214,84 @@
 
 .sidebar-meta strong { color: #222; font-size: 11px; }
 
-.sidebar-backdrop,
-.mobile-topbar {
-  display: none;
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: var(--app-topbar-height);
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-strong);
+  background: rgb(255 255 255 / 96%);
+  padding: 0 12px;
+  backdrop-filter: blur(8px);
+}
+
+.app-topbar-title {
+  grid-column: 2;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-topbar-brand {
+  grid-column: 3;
+  justify-self: end;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  border: 0;
+  background: rgb(0 0 0 / 34%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.sidebar-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-toggle {
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #222;
+  padding: 0;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sidebar-toggle-icon {
+  width: 18px;
+  display: grid;
+  gap: 4px;
+}
+
+.sidebar-toggle-icon i {
+  width: 18px;
+  height: 1px;
+  display: block;
+  background: currentColor;
 }
 
 .app-content {
@@ -237,111 +326,12 @@
 .site-footer a { color: inherit; }
 
 @media (max-width: 1140px) {
-  .app-shell { display: block; }
-
-  .app-sidebar {
-    position: fixed;
-    right: auto;
-    bottom: 0;
-    left: 0;
-    width: min(84vw, 292px);
-    height: 100dvh;
-    box-shadow: 10px 0 28px rgb(0 0 0 / 16%);
-    transform: translateX(-105%);
-    visibility: hidden;
-    transition: transform 180ms ease, visibility 180ms linear;
-  }
-
-  .app-sidebar.open {
-    transform: translateX(0);
-    visibility: visible;
-  }
-
-  .sidebar-close { display: grid; }
-
-  .sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 25;
-    display: block;
-    border: 0;
-    background: rgb(0 0 0 / 34%);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 180ms ease;
-  }
-
-  .sidebar-backdrop.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .mobile-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    min-height: 52px;
-    display: grid;
-    grid-template-columns: 84px minmax(0, 1fr) 30px;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 1px solid var(--border-strong);
-    background: rgb(255 255 255 / 96%);
-    padding: 0 12px;
-    backdrop-filter: blur(8px);
-  }
-
-  .sidebar-toggle {
-    min-width: 0;
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    color: #222;
-    padding: 0;
-    font-size: 10px;
-    font-weight: 800;
-    text-transform: uppercase;
-    cursor: pointer;
-  }
-
-  .sidebar-toggle-icon {
-    width: 18px;
-    display: grid;
-    gap: 4px;
-  }
-
-  .sidebar-toggle-icon i {
-    width: 18px;
-    height: 1px;
-    display: block;
-    background: currentColor;
-  }
-
-  .mobile-page-title {
-    overflow: hidden;
-    font-size: 11px;
-    font-weight: 700;
-    text-align: center;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-brand-mark {
-    width: 30px;
-    height: 30px;
-    font-size: 14px;
-  }
-
   .app-content { padding: 12px 12px 36px; }
   .site-footer { width: calc(100% - 24px); }
 }
 
 @media (max-width: 520px) {
-  .mobile-topbar { padding-inline: 10px; }
+  .app-topbar { padding-inline: 10px; }
   .app-content { padding: 10px 10px 32px; }
   .site-footer { width: calc(100% - 20px); display: block; }
   .site-footer > * { display: block; margin-bottom: 5px; }

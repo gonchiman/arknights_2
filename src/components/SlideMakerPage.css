@@ -49,7 +49,7 @@
 .slide-maker-field textarea { resize: vertical; min-height: 90px; }
 .slide-maker-field input::placeholder, .slide-maker-field textarea::placeholder { color: #777; }
 .slide-maker-error { margin: 8px 0 0; color: var(--danger); font-size: 12px; line-height: 1.7; }
-.slide-maker-preview { position: sticky; top: 20px; min-width: 0; }
+.slide-maker-preview { position: sticky; top: calc(var(--app-topbar-height) + 20px); min-width: 0; }
 .slide-maker-preview-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
 .slide-maker-preview-heading h2 { margin: 0; font-size: 14px; }
 .slide-maker-preview-heading span { font-size: 11px; color: var(--text-muted); }

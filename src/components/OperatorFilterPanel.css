@@ -1,6 +1,5 @@
 .damage-build-navigation.operator-filter-compact {
   position: sticky;
-  top: 0;
   z-index: 15;
   min-width: 0;
   align-self: start;
@@ -129,10 +128,6 @@
   background: var(--accent);
   color: var(--surface);
   font-weight: 700;
-}
-
-@media (max-width: 1140px) {
-  .damage-build-navigation.operator-filter-compact { top: 58px; }
 }
 
 @media (max-width: 760px) {

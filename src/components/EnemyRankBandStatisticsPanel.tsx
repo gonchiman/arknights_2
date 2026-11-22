@@ -10,12 +10,12 @@ import {
 import { ENEMY_RANK_BAND_METRIC_LABELS, formatRankBandStatistic } from '../lib/enemyRankBandStatisticsDisplay'
 import { ENEMY_RANK_BAND_IMAGE_STEP_OPTIONS } from '../lib/enemyRankBandStatisticsImage'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
+import { EnemyDefenseResistanceViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './EnemyDefenseResistanceViewSwitch'
 import {
   EnemyRankBandStatisticsImageDialog,
   type EnemyRankBandStatisticsChartSnapshot,
 } from './EnemyRankBandStatisticsImageDialog'
 import { EnemyRankBandStatisticsPlot } from './EnemyRankBandStatisticsPlot'
-import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import './EnemyRankBandStatisticsPanel.css'
 
 type Step = 5 | 10 | 20
@@ -25,18 +25,17 @@ const COLUMN_LABELS: Record<Column, string> = {
   min: '最小', max: '最大', width: '幅', mean: '平均', standardDeviation: '標準偏差', variance: '分散',
 }
 const METRICS: EnemyRankBandMetric[] = ['standardDeviation', 'width', 'mean', 'variance']
-const VIEW_LABELS = { table: '表', chart: 'グラフ' } as const
 const COUNT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
 
-export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, locationPath }: {
+export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, view, onViewChange }: {
   rows: readonly EnemyRecord[]
   counts: EnemyHistogramCounts
   conditions: readonly string[]
-  locationPath: readonly string[]
+  view: TableChartView
+  onViewChange: (view: TableChartView) => void
 }) {
   const id = useId()
   const [step, setStep] = useState<Step>(10)
-  const [view, setView] = useState<'table' | 'chart'>('table')
   const [showMean, setShowMean] = useState(false)
   const [showVariance, setShowVariance] = useState(false)
   const [showRange, setShowRange] = useState(false)
@@ -77,30 +76,22 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, locatio
     }
   }
 
-  return <section className="enemy-rank-statistics" aria-label="順位帯の統計">
-    <div className="enemy-rank-statistics-heading">
-      <div className="enemy-rank-statistics-heading-text">
-        <h2>順位帯ごとの統計量（標準化）</h2><span>出現回数で重み付け・全体基準・母分散</span>
-      </div>
-      <ElementLocationCopyButton segments={[...locationPath, VIEW_LABELS[view]]} className="enemy-rank-statistics-location-copy" />
-    </div>
+  return <div className="enemy-rank-statistics">
     <div className="enemy-rank-statistics-toolbar">
+      <EnemyDefenseResistanceViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange} label="順位帯統計の表示形式" />
       <label htmlFor={`${id}-step`}>順位帯幅
         <select id={`${id}-step`} aria-label="順位帯幅" value={step} onChange={event => setStep(Number(event.target.value) as Step)}>
           {[5, 10, 20].map(value => <option key={value} value={value}>{value}ポイント</option>)}
         </select>
       </label>
-      <div className="enemy-chart-scale-switch" role="group" aria-label="順位帯統計の表示形式">
-        {(['table', 'chart'] as const).map(key => <button key={key} type="button" aria-pressed={view === key}
-          className={view === key ? 'active' : ''} onClick={() => setView(key)}>{VIEW_LABELS[key]}</button>)}
-      </div>
       {view === 'chart' && <label htmlFor={`${id}-metric`}>統計量
         <select id={`${id}-metric`} aria-label="統計量" value={metric} onChange={event => setMetric(event.target.value as EnemyRankBandMetric)}>
           {METRICS.map(key => <option key={key} value={key}>{ENEMY_RANK_BAND_METRIC_LABELS[key]}</option>)}
         </select>
       </label>}
+      <span className="enemy-rank-statistics-conditions">全体基準で標準化・出現回数で重み付け・母分散</span>
       <button type="button" className="button secondary enemy-rank-statistics-save" aria-haspopup="dialog"
-        aria-label={`順位帯統計の${VIEW_LABELS[view]}をPNG画像で保存`}
+        aria-label={`順位帯統計の${viewLabel(TABLE_CHART_VIEWS, view)}をPNG画像で保存`}
         disabled={result.bands.length === 0} onClick={openImage}>画像を保存</button>
     </div>
     {view === 'table' && <div className="enemy-rank-statistics-columns" role="group" aria-label="追加表示する統計量">
@@ -111,12 +102,12 @@ export function EnemyRankBandStatisticsPanel({ rows, counts, conditions, locatio
     </div>}
     {result.bands.length === 0 ? <p role="status">集計対象の出現データがありません。</p>
       : view === 'table'
-        ? <div className="damage-two-table-wrap enemy-rank-statistics-table-scroll" role="region" tabIndex={0}
+        ? <div className="damage-two-table-wrap" role="region" tabIndex={0}
             aria-label="順位帯ごとの防御力と術耐性の統計量">{table}</div>
         : <EnemyRankBandStatisticsPlot bands={result.bands} metric={metric} />}
     {tableImage && <ComparisonTableImageDialog snapshot={tableImage} helpMode="none" onClose={() => setTableImage(null)} />}
     {chartImage && <EnemyRankBandStatisticsImageDialog snapshot={chartImage} onClose={() => setChartImage(null)} />}
-  </section>
+  </div>
 }
 
 export function EnemyRankBandStatisticsTable({ bands, columns }: {

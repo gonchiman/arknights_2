@@ -5,11 +5,15 @@ import {
   type EnemyResistanceThreshold,
 } from '../lib/enemyDefenseResistance'
 import { parseEcdfGuideInput } from '../lib/enemyEcdfGuides'
+import { ENEMY_DEFENSE_RESISTANCE_TITLE } from '../lib/navigation'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
+import { AnalysisTabPanel, AnalysisTabs } from './AnalysisTabs'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
+import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import { EnemyAggregationScopeSelector, ENEMY_MAIN_STORY_LABEL, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDefenseResistanceChart } from './EnemyDefenseResistanceChart'
+import { EnemyDefenseResistanceViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './EnemyDefenseResistanceViewSwitch'
 import { EnemyDataContent } from './EnemyPageShared'
 import { EnemyResistanceImageDialog, type EnemyResistanceImageSnapshot, type EnemyResistanceScatterSnapshot } from './EnemyResistanceImageDialog'
 import { EnemyResistanceThresholdScatter } from './EnemyResistanceThresholdScatter'
@@ -21,9 +25,7 @@ import './EnemyAnalysis.css'
 import './EnemyDefenseResistancePage.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP')
-const PAGE_TITLE = '防御力と術耐性の対応'
-const STATISTICS_VIEW_LABEL = '順位帯の統計'
-const VIEWS = [['table', '範囲表'], ['rank', '順位表'], ['resistance', '術耐性別'], ['chart', 'グラフ'], ['statistics', STATISTICS_VIEW_LABEL]] as const
+const TABS = [['range', '順位帯の範囲'], ['rank', '順位表'], ['resistance', '術耐性別'], ['statistics', '順位帯の統計']] as const
 const RESISTANCE_VIEWS = [['table', '表'], ['scatter', '散布図'], ['bar', '棒グラフ']] as const
 const DEFAULT_RANK_STEP = 10
 const MAX_RANK_PERCENTAGE = 100
@@ -37,7 +39,10 @@ export function EnemyDefenseResistancePage() {
   const unavailable = mainStory?.spawnCountsAvailable === false
   const result = useMemo(() => scopedData && !unavailable
     ? buildEnemyDefenseResistanceBands(scopedData.rows, scopedData.counts) : null, [scopedData, unavailable])
-  const [view, setView] = useState<typeof VIEWS[number][0]>('table')
+  const tabsId = useId()
+  const [tab, setTab] = useState<typeof TABS[number][0]>('range')
+  const [rangeView, setRangeView] = useState<TableChartView>('table')
+  const [statisticsView, setStatisticsView] = useState<TableChartView>('table')
   const [resistanceView, setResistanceView] = useState<typeof RESISTANCE_VIEWS[number][0]>('table')
   const [rankStep, setRankStep] = useState(DEFAULT_RANK_STEP)
   const [rankInput, setRankInput] = useState('')
@@ -48,7 +53,17 @@ export function EnemyDefenseResistancePage() {
   const [resistanceVideo, setResistanceVideo] = useState<EnemyResistanceScatterSnapshot | null>(null)
   const aggregationConditions = [`集計版 ${aggregation.selectedId}`, ...(scope === 'main' ? [ENEMY_MAIN_STORY_LABEL] : [])]
   const appearances = result ? `出現回数 ${NUMBER.format(result.total)}体` : ''
-  const resistanceTable = view === 'resistance' && result
+  const tabProps = { idPrefix: tabsId, activeTab: tab }
+  const formats = {
+    range: viewLabel(TABLE_CHART_VIEWS, rangeView),
+    rank: null,
+    resistance: viewLabel(RESISTANCE_VIEWS, resistanceView),
+    statistics: viewLabel(TABLE_CHART_VIEWS, statisticsView),
+  }
+  const location = [ENEMY_DEFENSE_RESISTANCE_TITLE, viewLabel(TABS, tab)]
+  const format = formats[tab]
+  if (format) location.push(format)
+  const resistanceTable = result
     ? <EnemyResistanceThresholdGrid rows={result.resistanceThresholds} showRankPercentage={showRankPercentage}
         showRankCutoff={showRankCutoff} estimatedRanks={Boolean(scopedData?.counts.summary.expectedMapCount)} />
     : null
@@ -82,52 +97,36 @@ export function EnemyDefenseResistancePage() {
     })
   }
 
-  return <section className="calculator-page enemy-analysis-route">
-    <header className="page-intro">
-      <h1>{PAGE_TITLE}</h1>
-      <div className="enemy-analysis-page-actions">
-        <div className="enemy-analysis-aggregation" role="group" aria-label="集計設定">
-          <EnemyAggregationSelector state={aggregation} />
-          <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
-        </div>
-        <a className="button secondary enemy-page-link" href={`#/analysis/enemies/defense-resistance/formula?aggregationVersion=${encodeURIComponent(aggregation.selectedId)}`}>対応式へ</a>
+  return <section className="calculator-page enemy-analysis-route enemy-defense-resistance-page">
+    <div className="enemy-defense-resistance-settings">
+      <div className="enemy-analysis-aggregation" role="group" aria-label="集計設定">
+        <EnemyAggregationSelector state={aggregation} />
+        <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
       </div>
-    </header>
+      {result && !aggregation.loading && !aggregation.error &&
+        <p className="enemy-defense-resistance-count" role="status">{appearances}</p>}
+      <a className="button secondary enemy-page-link" href={`#/analysis/enemies/defense-resistance/formula?aggregationVersion=${encodeURIComponent(aggregation.selectedId)}`}>対応式へ</a>
+    </div>
     <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
       {unavailable && <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>}
       {result && <>
-        <p className="enemy-defense-resistance-count" role="status">出現回数 · {NUMBER.format(result.total)}体</p>
         {result.bands.length > 0 ? <>
-          <div className="enemy-chart-scale-switch enemy-defense-resistance-view-switch" role="group" aria-label="表示形式">
-            {VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={view === id}
-              className={view === id ? 'active' : ''} onClick={() => setView(id)}>{label}</button>)}
+          <div className="enemy-defense-resistance-tabs">
+            <AnalysisTabs {...tabProps} tabs={TABS} onChange={setTab} label="分析項目" appearance="underline" />
+            <ElementLocationCopyButton segments={location} />
           </div>
-          {view === 'table' && <EnemyDefenseResistanceTable bands={result.bands} />}
-          {view === 'rank' && <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
-            input={rankInput} onInputChange={setRankInput} aggregationConditions={aggregationConditions}
-            onSaveImage={setRankImage} />}
-          {view === 'resistance' && <>
+          <AnalysisTabPanel {...tabProps} tab="range">
+            <EnemyDefenseResistanceViewSwitch views={TABLE_CHART_VIEWS} selected={rangeView} onChange={setRangeView} label="順位帯の範囲の表示形式" />
+            {rangeView === 'table' ? <EnemyDefenseResistanceTable bands={result.bands} /> : <EnemyDefenseResistanceChart bands={result.bands} />}
+          </AnalysisTabPanel>
+          <AnalysisTabPanel {...tabProps} tab="rank">
+            <EnemyDefenseResistanceRankTable result={result} step={rankStep} onStepChange={setRankStep}
+              input={rankInput} onInputChange={setRankInput} aggregationConditions={aggregationConditions} onSaveImage={setRankImage} />
+          </AnalysisTabPanel>
+          <AnalysisTabPanel {...tabProps} tab="resistance">
             <div className="enemy-defense-resistance-rank-controls">
-              <div className="enemy-chart-scale-switch" role="group" aria-label="術耐性別の表示形式">
-                {RESISTANCE_VIEWS.map(([id, label]) => <button key={id} type="button" aria-pressed={resistanceView === id}
-                  className={resistanceView === id ? 'active' : ''} onClick={() => setResistanceView(id)}>{label}</button>)}
-              </div>
-              {resistanceView !== 'table' &&
-                <button type="button" className="button secondary"
-                  aria-label={`術耐性別の${resistanceView === 'bar' ? '棒グラフ' : '散布図'}をPNG画像で保存`}
-                  aria-haspopup="dialog" onClick={openResistanceImage}>画像を保存</button>
-              }
-              {resistanceView === 'scatter' &&
-                <button type="button" className="button secondary" aria-label="術耐性別の散布図を動画で保存"
-                  aria-haspopup="dialog" onClick={() => setResistanceVideo(getResistanceScatterSnapshot())}>動画を保存</button>
-              }
-            </div>
-            {resistanceView !== 'table' &&
-              <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} chartType={resistanceView} />}
-          </>}
-          {resistanceTable && resistanceView === 'table' && <>
-            <div className="enemy-defense-resistance-rank-controls">
-              <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
+              <EnemyDefenseResistanceViewSwitch views={RESISTANCE_VIEWS} selected={resistanceView} onChange={setResistanceView} label="術耐性別の表示形式" />
+              {resistanceView === 'table' && <div className="enemy-defense-resistance-rank-controls" role="group" aria-label="表示する列">
                 <label>
                   <input type="checkbox" checked={showRankPercentage} onChange={event => setShowRankPercentage(event.target.checked)} />
                   出現順位（%）
@@ -136,18 +135,22 @@ export function EnemyDefenseResistancePage() {
                   <input type="checkbox" checked={showRankCutoff} onChange={event => setShowRankCutoff(event.target.checked)} />
                   出現順位の境目（位）
                 </label>
-              </div>
-              <button type="button" className="button secondary" aria-label="術耐性別の表をPNG画像で保存"
+              </div>}
+              <button type="button" className="button secondary" aria-label={`術耐性別の${formats.resistance}をPNG画像で保存`}
                 aria-haspopup="dialog" onClick={openResistanceImage}>画像を保存</button>
+              {resistanceView === 'scatter' &&
+                <button type="button" className="button secondary" aria-label="術耐性別の散布図を動画で保存"
+                  aria-haspopup="dialog" onClick={() => setResistanceVideo(getResistanceScatterSnapshot())}>動画を保存</button>}
             </div>
-            <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="術耐性別">
-              {resistanceTable}
-            </div>
-          </>}
-          {view === 'chart' && <EnemyDefenseResistanceChart bands={result.bands} />}
-          {view === 'statistics' && scopedData && <EnemyRankBandStatisticsPanel rows={scopedData.rows} counts={scopedData.counts}
-            locationPath={[PAGE_TITLE, STATISTICS_VIEW_LABEL]}
-            conditions={[`集計版 ${aggregation.selectedId}`, scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体']} />}
+            {resistanceView === 'table'
+              ? <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="術耐性別">{resistanceTable}</div>
+              : <EnemyResistanceThresholdScatter rows={result.resistanceThresholds} chartType={resistanceView} />}
+          </AnalysisTabPanel>
+          <AnalysisTabPanel {...tabProps} tab="statistics">
+            {scopedData && <EnemyRankBandStatisticsPanel rows={scopedData.rows} counts={scopedData.counts}
+              view={statisticsView} onViewChange={setStatisticsView}
+              conditions={[`集計版 ${aggregation.selectedId}`, scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体']} />}
+          </AnalysisTabPanel>
         </> : <p role="status">集計対象の出現データがありません。</p>}
       </>}
     </EnemyDataContent>

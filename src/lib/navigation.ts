@@ -23,6 +23,7 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 ]
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
+export const ENEMY_DEFENSE_RESISTANCE_TITLE = '防御力と術耐性の対応'
 export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
 export const SURTR_HOME_LINK = { label: 'スルト', href: '#/analysis/surtr' } as const
 
@@ -364,7 +365,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'enemy-defense-resistance',
     href: '#/analysis/enemies/defense-resistance',
-    label: '防御力と術耐性の対応',
+    label: ENEMY_DEFENSE_RESISTANCE_TITLE,
     description: '',
     section: 'analysis',
   },

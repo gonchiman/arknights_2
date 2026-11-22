@@ -190,7 +190,7 @@
 
 .damage-build-navigation {
   position: sticky;
-  top: 0;
+  top: var(--app-topbar-height);
   z-index: 15;
   min-width: 0;
   align-self: start;
@@ -2006,7 +2006,7 @@
 }
 
 @media (max-width: 1140px) {
-  .damage-build-navigation { top: 58px; }
+  .damage-build-navigation { top: calc(var(--app-topbar-height) + 6px); }
 }
 
 @media (max-width: 1250px) {

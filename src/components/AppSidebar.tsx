@@ -18,7 +18,7 @@ export function AppSidebar({ activePage, open, onClose }: AppSidebarProps) {
 
   return (
     <>
-      <aside className={`app-sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="メインナビゲーション">
+      <aside className={`app-sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="メインナビゲーション" inert={!open}>
         <div className="sidebar-header">
           <a className="site-brand" href={HOME_LINK.href} onClick={onClose} aria-label="Arknights Analyze Tool ホーム" aria-current={activePage === 'home' ? 'page' : undefined}>
             <span className="brand-mark" aria-hidden="true">A</span>

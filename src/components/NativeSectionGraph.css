@@ -8,8 +8,6 @@
 .code-analysis-page .native-section-sidebar-content.is-open { display: block; }
 .code-analysis-page .native-section-sidebar .native-flow-details { margin-top: 16px; }
 .code-analysis-page .native-section-warning { grid-column: 1 / -1; }
-/* Match navigation.css: wait for the permanent sidebar before using spare width,
-   so its appearance cannot push the details back below the graph. */
 @media (width > 1140px) {
   @container native-flow-content (min-width: 920px) {
     .code-analysis-page .native-section-graph { display: grid; grid-template-columns: minmax(560px, 1.6fr) minmax(320px, 1fr); gap: 16px 24px; align-items: start; }

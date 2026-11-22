@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
@@ -71,8 +71,6 @@ import './index.css'
 import './navigation.css'
 
 const OVERRIDE_STORAGE_KEY = 'arknights-skill-classification-overrides-v2'
-const SIDEBAR_DRAWER_QUERY = '(max-width: 1140px)'
-const SIDEBAR_DESKTOP_QUERY = '(min-width: 1141px)'
 const GoldenglowSingleTrialPage = lazy(() => import('./components/GoldenglowSingleTrialPage').then((module) => ({ default: module.GoldenglowSingleTrialPage })))
 const IntegratedStrategiesPage = lazy(() => import('./components/IntegratedStrategiesPage').then((module) => ({ default: module.IntegratedStrategiesPage })))
 const MapDatabase = lazy(() => import('./components/MapDatabase').then((module) => ({ default: module.MapDatabase })))
@@ -194,40 +192,28 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false)
+    window.requestAnimationFrame(() => sidebarToggleRef.current?.focus({ preventScroll: true }))
+  }, [])
+
   useEffect(() => {
     if (!sidebarOpen) return
-
-    const desktopMedia = window.matchMedia(SIDEBAR_DESKTOP_QUERY)
-    if (desktopMedia.matches) {
-      setSidebarOpen(false)
-      return
-    }
-
     const previousOverflow = document.body.style.overflow
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
       event.stopImmediatePropagation()
-      setSidebarOpen(false)
-      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus())
-    }
-    const handleDesktopChange = (event: MediaQueryListEvent) => {
-      if (!event.matches) return
-      setSidebarOpen(false)
-      window.requestAnimationFrame(() => {
-        document.querySelector<HTMLAnchorElement>('.sidebar-nav-link.active, .site-brand[aria-current="page"]')?.focus()
-      })
+      closeSidebar()
     }
 
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', handleKeyDown, { capture: true })
-    desktopMedia.addEventListener('change', handleDesktopChange)
     return () => {
       document.body.style.overflow = previousOverflow
       window.removeEventListener('keydown', handleKeyDown, { capture: true })
-      desktopMedia.removeEventListener('change', handleDesktopChange)
     }
-  }, [sidebarOpen])
+  }, [sidebarOpen, closeSidebar])
 
   const classifiedRows = useMemo(() => rows.map((row) => ({
     ...row,
@@ -303,20 +289,14 @@ export default function App() {
           ? 'surtr-home'
           : displayedRoute.view
   const activeNavigationItem = activeNavigationPage === 'home' ? HOME_LINK : APP_NAV_ITEMS.find((item) => item.id === activeNavigationPage)
-  const closeSidebar = () => {
-    if (!sidebarOpen) return
-    setSidebarOpen(false)
-    if (window.matchMedia(SIDEBAR_DRAWER_QUERY).matches) {
-      window.requestAnimationFrame(() => sidebarToggleRef.current?.focus())
-    }
-  }
+  const TopbarTitle = displayedRoute.view === 'enemy-defense-resistance' ? 'h1' : 'span'
 
   return (
     <div className="app-shell">
       <AppSidebar activePage={activeNavigationPage} open={sidebarOpen} onClose={closeSidebar} />
 
       <div className="app-main" inert={sidebarOpen ? true : undefined}>
-        <header className="mobile-topbar">
+        <header className="app-topbar">
           <button
             ref={sidebarToggleRef}
             className="sidebar-toggle"
@@ -328,8 +308,8 @@ export default function App() {
             <span className="sidebar-toggle-icon" aria-hidden="true"><i /><i /><i /></span>
             <span>Menu</span>
           </button>
-          <span className="mobile-page-title">{activeNavigationItem?.label}</span>
-          <a className="mobile-brand-mark" href={HOME_LINK.href} aria-label="Arknights Analyze Tool ホーム" aria-current={activeNavigationPage === 'home' ? 'page' : undefined}>A</a>
+          <TopbarTitle className="app-topbar-title">{activeNavigationItem?.label}</TopbarTitle>
+          <a className="app-topbar-brand" href={HOME_LINK.href} aria-label="Arknights Analyze Tool ホーム" aria-current={activeNavigationPage === 'home' ? 'page' : undefined}>A</a>
         </header>
 
         <main className="app-content">
