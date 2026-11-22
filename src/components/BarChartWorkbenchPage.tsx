@@ -48,6 +48,8 @@ export function BarChartWorkbenchPage() {
   }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric])
   const document = result?.document
   const comparisonSelection = document?.layout === 'mirrored' ? getBarChartComparisonSelection(document, settings) : null
+  const hasHighlights = Boolean(settings.selectedRanks?.length
+    || settings.comparisonSelection?.left?.length || settings.comparisonSelection?.right?.length)
   const presentation = document ? getBarChartPresentationLabels(getBarChartItemKind(document), document.layout) : null
   const update = (key: 'values' | 'axisBand' | 'percent' | 'cumulative' | 'cumulativeBand' | 'rankBand', checked: boolean) =>
     setSettings(current => ({ ...current, [key]: checked }))
@@ -153,7 +155,7 @@ export function BarChartWorkbenchPage() {
           </>}
           {document.capabilities.rankBands && <label><input type="checkbox" checked={Boolean(settings.rankBand)} onChange={event => update('rankBand', event.target.checked)} />評価帯</label>}
         </div>}
-        {document.bins.length > 0 && <fieldset className="bar-chart-workbench-options bar-chart-highlight-options">
+        {(document.bins.length > 0 || hasHighlights) && <fieldset className="bar-chart-workbench-options bar-chart-highlight-options">
           <legend>強調</legend>
           {comparisonSelection && <select aria-label="強調する側" value={highlightTarget}
             onChange={event => setHighlightTarget(event.target.value as BarChartHighlightTarget)}>
@@ -161,6 +163,10 @@ export function BarChartWorkbenchPage() {
             <option value="left">左</option>
             <option value="right">右</option>
           </select>}
+          <button type="button" className="button secondary" aria-label="強調をすべて解除" disabled={!hasHighlights}
+            onClick={() => setSettings(current => ({ ...current, selectedRanks: [], comparisonSelection: undefined }))}>
+            すべて解除
+          </button>
           {document.bins.map(bin => {
             const left = comparisonSelection?.left.has(bin.id) ?? false
             const right = comparisonSelection?.right.has(bin.id) ?? false
