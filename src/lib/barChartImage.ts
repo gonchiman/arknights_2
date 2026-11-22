@@ -1,4 +1,4 @@
-import { getBarChartComparisonBand, getBarChartSelectedLabel, type BarChartDocument, type BarChartDisplaySettings } from './barChartDocument.ts'
+import { getBarChartComparisonBand, getBarChartHighlightFilenamePart, type BarChartDocument, type BarChartDisplaySettings } from './barChartDocument.ts'
 import { BAR_CHART_PROVIDERS, type BarChartProviderVariant } from './barChartProviders.ts'
 import { createChartImageFilename, withChartImageAspect } from './chartImageFilename.ts'
 
@@ -46,10 +46,11 @@ export function getBarChartArchiveFilename(snapshot: BarChartImageSnapshot,
   const { settings } = snapshot
   const mirrored = first.layout === 'mirrored'
   const band = mirrored ? getBarChartComparisonBand(settings, first) : 'none'
-  const selection = mirrored ? getBarChartSelectedLabel(first, settings.selectedRanks ?? []) : null
+  const highlight = getBarChartHighlightFilenamePart(first, variants[0]?.snapshot.settings ?? settings, 'zip')
+  const commonHighlight = highlight && variants.every(({ snapshot: variant }) =>
+    getBarChartHighlightFilenamePart(variant.document, variant.settings, 'zip') === highlight)
   const display = mirrored ? [
     band === 'value' && '数値帯', band === 'cumulative' && '累積割合帯', band === 'rank' && '階級割合帯',
-    selection && `${selection}強調`,
   ] : [
     settings.values && '数値表示', settings.axisBand && '階級帯',
     settings.percent && documents.every(document => document.capabilities.percentages) && '割合帯',
@@ -61,6 +62,6 @@ export function getBarChartArchiveFilename(snapshot: BarChartImageSnapshot,
   const choices = first.source.providerId === 'enemy-stat-rating-comparison' && variants.length === snapshot.variants?.length
     ? ['全組み合わせ'] : variants.map(variant => variant.label)
   return withChartImageAspect(createChartImageFilename(provider?.label ?? `${first.semantics.subject}の棒グラフ`, [
-    `${variants.length}枚`, numericBinning, ...commonConditions, ...choices, '幅1920px', ...display,
+    `${variants.length}枚`, numericBinning, ...commonConditions, ...choices, '幅1920px', ...display, commonHighlight && highlight,
   ]), aspectRatio).replace(/\.png$/i, '.zip')
 }

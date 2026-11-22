@@ -122,6 +122,95 @@ test('0は高さ0の観測値、欠損は—とし、数値OFFでも欠損を0�
   }
 })
 
+test('縦棒では非選択の棒を薄くし、数値階級・評価・術耐性の選択を横軸とPNGに反映する', () => {
+  const targets = [
+    { document: frequency, selected: [frequency.bins[0], frequency.bins[2]] },
+    { document: ratingFrequency, selected: [ratingFrequency.bins[0], ratingFrequency.bins[1]] },
+    { document: correspondence, selected: [correspondence.bins.find(bin => bin.value === 0),
+      correspondence.bins.find(bin => bin.value === null)] },
+  ]
+  const highlights = markup => rectangles(markup).filter(tag => tag['data-bar-chart-selected'])
+  const dimmed = markup => groups(markup).filter(tag => tag['data-bar-chart-dimmed'] === 'true')
+    .map(tag => tag['data-bar-chart-bin'])
+  for (const { document, selected } of targets) for (const axisBand of [false, true]) {
+    const selectedIds = selected.map(bin => bin.id)
+    const display = { ...settings, axisBand, selectedRanks: [...selectedIds].reverse().concat('stale-id') }
+    const size = { width: 928, height: 334 }
+    const screen = render(Plot, { document, settings: display, ...size })
+    const preview = renderToStaticMarkup(imageFrame(createSnapshot(document, display)).children(size))
+    const marked = highlights(screen)
+    assert.deepEqual(marked.map(tag => tag['data-bar-chart-selected']), selectedIds)
+    assert.ok(marked.every(tag => Number(tag.width) > 0 && Number(tag.height) > 0), '度数0や欠損にも幅と高さがある')
+    assert.deepEqual(highlights(preview), marked)
+    const barBottom = Math.max(...bars(screen).map(bar => Number(bar.y) + Number(bar.height)))
+    assert.ok(marked.every(tag => Number(tag.y) > barBottom), '選択の背景は横軸だけに置く')
+    const excluded = document.bins.filter(bin => !selectedIds.includes(bin.id)).map(bin => bin.id)
+    assert.deepEqual(dimmed(screen), excluded)
+    assert.deepEqual(dimmed(preview), excluded)
+    for (const selectedRanks of [[], ['stale-id']]) {
+      const cleared = render(Plot, { document, settings: { ...display, selectedRanks }, ...size })
+      assert.deepEqual(highlights(cleared), [])
+      assert.deepEqual(dimmed(cleared), [])
+      assert.deepEqual(bars(cleared), bars(screen), '強調は棒の寸法を変えない')
+      assert.deepEqual(bins(cleared), bins(screen), '強調は棒の値を変えない')
+    }
+  }
+})
+
+test('縦棒と左右比較のクリック領域はグラフ操作が有効な画面にだけ描く', () => {
+  const comparison = createBarChartFromProvider('enemy-stat-rating-comparison', context)
+  for (const document of [correspondence, comparison]) {
+    const size = { width: 928, height: getBarChartNaturalHeight(document, settings) }
+    const props = { document, settings, ...size }
+    const interactive = render(Plot, { ...props, onToggleHighlight() {} })
+    const targets = rectangles(interactive).filter(tag => tag['data-bar-chart-hit'])
+    const sides = document.layout === 'mirrored' ? ['left', 'both', 'right'] : [undefined]
+    for (const side of sides) {
+      const hits = targets.filter(tag => tag['data-bar-chart-hit-side'] === side)
+      assert.deepEqual(hits.map(tag => tag['data-bar-chart-hit']), document.bins.map(bin => bin.id))
+      assert.ok(hits.every(tag => Number(tag.width) > 0 && Number(tag.height) > 0))
+    }
+    if (document.layout === 'mirrored') {
+      const [left, center, right] = targets.filter(tag => tag['data-bar-chart-hit'] === document.bins[0].id)
+      assert.equal(Number(left.x) + Number(left.width), Number(center.x))
+      assert.equal(Number(center.x) + Number(center.width), Number(right.x))
+    }
+    assert.equal(markerCount(render(Plot, props), 'data-bar-chart-hit'), 0)
+    const preview = renderToStaticMarkup(imageFrame(createSnapshot(document, settings)).children(size))
+    assert.equal(markerCount(preview, 'data-bar-chart-hit'), 0)
+  }
+})
+
+test('左右別の強調は中央セル全体に反映し、画面と画像で選んだ側を保つ', () => {
+  const selected = markup => groups(markup).filter(tag => !tag['data-bar-chart-dimmed'])
+    .map(tag => [tag['data-bar-chart-series'], tag['data-bar-chart-bin']])
+  for (const provider of ['enemy-stat-rating-comparison', 'enemy-rank-band-statistics']) {
+    const document = createBarChartFromProvider(provider, context)
+    const [left, right, shared] = document.bins
+    const display = { ...settings, selectedRanks: [shared.id], comparisonSelection: { left: [left.id], right: [right.id] } }
+    const width = 928
+    const size = { width, height: getBarChartNaturalHeight(document, display) }
+    const screen = render(Plot, { document, settings: display, ...size })
+    const preview = renderToStaticMarkup(imageFrame(createSnapshot(document, display)).children(size))
+    const idle = render(Plot, { document, settings, width, height: getBarChartNaturalHeight(document, settings) })
+    const cells = rectangles(screen).filter(tag => tag['data-bar-chart-selected'])
+    const idleCells = rectangles(idle).filter(tag => tag['data-bar-chart-comparison-category'])
+    const geometry = tag => [tag.x, tag.y, tag.width, tag.height]
+    assert.equal(rectangles(screen).length, rectangles(idle).length, '半分を塗る矩形を追加しない')
+    assert.deepEqual(cells.map(tag => [tag['data-bar-chart-selected-side'], tag['data-bar-chart-selected']]),
+      [['left', left.id], ['right', right.id], ['both', shared.id]])
+    for (const cell of cells) {
+      const id = cell['data-bar-chart-selected']
+      assert.equal(cell['data-bar-chart-comparison-category'], id)
+      assert.ok(cell.class?.split(' ').includes('bar-chart-selected-cell'))
+      assert.deepEqual(geometry(cell), geometry(idleCells.find(tag => tag['data-bar-chart-comparison-category'] === id)))
+    }
+    assert.deepEqual(rectangles(preview).filter(tag => tag['data-bar-chart-selected']), cells)
+    assert.deepEqual(selected(screen), [['left', left.id], ['left', shared.id], ['right', right.id], ['right', shared.id]])
+    assert.deepEqual(selected(preview), selected(screen))
+  }
+})
+
 test('棒幅の型は0や欠損から推定せず、全項目の幅を使って画面とPNGへ同じ上限を適用する', () => {
   const disabled = { ...settings, percent: false, cumulative: false }
   for (const kind of ['point', 'category', 'interval']) for (const width of [320, 928]) {

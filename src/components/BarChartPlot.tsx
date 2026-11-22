@@ -1,6 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import type { BarChartDisplaySettings, BarChartDocument } from '../lib/barChartDocument'
+import { getBarChartSelectedLabel, type BarChartDisplaySettings, type BarChartDocument, type BarChartHighlightTarget } from '../lib/barChartDocument'
 import { getBarChartBarWidth, getBarChartItemKind } from '../lib/barChartPresentation'
 import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
@@ -10,6 +10,7 @@ import { getStatMetricColor, STAT_METRIC_BAR_OPACITY, STAT_CUMULATIVE_COLOR, STA
 import { ChartStripCell } from './ChartStripCell'
 import { StatRankStrip } from './StatRankStrip'
 import { BarChartComparisonPlot } from './BarChartComparisonPlot'
+import { BarChartHighlightTargets } from './BarChartHighlightTargets'
 import { estimatedBarChartTextWidth as estimatedWidth, useBarChartTextWidths as useTextWidths } from './useBarChartTextWidths'
 import './BarChartPlot.css'
 
@@ -19,6 +20,7 @@ export interface BarChartPlotProps {
   width: number
   height?: number
   imageMode?: boolean
+  onToggleHighlight?: (id: string, target?: BarChartHighlightTarget) => void
 }
 
 const INK = { 'data-chart-image-ink': 'true' }
@@ -41,20 +43,24 @@ function percentage(share: number | null | undefined): string {
   return share == null ? '—' : formatHistogramPercentage(share, 1)?.replace(/%$/, '').replace(/\.0$/, '') ?? '—'
 }
 
-/** One read-only drawing is shared by the page and PNG output. */
-export function BarChartPlot({ document: data, settings, width, height, imageMode = false }: BarChartPlotProps) {
-  return data.layout === 'mirrored'
-    ? <BarChartComparisonPlot document={data} settings={settings} width={width} height={height} imageMode={imageMode} />
-    : <VerticalBarChartPlot document={data} settings={settings} width={width} height={height} imageMode={imageMode} />
+/** The page and PNG share the drawing; only the page passes a selection action. */
+export function BarChartPlot(props: BarChartPlotProps) {
+  const plotProps = props.imageMode ? { ...props, onToggleHighlight: undefined } : props
+  return props.document.layout === 'mirrored'
+    ? <BarChartComparisonPlot {...plotProps} />
+    : <VerticalBarChartPlot {...plotProps} />
 }
 
-function VerticalBarChartPlot({ document: data, settings, width, height, imageMode = false }: BarChartPlotProps) {
+function VerticalBarChartPlot({ document: data, settings, width, height, imageMode = false, onToggleHighlight }: BarChartPlotProps) {
   const titleId = useId(), descriptionId = useId()
   const number = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: data.fractionDigits })
   const format = (value: number) => number.format(value)
   const bins = data.bins.map(bin => ({ ...bin,
     value: bin.value !== null && Number.isFinite(bin.value) && bin.value >= 0 ? bin.value : null,
   }))
+  const selection = new Set(settings.selectedRanks)
+  const selectedLabel = getBarChartSelectedLabel(data, settings.selectedRanks ?? [])
+  const hasSelection = bins.some(bin => selection.has(bin.id))
   const texts = bins.map(bin => bin.value === null ? '—' : format(bin.value))
   const maximum = Math.max(0, ...bins.flatMap(bin => bin.value === null ? [] : [bin.value]))
   const axis = createZeroBasedValueAxis(maximum * 1.12, 10 ** -data.fractionDigits)
@@ -119,14 +125,15 @@ function VerticalBarChartPlot({ document: data, settings, width, height, imageMo
       '--bar-chart-cumulative-dash': STAT_CUMULATIVE_DASH_ARRAY } as CSSProperties}
     viewBox={`0 0 ${svgWidth} ${svgHeight}`} role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
     <title id={titleId}>{data.title}</title>
-    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}${describeRange(bin) ? `（${describeRange(bin)}）` : ''}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}</desc>
+    <desc id={descriptionId}>{`${data.xAxisTitle}、${data.yAxisTitle}。${bins.map((bin, index) => `${bin.label}：${texts[index]}${describeRange(bin) ? `（${describeRange(bin)}）` : ''}`).join('。')}${showCumulativeBand ? '。累積割合帯は各階級全体を含む割合です。' : ''}`}{selectedLabel && `。強調（${selectedLabel}）`}</desc>
     <g transform={`translate(${left} ${top})`}>
       {axis.ticks.map(tick => <g key={tick} aria-hidden="true">
         <line className={`bar-chart-guide${tick === 0 ? ' is-zero' : ''}`} x1="0" x2={plotWidth} y1={y(tick)} y2={y(tick)} />
         <text {...INK} className="bar-chart-tick" x="-9" y={y(tick) + 4} textAnchor="end">{format(tick)}</text>
       </g>)}
       <line className="bar-chart-guide is-zero" x1="0" x2="0" y1="0" y2={plotHeight} />
-      {bars.map(bar => <g key={bar.id} data-bar-chart-bin={bar.id} data-bar-chart-value={bar.value ?? 'missing'}>
+      {bars.map(bar => <g key={bar.id} data-bar-chart-bin={bar.id} data-bar-chart-value={bar.value ?? 'missing'}
+        data-bar-chart-dimmed={hasSelection && !selection.has(bar.id) ? 'true' : undefined}>
         {bar.value === null
           ? <text {...INK} className="bar-chart-missing" x={bar.x + bar.width / 2} y={plotHeight - 4} textAnchor="middle">—</text>
           : <rect {...INK} className="bar-chart-bar" x={bar.x} y={bar.y} width={bar.width} height={bar.height} />}
@@ -165,14 +172,19 @@ function VerticalBarChartPlot({ document: data, settings, width, height, imageMo
         </g>)}
       </g>
     })}
-    {bins.map((bin, index) => <g key={bin.id} data-bar-chart-axis-band={settings.axisBand ? bin.id : undefined}>
-      {settings.axisBand && <ChartStripCell left={left + index * slot} width={slot} top={bottom + 8}
-        leftInset={1.5} rightInset={1.5} height={axisHeight} label={bin.label} showLabel={false} />}
-      <text {...INK} className={settings.axisBand ? 'chart-strip-label' : 'bar-chart-tick'} textAnchor="middle"
-        x={left + centerX(index)} y={bottom + 8 + (axisHeight - axisLines[index].length * 14) / 2 + 11}>
-        {axisLines[index].map((line, row) => <tspan key={row} x={left + centerX(index)} dy={row ? 14 : 0}>{line}</tspan>)}
-      </text>
-    </g>)}
+    {bins.map((bin, index) => {
+      const isSelected = selection.has(bin.id)
+      return <g key={bin.id} data-bar-chart-axis-band={settings.axisBand ? bin.id : undefined}>
+        {(settings.axisBand || isSelected) && <ChartStripCell left={left + index * slot} width={slot} top={bottom + 8}
+          leftInset={1.5} rightInset={1.5} height={axisHeight} label={bin.label} showLabel={false}
+          fillClassName={isSelected ? 'bar-chart-selected-cell' : undefined}
+          fillAttributes={isSelected ? { 'data-bar-chart-selected': bin.id } : undefined} />}
+        <text {...INK} className={`${settings.axisBand ? 'chart-strip-label' : 'bar-chart-tick'}${isSelected ? ' bar-chart-selected-label' : ''}`}
+          textAnchor="middle" x={left + centerX(index)} y={bottom + 8 + (axisHeight - axisLines[index].length * 14) / 2 + 11}>
+          {axisLines[index].map((line, row) => <tspan key={row} x={left + centerX(index)} dy={row ? 14 : 0}>{line}</tspan>)}
+        </text>
+      </g>
+    })}
     {settings.axisBand && <text {...INK} className="chart-strip-title" x={left - 8} y={bottom + 8 + axisHeight / 2 + 4} textAnchor="end">{data.semantics.xBandTitle ?? '階級'}</text>}
     {secondaryBand && secondaryLines && <g data-bar-chart-secondary-axis-band="true" role="group" aria-label={secondaryBand.title}>
       <text {...INK} className="chart-strip-title" x={left - 8} y={secondaryTop + secondaryAxisHeight / 2 + 4} textAnchor="end">{secondaryBand.title}</text>
@@ -189,10 +201,12 @@ function VerticalBarChartPlot({ document: data, settings, width, height, imageMo
       <text {...INK} className="chart-strip-title" x={left - 8} y={rankTop + 16} textAnchor="end">評価</text>
       <StatRankStrip bands={rankBands} left={left} right={right} top={rankTop} title="評価" showTooltips={false} />
     </g>}
+    {onToggleHighlight && <BarChartHighlightTargets bins={data.bins} onToggle={onToggleHighlight}
+      bounds={index => ({ x: left + index * slot, y: top, width: slot, height: plotHeight + 8 + axisHeight + secondaryHeight })} />}
   </svg>
 }
 
-export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotProps, 'document' | 'settings'>) {
+export function BarChartFigure({ document: data, settings, onToggleHighlight }: Pick<BarChartPlotProps, 'document' | 'settings' | 'onToggleHighlight'>) {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(928)
   useLayoutEffect(() => {
@@ -223,7 +237,8 @@ export function BarChartFigure({ document: data, settings }: Pick<BarChartPlotPr
   return <figure className={`bar-chart-figure${data.layout === 'mirrored' ? ' is-comparison' : ''}`} aria-label={data.title}>
     <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
     <div className="bar-chart-scroll" ref={ref}>
-      <BarChartPlot document={data} settings={settings} width={plotWidth} height={getBarChartNaturalHeight(data, settings)} />
+      <BarChartPlot document={data} settings={settings} width={plotWidth} height={getBarChartNaturalHeight(data, settings)}
+        onToggleHighlight={onToggleHighlight} />
     </div>
     <div className="bar-chart-x-title">{data.xAxisTitle}</div>
   </figure>

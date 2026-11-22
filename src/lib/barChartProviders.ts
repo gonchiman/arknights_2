@@ -125,7 +125,7 @@ function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDoc
     })
   }
   const bins = buildHistogramCumulativeRows(statistics.bins, statistics.count).map(({ bin, proportion, cumulativeProportion }, index): BarChartBin => ({
-    id: `interval-${index}-${bin.start}-${bin.end}`,
+    id: `interval-${statKey}-${index}-${bin.start}-${bin.end}-${bin.isOverflow ? 'overflow' : bin.includesMaximum ? 'closed' : 'open'}`,
     label: formatHistogramBinRangeLines(bin).join(''), value: bin.count,
     interval: { start: bin.start, end: bin.isOverflow ? null : bin.end,
       includesMinimum: !bin.isOverflow, includesMaximum: !bin.isOverflow && bin.includesMaximum,
