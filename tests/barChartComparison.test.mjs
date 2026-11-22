@@ -215,6 +215,8 @@ const rects = markup => [...markup.matchAll(/<rect\b[^>]*>/g)].map(([tag]) => at
 const finite = markup => assert.doesNotMatch(markup, /(?:x|y|width|height|points|transform)="[^"]*(?:NaN|Infinity|undefined)/)
 const markerCount = (markup, name) => [...markup.matchAll(new RegExp(`\\b${name}="`, 'g'))].length
 const bars = markup => rects(markup).filter(tag => tag.class?.split(' ').includes('bar-chart-comparison-bar'))
+const plottedItems = markup => [...markup.matchAll(/<g\b[^>]*data-bar-chart-bin="[^"]*"[^>]*>/g)]
+  .map(([tag]) => attributes(tag))
 
 test('左右比較の画面と画像は同じデータ・設定・描画を共有し、画像スナップショットは選択配列を切り離す', () => {
   const document = comparison('maxHp', 'defense')
@@ -223,12 +225,28 @@ test('左右比較の画面と画像は同じデータ・設定・描画を共�
   current.selectedRanks.push('rating-A')
   assert.deepEqual(snapshot.settings.selectedRanks, ['rating-E', 'rating-C'])
   assert.ok(Object.isFrozen(snapshot.settings.selectedRanks))
+  const dimmed = markup => plottedItems(markup).filter(tag => tag['data-bar-chart-dimmed'] === 'true')
+    .map(tag => [tag['data-bar-chart-series'], tag['data-bar-chart-bin']])
+  const excluded = document.series.flatMap(series => series.bins
+    .filter(bin => !snapshot.settings.selectedRanks.includes(bin.id)).map(bin => [series.id, bin.id]))
   for (const width of [600, 928]) {
     const height = getBarChartNaturalHeight(document, snapshot.settings)
     const screen = render(Plot, { document, settings: snapshot.settings, width, height })
     const frame = imageFrame(snapshot)
     const image = renderToStaticMarkup(frame.children({ width, height }))
     assert.deepEqual(rects(image), rects(screen))
+    assert.deepEqual(dimmed(screen), excluded)
+    assert.deepEqual(dimmed(image), excluded)
+    const selectedCells = rects(screen).filter(tag => tag['data-bar-chart-selected'])
+    assert.deepEqual(selectedCells.map(tag => tag['data-bar-chart-selected']), snapshot.settings.selectedRanks)
+    assert.ok(selectedCells.every(tag => Number(tag.width) < width / 2), '中央の評価セルだけを塗る')
+    const inactive = { ...snapshot.settings, selectedRanks: ['stale-id'] }
+    const cleared = render(Plot, { document, settings: inactive, width, height: getBarChartNaturalHeight(document, inactive) })
+    assert.deepEqual(dimmed(cleared), [])
+    assert.equal(markerCount(cleared, 'data-bar-chart-selected'), 0)
+    assert.deepEqual(bars(cleared), bars(screen))
+    assert.deepEqual(plottedItems(cleared).map(tag => tag['data-bar-chart-value']),
+      plottedItems(screen).map(tag => tag['data-bar-chart-value']))
     assert.equal(frame.title, document.title)
     assert.equal(frame.conditions, document.conditions)
     assert.equal(frame.naturalChartHeight, height)

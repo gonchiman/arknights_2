@@ -13,7 +13,7 @@ export const BAR_CHART_MIRRORED_BOTTOM_HEIGHT = 2
 export function getBarChartNaturalHeight(document: BarChartDocument, settings: BarChartDisplaySettings): number {
   if (document.layout === 'mirrored') {
     return BAR_CHART_MIRRORED_HEADER_HEIGHT + Math.max(1, document.bins.length) * BAR_CHART_MIRRORED_ROW_HEIGHT
-      + (getBarChartSelectionSummary(document, settings.selectedRanks ?? []) ? BAR_CHART_MIRRORED_SELECTION_HEIGHT : 0)
+      + (getBarChartSelectionSummary(document, settings.selectedRanks ?? [], settings.comparisonSelection) ? BAR_CHART_MIRRORED_SELECTION_HEIGHT : 0)
       + BAR_CHART_MIRRORED_BOTTOM_HEIGHT
   }
   const cumulative = settings.cumulativeBand && document.capabilities.cumulative

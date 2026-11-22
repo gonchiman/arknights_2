@@ -4,7 +4,9 @@ import {
   buildBarChartImageVariants, createBarChartImageSnapshot, getBarChartArchiveFilename,
 } from '../src/lib/barChartImage.ts'
 import { createBarChartFromProvider, createBarChartProviderVariants } from '../src/lib/barChartProviders.ts'
-import { getBarChartFilename } from '../src/lib/barChartDocument.ts'
+import {
+  getBarChartComparisonSelection, getBarChartFilename, getBarChartSelectionSummary, toggleBarChartHighlight,
+} from '../src/lib/barChartDocument.ts'
 import { CHART_IMAGE_FILENAME_BYTE_LIMIT } from '../src/lib/chartImageFilename.ts'
 import { ENEMY_RANK_BAND_STATISTIC_LABELS } from '../src/lib/enemyRankBandStatisticsDisplay.ts'
 
@@ -99,6 +101,66 @@ function providerSnapshot(source, extra = {}) {
 
 const archiveFor = (snapshot, keys) => getBarChartArchiveFilename(snapshot, buildBarChartImageVariants(snapshot, keys), 16 / 9)
 
+test('左右の片側の強調と両側の強調を同じ項目で切り替えられる', () => {
+  const { document, settings } = providerSnapshot('enemy-stat-rating-comparison')
+  const id = 'rating-E'
+  const getSelection = current => {
+    const { left, right } = getBarChartComparisonSelection(document, current)
+    return [[...left], [...right]]
+  }
+  const leftOnly = toggleBarChartHighlight(settings, id, 'left')
+  assert.deepEqual(getSelection(settings), [[], []])
+  assert.deepEqual(getSelection(leftOnly), [[id], []])
+  const both = toggleBarChartHighlight(leftOnly, id, 'right')
+  assert.deepEqual(getSelection(both), [[id], [id]])
+  const rightOnly = toggleBarChartHighlight(both, id, 'left')
+  assert.deepEqual(getSelection(rightOnly), [[], [id]])
+  const simultaneous = toggleBarChartHighlight(rightOnly, id, 'both')
+  assert.deepEqual(getSelection(simultaneous), [[id], [id]])
+  assert.deepEqual(getSelection(toggleBarChartHighlight(simultaneous, id, 'both')), [[], []])
+  assert.deepEqual(getSelection(toggleBarChartHighlight(rightOnly, 'rating-A')),
+    [['rating-A'], [id, 'rating-A']], '縦棒からの操作は片側の設定を消さない')
+})
+
+test('評価別比較の選択合計は左右の強調項目から求め、0件と未選択を区別する', () => {
+  const { document } = providerSnapshot('enemy-stat-rating-comparison',
+    { leftStatKey: 'defense', rightStatKey: 'magicResistance' })
+  const summary = getBarChartSelectionSummary(document, ['rating-E'], { left: ['rating-A'], right: ['stale-id'] })
+  assert.equal(summary.label, '左E・A・右E')
+  assert.deepEqual(summary.series.map(series => series.selectionLabel), ['E・A', 'E'])
+  for (const [i, series] of document.series.entries()) {
+    const ids = i === 0 ? ['rating-E', 'rating-A'] : ['rating-E']
+    const count = series.bins.filter(bin => ids.includes(bin.id)).reduce((total, bin) => total + bin.value, 0)
+    assert.equal(summary.series[i].count, count)
+    assert.equal(summary.series[i].share, count / series.population.valid)
+  }
+  const zeroCount = getBarChartSelectionSummary(document, [], { left: ['rating-SS'] })
+  assert.deepEqual(zeroCount.series.map(series => [series.selectionLabel, series.share]), [['SS', 0], [null, null]])
+  assert.equal(getBarChartSelectionSummary(document, [], { right: ['stale-id'] }), null)
+})
+
+test('左右で項目が異なる強調をPNGと共通ZIP名へ固定し、同じ項目なら従来名を使う', () => {
+  const source = providerSnapshot('enemy-stat-rating-comparison')
+  const snapshotWith = display => createBarChartImageSnapshot(source.document, { ...source.settings, ...display },
+    source.variants)
+  const keys = ['maxHp-maxHp', 'maxHp-defense']
+  const filename = snapshot => getBarChartFilename(snapshot.document, snapshot.settings, 16 / 9)
+  const requested = { left: ['rating-E'], right: ['rating-A', 'stale-id'] }
+  const asymmetric = snapshotWith({ comparisonSelection: requested })
+  requested.left.push('rating-C')
+  assert.ok(Object.isFrozen(asymmetric.settings.comparisonSelection.left))
+  assert.match(filename(asymmetric), /左E・右A強調/)
+  assert.match(archiveFor(asymmetric, keys), /左E・右A強調/)
+  const reversed = snapshotWith({ comparisonSelection: { left: ['rating-A'], right: ['rating-E'] } })
+  assert.notEqual(filename(asymmetric), filename(reversed))
+  assert.notEqual(archiveFor(asymmetric, keys), archiveFor(reversed, keys))
+  const identical = snapshotWith({ comparisonSelection: { left: ['rating-A'], right: ['rating-A'] } })
+  const shared = snapshotWith({ selectedRanks: ['rating-A'] })
+  assert.equal(filename(identical), filename(shared))
+  assert.equal(archiveFor(identical, keys), archiveFor(shared, keys))
+  assert.match(filename(shared), /評価A強調/)
+})
+
 test('分布のZIP名は数値とゲーム内評価を区別し、単体PNGも選択ステータスへ一致する', () => {
   const numeric = providerSnapshot('enemy-stat-histogram', { histogramBinning: 'numeric' })
   const rating = providerSnapshot('enemy-stat-histogram', { histogramBinning: 'rating' })
@@ -118,6 +180,35 @@ test('分布のZIP名は数値とゲーム内評価を区別し、単体PNGも�
     assert.match(filename, /防御力のヒストグラム/)
     assert.match(filename, /比率16x9\.png$/)
   }
+})
+
+test('数値階級の強調は境界が同じ別ステータスへ移らず、評価の強調は共有される', () => {
+  const sameValues = { ...context.data, rows: rows.map(row =>
+    ({ ...row, stats: { ...row.stats, attack: row.stats.defense } })) }
+  const sourceId = 'enemy-stat-histogram'
+  const makeSnapshot = (histogramBinning, label) => {
+    const input = { ...context, data: sameValues, statKey: 'defense', histogramBinning }
+    const document = createBarChartFromProvider(sourceId, input)
+    const bin = document.bins.find(bin => label === undefined || bin.label === label)
+    return createBarChartImageSnapshot(document, { ...settingsFor(), selectedRanks: [bin.id, 'stale-id'] },
+      createBarChartProviderVariants(sourceId, input))
+  }
+  const keys = ['attack', 'defense']
+  const filenames = snapshot => Object.fromEntries(buildBarChartImageVariants(snapshot, keys).map(({ key, snapshot }) =>
+    [key, getBarChartFilename(snapshot.document, snapshot.settings, 16 / 9)]))
+  const numeric = makeSnapshot('numeric')
+  const attackBins = numeric.variants.find(variant => variant.key === 'attack').document.bins
+  assert.deepEqual(attackBins.map(bin => bin.interval), numeric.document.bins.map(bin => bin.interval))
+  assert.match(filenames(numeric).defense, /強調/)
+  assert.doesNotMatch(filenames(numeric).attack, /強調/)
+  assert.doesNotMatch(archiveFor(numeric, keys), /強調/)
+  assert.equal(getBarChartFilename(numeric.document, numeric.settings),
+    getBarChartFilename(numeric.document, { ...numeric.settings, selectedRanks: numeric.settings.selectedRanks.slice(0, 1) }))
+
+  const rating = makeSnapshot('rating', 'A')
+  assert.match(filenames(rating).defense, /A強調/)
+  assert.match(filenames(rating).attack, /A強調/)
+  assert.match(archiveFor(rating, keys), /A強調/)
 })
 
 test('同じ左右の集合でもペア関係が異なるZIP名と全16組の名を区別する', () => {

@@ -3,6 +3,10 @@ import type { StatRankBand } from './statRankBands.ts'
 import { createZeroBasedValueAxis } from './chartValueAxis.ts'
 import { getHpChartValueAxis } from './goldenglowTargetSwitchHpAxis.ts'
 
+export type BarChartHighlightSide = 'left' | 'right'
+export type BarChartHighlightTarget = BarChartHighlightSide | 'both'
+type BarChartComparisonSelection = Readonly<Partial<Record<BarChartHighlightSide, readonly string[]>>>
+
 export interface BarChartDisplaySettings {
   values: boolean
   axisBand: boolean
@@ -11,8 +15,9 @@ export interface BarChartDisplaySettings {
   cumulativeBand?: boolean
   rankBand?: boolean
   comparisonBand?: 'cumulative' | 'rank' | 'value' | 'none'
-  /** Stable category IDs; never recover identity from a displayed label. */
+  /** Stable bin IDs for a vertical chart or the shared selection of both comparison series. */
   selectedRanks?: readonly string[]
+  comparisonSelection?: BarChartComparisonSelection
 }
 
 export const DEFAULT_BAR_CHART_DISPLAY_SETTINGS: Readonly<BarChartDisplaySettings> = Object.freeze({
@@ -284,15 +289,15 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
 }
 
 export function getBarChartFilename(document: BarChartDocument, settings: BarChartDisplaySettings, aspectRatio?: number): string {
+  const highlight = getBarChartHighlightFilenamePart(document, settings, 'png')
   if (document.layout === 'mirrored') {
-    const selectedLabel = getBarChartSelectedLabel(document, settings.selectedRanks ?? [])
     const band = getBarChartComparisonBand(settings, document)
     return withChartImageAspect(createChartImageFilename(document.title, [
       ...document.filenameParts, '幅1920px',
       band === 'cumulative' && '累積割合帯',
       band === 'rank' && '階級割合帯',
       band === 'value' && `${document.semantics.xLabel}帯`,
-      selectedLabel && `${document.semantics.comparisonValue === 'value' ? '' : '評価'}${selectedLabel}強調`,
+      highlight,
     ]), aspectRatio)
   }
   const filename = createChartImageFilename(document.title, [
@@ -304,6 +309,7 @@ export function getBarChartFilename(document: BarChartDocument, settings: BarCha
     settings.cumulative && document.capabilities.cumulative && '累積割合',
     settings.cumulativeBand && document.capabilities.cumulative && '累積割合帯',
     settings.rankBand && document.capabilities.rankBands && Boolean(document.rankBands?.length) && '評価帯',
+    highlight,
   ])
   return withChartImageAspect(filename, aspectRatio)
 }
@@ -334,9 +340,11 @@ export function getBarChartComparisonAxis(document: BarChartDocument) {
 }
 
 export function getBarChartSelectedLabel(document: BarChartDocument, selectedRanks: readonly string[]): string | null {
+  if (!selectedRanks.length) return null
   const selected = new Set(selectedRanks)
-  const categories = document.bins.filter(bin => selected.has(bin.id))
-  if (!categories.length) return null
+  if (document.layout !== 'mirrored' && !document.secondaryAxisBand) {
+    return document.bins.filter(bin => selected.has(bin.id)).map(bin => bin.label).join('・') || null
+  }
   const ranges: { first: string; last: string }[] = []
   let range: { first: string; last: string } | undefined
   for (const bin of document.bins) {
@@ -344,22 +352,90 @@ export function getBarChartSelectedLabel(document: BarChartDocument, selectedRan
     if (range) range.last = bin.label
     else { range = { first: bin.label, last: bin.label }; ranges.push(range) }
   }
-  return ranges.map(({ first, last }) => first === last ? first : `${first}〜${last}`).join('・')
+  return ranges.map(({ first, last }) => first === last ? first : `${first}〜${last}`).join('・') || null
 }
 
-export function getBarChartSelectionSummary(document: BarChartDocument, selectedRanks: readonly string[]): {
+type BarChartHighlightSettings = Pick<BarChartDisplaySettings, 'selectedRanks' | 'comparisonSelection'>
+
+export function getBarChartComparisonSelection(document: BarChartDocument, settings: BarChartHighlightSettings):
+  Readonly<Record<BarChartHighlightSide, ReadonlySet<string>>> {
+  const shared = new Set(settings.selectedRanks)
+  const leftOnly = new Set(settings.comparisonSelection?.left)
+  const rightOnly = new Set(settings.comparisonSelection?.right)
+  const left = new Set<string>()
+  const right = new Set<string>()
+  for (const { id } of document.bins) {
+    if (shared.has(id) || leftOnly.has(id)) left.add(id)
+    if (shared.has(id) || rightOnly.has(id)) right.add(id)
+  }
+  return { left, right }
+}
+
+function setHighlight(ids: readonly string[], id: string, selected: boolean): readonly string[] {
+  if (!selected) return ids.filter(current => current !== id)
+  return ids.includes(id) ? ids : [...ids, id]
+}
+
+export function toggleBarChartHighlight(settings: BarChartDisplaySettings, id: string, target?: BarChartHighlightTarget): BarChartDisplaySettings {
+  const shared = settings.selectedRanks ?? []
+  const sharedSelected = shared.includes(id)
+  if (target === undefined) return { ...settings, selectedRanks: setHighlight(shared, id, !sharedSelected) }
+
+  const leftOnly = settings.comparisonSelection?.left ?? []
+  const rightOnly = settings.comparisonSelection?.right ?? []
+  let leftSelected = sharedSelected || leftOnly.includes(id)
+  let rightSelected = sharedSelected || rightOnly.includes(id)
+  if (target === 'both') {
+    const selectBoth = !(leftSelected && rightSelected)
+    leftSelected = rightSelected = selectBoth
+  } else if (target === 'left') leftSelected = !leftSelected
+  else rightSelected = !rightSelected
+
+  const left = setHighlight(leftOnly, id, leftSelected && !rightSelected)
+  const right = setHighlight(rightOnly, id, rightSelected && !leftSelected)
+  const nextSettings = { ...settings, selectedRanks: setHighlight(shared, id, leftSelected && rightSelected) }
+  if (left.length || right.length) nextSettings.comparisonSelection = { left, right }
+  else delete nextSettings.comparisonSelection
+  return nextSettings
+}
+
+function comparisonSelectionLabels(document: BarChartDocument, selection: ReturnType<typeof getBarChartComparisonSelection>) {
+  const sameSelection = selection.left.size === selection.right.size && [...selection.left].every(id => selection.right.has(id))
+  const left = getBarChartSelectedLabel(document, [...selection.left])
+  const right = sameSelection ? left : getBarChartSelectedLabel(document, [...selection.right])
+  const label = sameSelection ? left : [left && `左${left}`, right && `右${right}`].filter(Boolean).join('・') || null
+  return { label, sameSelection, bySide: { left, right } }
+}
+
+export function getBarChartHighlightFilenamePart(document: BarChartDocument, settings: BarChartHighlightSettings, format: 'png' | 'zip'): string | null {
+  if (document.layout !== 'mirrored') {
+    const label = getBarChartSelectedLabel(document, settings.selectedRanks ?? [])
+    return label ? `${label}強調` : null
+  }
+  const { label, sameSelection } = comparisonSelectionLabels(document, getBarChartComparisonSelection(document, settings))
+  const ratingPrefix = sameSelection && format === 'png' && document.semantics.comparisonValue !== 'value' ? '評価' : ''
+  return label ? `${ratingPrefix}${label}強調` : null
+}
+
+export function getBarChartSelectionSummary(document: BarChartDocument, selectedRanks: readonly string[],
+  comparisonSelection?: BarChartComparisonSelection): {
   label: string
-  series: { id: 'left' | 'right'; label: string; count: number; share: number | null }[]
+  series: { id: BarChartHighlightSide; label: string; count: number; share: number | null; selectionLabel?: string | null }[]
 } | null {
   if (document.layout !== 'mirrored' || !document.series || document.semantics.comparisonValue === 'value') return null
-  const label = getBarChartSelectedLabel(document, selectedRanks)
+  const selection = getBarChartComparisonSelection(document, { selectedRanks, comparisonSelection })
+  const { label, sameSelection, bySide } = comparisonSelectionLabels(document, selection)
   if (!label) return null
-  const selected = new Set(selectedRanks)
   return {
     label,
     series: document.series.map(series => {
+      const selected = selection[series.id]
       const count = series.bins.reduce((sum, bin) => sum + (selected.has(bin.id) ? bin.value ?? 0 : 0), 0)
-      return { id: series.id, label: series.label, count, share: series.population.valid > 0 ? count / series.population.valid : null }
+      return {
+        id: series.id, label: series.label, count,
+        share: selected.size > 0 && series.population.valid > 0 ? count / series.population.valid : null,
+        ...(!sameSelection ? { selectionLabel: bySide[series.id] } : {}),
+      }
     }),
   }
 }

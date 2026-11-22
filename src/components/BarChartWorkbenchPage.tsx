@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { BAR_CHART_PROVIDERS, createBarChartFromProvider, createBarChartProviderVariants, type BarChartProviderId } from '../lib/barChartProviders'
 import {
   DEFAULT_BAR_CHART_DISPLAY_SETTINGS, getBarChartComparisonAxis, getBarChartComparisonBand,
-  type BarChartDisplaySettings,
+  getBarChartComparisonSelection, toggleBarChartHighlight, type BarChartDisplaySettings, type BarChartHighlightTarget,
 } from '../lib/barChartDocument'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import { getBarChartPresentationLabels, getBarChartItemKind } from '../lib/barChartPresentation'
@@ -38,6 +38,7 @@ export function BarChartWorkbenchPage() {
   const histogramBinning = supportsRating ? binning : 'numeric'
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
   const [settings, setSettings] = useState<BarChartDisplaySettings>({ ...DEFAULT_BAR_CHART_DISPLAY_SETTINGS })
+  const [highlightTarget, setHighlightTarget] = useState<BarChartHighlightTarget>('both')
   const [snapshot, setSnapshot] = useState<BarChartImageSnapshot | null>(null)
   const { data, version, loading, error } = aggregation
   const result = useMemo(() => {
@@ -46,9 +47,14 @@ export function BarChartWorkbenchPage() {
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
   }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric])
   const document = result?.document
+  const comparisonSelection = document?.layout === 'mirrored' ? getBarChartComparisonSelection(document, settings) : null
   const presentation = document ? getBarChartPresentationLabels(getBarChartItemKind(document), document.layout) : null
   const update = (key: 'values' | 'axisBand' | 'percent' | 'cumulative' | 'cumulativeBand' | 'rankBand', checked: boolean) =>
     setSettings(current => ({ ...current, [key]: checked }))
+
+  function toggleHighlight(id: string, target?: BarChartHighlightTarget) {
+    setSettings(current => toggleBarChartHighlight(current, id, target))
+  }
 
   function openImage() {
     if (!document || !data || !version) return
@@ -136,14 +142,6 @@ export function BarChartWorkbenchPage() {
               {mode === 'value' ? document.semantics.xLabel : mode === 'cumulative' ? '累積割合' : mode === 'rank' ? '階級割合' : 'なし'}
             </label>)}
           </fieldset>
-          <fieldset className="bar-chart-workbench-options"><legend>強調</legend>
-            {document.bins.map(bin => <label key={bin.id}>
-              <input type="checkbox" checked={settings.selectedRanks?.includes(bin.id) ?? false} onChange={event =>
-                setSettings(current => ({ ...current, selectedRanks: event.target.checked
-                  ? [...(current.selectedRanks ?? []), bin.id] : current.selectedRanks?.filter(id => id !== bin.id) ?? [] }))} />
-              {bin.label}
-            </label>)}
-          </fieldset>
         </div> : <div className="bar-chart-workbench-options" role="group" aria-label="共通の表示設定">
           <span>表示</span>
           <label><input type="checkbox" checked={settings.values} onChange={event => update('values', event.target.checked)} />数値</label>
@@ -155,7 +153,29 @@ export function BarChartWorkbenchPage() {
           </>}
           {document.capabilities.rankBands && <label><input type="checkbox" checked={Boolean(settings.rankBand)} onChange={event => update('rankBand', event.target.checked)} />評価帯</label>}
         </div>}
-        <BarChartFigure document={document} settings={settings} />
+        {document.bins.length > 0 && <fieldset className="bar-chart-workbench-options bar-chart-highlight-options">
+          <legend>強調</legend>
+          {comparisonSelection && <select aria-label="強調する側" value={highlightTarget}
+            onChange={event => setHighlightTarget(event.target.value as BarChartHighlightTarget)}>
+            <option value="both">両側</option>
+            <option value="left">左</option>
+            <option value="right">右</option>
+          </select>}
+          {document.bins.map(bin => {
+            const left = comparisonSelection?.left.has(bin.id) ?? false
+            const right = comparisonSelection?.right.has(bin.id) ?? false
+            const mixed = Boolean(comparisonSelection && highlightTarget === 'both' && left !== right)
+            const checked = comparisonSelection
+              ? highlightTarget === 'both' ? left && right : comparisonSelection[highlightTarget].has(bin.id)
+              : settings.selectedRanks?.includes(bin.id) ?? false
+            return <label key={bin.id}>
+              <input type="checkbox" checked={checked} ref={input => { if (input) input.indeterminate = mixed }}
+                onChange={() => toggleHighlight(bin.id, comparisonSelection ? highlightTarget : undefined)} />
+              {bin.label}
+            </label>
+          })}
+        </fieldset>}
+        <BarChartFigure document={document} settings={settings} onToggleHighlight={toggleHighlight} />
       </>}
     </EnemyDataContent>
     {snapshot && <BarChartImageDialog snapshot={snapshot} onClose={() => setSnapshot(null)} />}

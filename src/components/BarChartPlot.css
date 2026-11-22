@@ -63,8 +63,13 @@
 .bar-chart-comparison-series-label { font-size: 12px; font-weight: 600; }
 .bar-chart-comparison-series-label.is-left { fill: var(--bar-chart-left); }
 .bar-chart-comparison-series-label.is-right { fill: var(--bar-chart-right); }
-.bar-chart-comparison-highlight { fill: var(--text-soft, #444); fill-opacity: .08; }
-.bar-chart-comparison-selected { font-weight: 700; }
+[data-bar-chart-dimmed] > :is(.bar-chart-bar, .bar-chart-comparison-bar) { fill-opacity: .44; }
+.bar-chart-selected-cell { fill: var(--bar-chart-bar, var(--text-soft, #444)); fill-opacity: .25; }
+.bar-chart-comparison .bar-chart-selected-cell[data-bar-chart-selected-side="both"] { fill-opacity: .16; }
+.bar-chart-selected-cell[data-bar-chart-selected-side="left"] { fill: var(--bar-chart-left); }
+.bar-chart-selected-cell[data-bar-chart-selected-side="right"] { fill: var(--bar-chart-right); }
+.bar-chart-highlight-target { fill: transparent; pointer-events: all; cursor: pointer; }
+.bar-chart-selected-label { font-weight: 700; }
 @media (max-width: 600px) {
   .bar-chart-figure.is-comparison .bar-chart-heading { grid-template-columns: 1fr; gap: 6px; }
   .bar-chart-figure.is-comparison .bar-chart-heading > span:first-child { display: none; }
