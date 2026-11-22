@@ -9,6 +9,7 @@ import {
 } from '../lib/chartDirectoryDestination'
 import { getChartImageLayout } from '../lib/chartImageLayout'
 import { createStoredZipArchive } from '../lib/pngZipArchive'
+import type { ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { ChartImageFrame, type ChartImageFrameProps } from './ChartImageFrame'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 
@@ -16,6 +17,8 @@ export interface ChartImageBatchOutput {
   key: string
   filename: string
   frame: ChartImageFrameProps
+  /** Optional exact raster size; existing callers retain automatic scaling. */
+  output?: ChartImageRasterOutput
 }
 
 interface BatchSaveState {
@@ -123,11 +126,11 @@ export function createChartImageBatchSaveController({ generate, onState,
   return { reset, save }
 }
 
-async function generateChartPng(output: ChartImageBatchOutput): Promise<Blob> {
+export async function generateChartImageBatchPng(output: ChartImageBatchOutput): Promise<Blob> {
   let result: Blob | null = null
   await saveComparisonChartImage({
     chart: <ChartImageFrame {...output.frame} />, filename: output.filename,
-    width: getChartImageLayout(output.frame).width,
+    width: getChartImageLayout(output.frame).width, output: output.output,
     writeBlob: async blob => { result = blob },
   })
   if (!result) throw new Error('グラフのPNG画像を作成できませんでした。')
@@ -138,7 +141,7 @@ async function generateChartPng(output: ChartImageBatchOutput): Promise<Blob> {
 export function useChartImageBatchSave(options: BatchSaveOptions) {
   const [state, setState] = useState<BatchSaveState>(initialState)
   const controller = useRef<ReturnType<typeof createChartImageBatchSaveController> | null>(null)
-  if (!controller.current) controller.current = createChartImageBatchSaveController({ generate: generateChartPng, onState: setState })
+  if (!controller.current) controller.current = createChartImageBatchSaveController({ generate: generateChartImageBatchPng, onState: setState })
   const picker = getChartImageSavePicker()
   const directoryPicker = getChartDirectorySavePicker()
   return {
