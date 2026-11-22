@@ -25,7 +25,9 @@
 | [BarChartComparisonPlot.tsx](../../src/components/BarChartComparisonPlot.tsx) | 同じカテゴリに揃った2系列の割合または値の左右配置、共通軸、外側の帯、強調と割合の選択合計 |
 | [useBarChartTextWidths.ts](../../src/components/useBarChartTextWidths.ts) | 縦棒と左右比較で共有する文字幅の計測 |
 | [BarChartWorkbenchPage.tsx](../../src/components/BarChartWorkbenchPage.tsx) | 提供元・ステータス・集計版・範囲・表示設定の操作と、自動設定値の表示 |
+| [barChartImage.ts](../../src/lib/barChartImage.ts) | 保存対象の固定スナップショット、選択した出力条件の抽出、ZIP名の生成 |
 | [BarChartImageDialog.tsx](../../src/components/BarChartImageDialog.tsx) | 表示時点のデータと設定をPNG用の共通フレームに渡す |
+| [ChartImageBatchOptions.tsx](../../src/components/ChartImageBatchOptions.tsx) / [useChartImageBatchSave.tsx](../../src/components/useChartImageBatchSave.tsx) | 既存の複数条件・プレビューの選択と、ZIP・PNGフォルダ保存、進捗・再試行の共通処理 |
 | [ChartImageFrame](../../src/components/ChartImageFrame.tsx) / [ChartImageSaveDialog](../../src/components/ChartImageSaveDialog.tsx) | 画像の配置、縦横比、保存操作 |
 | [examples/](examples/) | この実装から生成した確認用PNG |
 
@@ -105,6 +107,28 @@
 帯内が同値で、全体の標準偏差は有効な場合の幅・標準偏差・分散0は、真の0として保持する。全体の標準偏差が0などで標準化できない系列は `null` とし、棒を描かず「—」で表す。0に置き換えず、もう一方の有効な系列は表示する。
 
 保存する固定スナップショットには値、順位帯、指標ID、比較値の方式、統計量、見出し、集計版・範囲・出現回数・順位帯幅・全体基準の標準化の条件を保持する。標準偏差・分散では母分散も条件に保持する。条件と保存名も同じデータから生成し、統計量・帯の表示・強調・幅・比率を実際の表示状態に合わせる。共通有効集合の件数・欠損は条件欄へ1回だけ示す。旧ページの表とグラフは引き続き使い、この提供元への置換は行わない。
+
+### 画像一括出力
+
+「画像を保存」の初期対象は「現在の条件」とし、従来の1枚のPNGを保存する。「複数条件」では、提供元が用意した以下の一覧から出力対象を複数選択する。全項目のチェックは初期ON。選択が空なら保存できず、1条件ならPNG、2条件以上ならZIPを使う。「PNGをフォルダへ」も既存の保存UIから選べ、非対応のブラウザーでは無効にする。現在のグラフに一致する条件が一覧にあれば、その条件を最初のプレビューにする。プレビューを切り替えても、選択した出力枚数や条件は変えない。
+
+提供する候補が7条件以上の出力一覧には「全選択」「すべて解除」を置く。プレビューの選択は、提供する候補が6条件以下なら既存の条件ボタン、7条件以上ならプルダウンを使う。保存対象としてチェックした条件だけをプレビューに並べる。
+
+| 提供元・階級方式 | 複数選択する条件 | 固定する主な条件 |
+| --- | --- | --- |
+| 敵のステータス分布・数値階級 | 7ステータス | 集計版・集計範囲・集計方法・数値階級方式 |
+| 敵のステータス分布・ゲーム内評価 | HP・攻撃力・防御力・術耐性の4ステータス | 集計版・集計範囲・集計方法・ゲーム内評価方式 |
+| 敵ステータスの評価別比較 | 「組み合わせ」の一覧から、4ステータスの左右16通り | 集計版・集計範囲・集計方法・外側の帯・行の強調 |
+| 防御力と術耐性の対応 | 全体・メインストーリーの2集計範囲 | 集計版・出現回数・術耐性の10刻み |
+| 防御力・術耐性の順位帯統計 | 最小・最大・幅・平均・標準偏差・分散の6統計量 | 集計版・集計範囲・出現回数・順位帯幅・外側の帯・行の強調 |
+
+左右の組み合わせは順序を区別し、同じステータス同士も一覧に残す。「防御力と術耐性の対応」の複数条件は、選択中の集計版に全体・メインストーリー両方の出現回数がある場合だけ表示する。利用できない版のデータを現在のデータから補わず、「現在の条件」による1枚の保存を保つ。
+
+提供元の `createBarChartProviderVariants` が、保存画面を開いた時点の同じデータと設定から、条件別の固定データを作る。保存側はステータスの度数や順位帯の統計量を計算し直さない。順位帯幅の複数選択は追加せず、画面で選択中の幅を使う。分布の数値階級幅と上限は、各ステータスの既存の自動計算を維持する。割合・累積割合・評価帯などの表示設定は共有するが、対象のデータで有効なものだけを描画・命名に使う。
+
+一括出力にも同じ `BarChartPlot`・`ChartImageFrame` を使い、幅1,920pxと保存画面で選んだ縦横比を各PNGへ適用する。各PNGの名前は条件ごとのステータス・左右の組み合わせ・集計範囲・統計量と、有効な主要条件・表示・比率を識別する。ZIP名は提供元の表示名・選択した条件・枚数と共通条件を識別し、1枚目に固有のステータスや集計範囲を全画像の条件として扱わない。階級方式は「数値階級」「ゲーム内評価」で区別し、評価別比較の16通りすべてを選んだ場合は「全組み合わせ」と示す。手入力名はZIPまたは単独PNGへ使い、フォルダ保存では条件別の自動名を使う。
+
+ZIP・フォルダ保存の進捗、保存先の取消し、同名ファイルの回避、フォルダへの書き込み失敗後の再試行は既存の共通処理を再利用する。全PNGが生成できてからZIP作成・フォルダ書き込みを始める。途中で書き込みに失敗した場合は保存済み枚数を表示し、同じ条件なら未保存分から続ける。出力対象・保存方式・選択条件・比率を変更した場合は再開状態を破棄し、プレビューだけの切り替えでは破棄しない。
 
 ### 割合と累積割合
 
@@ -249,6 +273,8 @@ const rankBandStatistics = createBarChartFromProvider('enemy-rank-band-statistic
 
 [順位帯別平均の確認用PNG](examples/rank-band-mean-v12-all.png)は、上記の標準偏差と同じ条件で「統計量：平均」へ切り替え、同じ共通の画像保存処理から生成した実出力。左右の負値と0の基線、同じ値に対する共通の長さを確認する。
 
+[順位帯統計の一括保存画面](examples/rank-statistics-batch-dialog.jpg)は、実装の保存ダイアログで6統計量を選択し、ZIP保存とプレビューの切り替えを表示した実スクリーンショット。画像出力そのものの見本とは区別する。更新時はv12・メインストーリー・順位帯幅10ポイントから保存画面を開き、「複数条件」・6統計量・16:9を選んで実UIを撮影する。PNGの検証には同じ `createChartImageBatchSaveController`・`generateChartImageBatchPng` の保存処理を使い、生成したZIPを展開して6枚すべての幅1,920px・高さ1,080px、ファイル名の重複がないこと、各統計量の値・符号と帯・強調を確認する。実出力の確認ではZIP内6PNGの寸法とCRCを検査し、平均PNGの負値と0基線も照合している。
+
 新しい提供元や配置変更の見本は、画面のスクリーンショットや手描きの図に置き換えず、実際のPNG保存から作る。画面・プレビュー・保存画像が同じデータを示していることを併せて確認する。
 
 ## 適用状況
@@ -282,11 +308,14 @@ const rankBandStatistics = createBarChartFromProvider('enemy-rank-band-statistic
 - 値の左右比較は生の `value` を共通軸へ直接描き、標準化した平均・最小・最大の負値と、各トラックの0の基線を保持する。同じ絶対値は左右同じ長さになる。非負の統計量と従来の評価別割合はゼロ始まりの軸を維持する。
 - 外側は数値／なしだけ、割合・累積割合・統計量の選択合計を表示しない。行の強調による高さの増加や無効設定の保存名への混入がない。
 - 真の0、空データ、全体の標準偏差0などによる標準化不能を区別する。比較値の方式・統計量・順位帯幅・全体基準の標準化・該当する母分散・集計条件を固定スナップショットと条件・保存名へ保持する。
+- 一括出力は数値分布7種・評価分布4種・左右評価比較16通り・対応値の2集計範囲・順位帯の6統計量を、元の単独保存と同じ値・PNGで出力する。左右同一・入替も別条件として保持し、対応値の本編出現回数がない版では複数条件を表示しない。
+- 保存画面を開いた後の元データ・表示の変更やプレビューの切替えが、固定済みの出力集合へ影響しない。出力対象0・1・複数、選択順・重複・不明キーを扱い、保存名・枚数・実際に有効な表示設定を一致させる。ZIP名へ1条件に固有の情報を共通条件として混入させない。
+- ZIP内のPNGとフォルダ保存の各画像を開き、幅1,920px・指定比率、統計量の名前・値・負値の0基線、帯・強調を確認する。保存取消し、フォルダ途中失敗と未保存分の再試行、プレビュー切り替えで出力集合が変わらないことも確認する。
 - 狭い画面、長い名称、画像の自動比率と16:9で、ラベルと帯が欠けたり重なったりしない。
 - 関連テスト、ビルド、`npm run rules:check`を確認する。実際に生成したPNGも開いて確認する。
 
 ```sh
-node --experimental-strip-types --test tests/barChartProviders.test.mjs tests/barChartPresentation.test.mjs tests/barChartWorkbench.test.mjs tests/barChartComparison.test.mjs tests/barChartRankStatistics.test.mjs tests/enemyRankBandStatistics.test.ts tests/routes.test.ts
+node --experimental-strip-types --test tests/barChartProviders.test.mjs tests/barChartProviderVariants.test.mjs tests/barChartImageBatch.test.mjs tests/barChartPresentation.test.mjs tests/barChartWorkbench.test.mjs tests/barChartComparison.test.mjs tests/barChartRankStatistics.test.mjs tests/chartImageBatchSave.test.mjs tests/enemyRankBandStatistics.test.ts tests/routes.test.ts
 npm run build
 npm run rules:check
 ```

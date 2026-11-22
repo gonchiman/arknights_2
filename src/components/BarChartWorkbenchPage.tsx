@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { BAR_CHART_PROVIDERS, createBarChartFromProvider, type BarChartProviderId } from '../lib/barChartProviders'
+import { BAR_CHART_PROVIDERS, createBarChartFromProvider, createBarChartProviderVariants, type BarChartProviderId } from '../lib/barChartProviders'
 import {
   DEFAULT_BAR_CHART_DISPLAY_SETTINGS, getBarChartComparisonAxis, getBarChartComparisonBand,
   type BarChartDisplaySettings,
@@ -50,11 +50,19 @@ export function BarChartWorkbenchPage() {
   const update = (key: 'values' | 'axisBand' | 'percent' | 'cumulative' | 'cumulativeBand' | 'rankBand', checked: boolean) =>
     setSettings(current => ({ ...current, [key]: checked }))
 
+  function openImage() {
+    if (!document || !data || !version) return
+    const variants = createBarChartProviderVariants(sourceId, {
+      data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric,
+    })
+    setSnapshot(createBarChartImageSnapshot(document, settings, variants))
+  }
+
   return <section className="calculator-page enemy-analysis-route bar-chart-workbench">
     <header className="page-intro bar-chart-workbench-intro">
       <h1>棒グラフ作成</h1>
       <button type="button" className="button secondary" disabled={!document} aria-haspopup="dialog"
-        onClick={() => document && setSnapshot(createBarChartImageSnapshot(document, settings))}>画像を保存</button>
+        onClick={openImage}>画像を保存</button>
     </header>
     <section className="bar-chart-workbench-data" aria-label="グラフに渡すデータ">
       <div className={`bar-chart-data-selectors${isComparison ? ' is-comparison' : ''}`}>
