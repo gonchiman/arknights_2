@@ -6,6 +6,8 @@ import { buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
   type DamageCalculatorThreeConditions } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeComparisonEntries, evaluateDamageThreeComparisonEntry,
   type DamageThreeComparisonEntry } from '../src/lib/damageCalculatorThreeComparison.ts'
+import { buildDamageThreePowerByYear } from '../src/lib/damageThreePowerByYear.ts'
+import type { CoverageSnapshot } from '../src/lib/damageCalculatorThreeCoverageHistory.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
@@ -38,6 +40,67 @@ function record(operatorId: string, skillIndex: number): SkillRecord {
 const catalog = [...guards.flatMap(operator => operator.skills.map(skill => record(operator.id, skill.skillIndex))),
   ...sources.flatMap(operator => operator.skills.map(skill => record(operator.operatorId, skill.skillIndex)))]
 const entries = getDamageThreeComparisonEntries(catalog)
+const coverageV11: CoverageSnapshot = JSON.parse(readFileSync(new URL('../public/data/dc3-coverage/v11.json', import.meta.url), 'utf8'))
+
+test('年代比較では同じ人の最大DPSを1件採用し、全期間と属性ごとに中央値を求める', () => {
+  const zero = buildDamageThreePowerByYear(catalog, coverageV11, 'zero')
+  const standard = buildDamageThreePowerByYear(catalog, coverageV11, 'standard')
+  assert.equal(zero.latestReleaseDate, '2026-10-14')
+  assert.deepEqual(zero.years.map(row => [row.year, row.rosterCount, row.count]), [
+    [2020, 26, 20], [2021, 17, 14], [2022, 16, 9], [2023, 18, 11], [2024, 18, 11], [2025, 20, 10], [2026, 16, 7],
+  ])
+  assert.deepEqual(zero.years.find(row => row.year === 2022)?.arts, { count: 0, median: null })
+  for (const { total } of [zero, standard]) {
+    assert.equal(total.rosterCount, 131)
+    assert.equal(total.count, 82)
+    assert.equal(total.physical.count + total.arts.count + total.otherCount, total.count)
+  }
+  assert.deepEqual([zero, standard].map(({ total }) => [
+    Math.round(total.median!), total.physical.count, Math.round(total.physical.median!),
+    total.arts.count, Math.round(total.arts.median!), total.otherCount,
+  ]), [[1781, 51, 1819, 16, 1294, 15], [1604, 51, 1727, 15, 1052, 16]])
+  assert.equal(Math.round(standard.years.find(row => row.year === 2026)!.arts.median!), 1778)
+})
+
+test('計算元のスキルが不足しても年ごとの実装人数を保持し、未計算の中央値を空欄にする', () => {
+  const empty = buildDamageThreePowerByYear([], coverageV11, 'zero')
+  assert.equal(empty.total.rosterCount, 131)
+  assert.ok(empty.years.every(row => row.rosterCount > 0 && row.count === 0 && row.median === null))
+  const thorns = catalog.filter(skill => skill.operatorId === 'char_293_thorns')
+  const withPoison = buildDamageThreePowerByYear(thorns, coverageV11, 'zero')
+  assert.deepEqual([withPoison.total.count, withPoison.total.physical.count, withPoison.total.arts.count, withPoison.total.otherCount], [1, 0, 0, 1])
+})
+
+test('スキル単位では各人が持つスキルを個別に数え、同じスキルの複数段階から最高DPSを1件採用する', () => {
+  const thornsRow = record('char_293_thorns', 3)
+  const result = buildDamageThreePowerByYear([thornsRow], coverageV11, 'zero', 'skill')
+  const enemy = { defense: 0, resistance: 0, enemyCount: 1 }
+  const first = evaluateDamageThreeComparisonEntry(entry(thornsRow.operatorId, 3, 'first'), enemy)
+  const later = evaluateDamageThreeComparisonEntry(entry(thornsRow.operatorId, 3, 'second_and_later'), enemy)
+  assert.ok(later.combinedDps! > first.combinedDps!)
+  assert.equal(result.total.count, 1)
+  assert.equal(result.total.rosterCount, 393)
+  assert.equal(result.total.median, later.combinedDps)
+  const bothSkills = [thornsRow, record(thornsRow.operatorId, 1)]
+  assert.equal(buildDamageThreePowerByYear(bothSkills, coverageV11, 'zero', 'skill').total.count, 2)
+  assert.equal(buildDamageThreePowerByYear(bothSkills, coverageV11, 'zero', 'operator').total.count, 1)
+})
+
+test('スキル単位では実装年・属性・全期間の全てをスキル数とスキル別DPSで集計する', () => {
+  const zero = buildDamageThreePowerByYear(catalog, coverageV11, 'zero', 'skill')
+  const standard = buildDamageThreePowerByYear(catalog, coverageV11, 'standard', 'skill')
+  assert.deepEqual(zero.years.map(row => [row.year, row.rosterCount, row.count]), [
+    [2020, 78, 43], [2021, 51, 27], [2022, 48, 19], [2023, 54, 22], [2024, 54, 20], [2025, 60, 14], [2026, 48, 14],
+  ])
+  assert.equal(zero.years.find(row => row.year === 2022)?.arts.count, 1)
+  for (const { total } of [zero, standard]) {
+    assert.deepEqual([total.count, total.rosterCount, total.physical.count, total.arts.count, total.otherCount], [159, 393, 104, 34, 21])
+  }
+  const medians = [zero, standard].map(({ total }) => [
+    Math.round(total.median!), Math.round(total.physical.median!), Math.round(total.arts.median!),
+  ])
+  assert.deepEqual(medians, [[1337, 1381, 958], [1272, 1282, 767]])
+})
 
 function entry(operatorId: string, skillIndex: number, stageId?: string): DamageThreeComparisonEntry {
   const value = entries.find(item => item.skill.operatorId === operatorId && item.skill.skillIndex === skillIndex
