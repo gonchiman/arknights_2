@@ -9,7 +9,7 @@ import { createBarChartFromProvider } from '../src/lib/barChartProviders.ts'
 import { ENEMY_STAT_METRICS } from '../src/lib/enemyStatMetrics.ts'
 import { getBarChartPresentationLabels } from '../src/lib/barChartPresentation.ts'
 import { parseHashRoute } from '../src/lib/routes.ts'
-import { APP_NAV_ITEMS } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, getStandardPageTitle } from '../src/lib/navigation.ts'
 import { getChartImageLayout } from '../src/lib/chartImageLayout.ts'
 import { getChartImageRasterSize } from '../src/lib/chartImageRasterSize.ts'
 import { getBarChartNaturalHeight } from '../src/lib/barChartLayout.ts'
@@ -462,7 +462,9 @@ test('保存スナップショットは後続の表示変更を受けず、16:9�
 
 test('共通ページはデータを選ぶ入口を持ち、X/Y入力や説明を追加せず初期の共通描画を使う', () => {
   const markup = render(Page, {})
-  assert.match(markup, /棒グラフ作成/)
+  assert.match(markup, /class="standard-page [^"]*bar-chart-workbench"/)
+  assert.doesNotMatch(markup, /<h1\b/)
+  assert.match(markup, /standard-page-settings.*グラフに渡すデータ.*データの集計設定.*page-output-header.*画像を保存.*棒グラフ作成 \/ 術耐性のヒストグラムの場所をコピー/)
   assert.match(markup, /value="enemy-stat-histogram" selected=""/)
   assert.match(markup, /value="enemy-defense-resistance"/)
   assert.match(markup, /敵のステータス分布/)
@@ -476,10 +478,10 @@ test('共通ページはデータを選ぶ入口を持ち、X/Y入力や説明�
   assert.doesNotMatch(statSelect, /stageAppearanceCount/)
   assert.match(markup, /<input\b(?=[^>]*value="main")(?=[^>]*checked="")[^>]*>/)
   assert.match(markup, /出現回数（体）/)
-  assert.match(markup, /描画方式<\/dt><dd><strong>区間型<\/strong>/)
-  assert.match(markup, /棒幅<\/dt><dd><strong>1項目幅の96%<\/strong>/)
-  assert.match(markup, /階級幅<\/dt><dd><strong>10<\/strong>/)
-  assert.match(markup, /上限<\/dt><dd><strong>自動 100<\/strong>/)
+  assert.match(markup, /描画方式<\/dt><dd>区間型<\/dd>/)
+  assert.match(markup, /棒幅<\/dt><dd>1項目幅の96%<\/dd>/)
+  assert.match(markup, /階級幅<\/dt><dd>10<\/dd>/)
+  assert.match(markup, /上限<\/dt><dd>自動 100<\/dd>/)
   assert.match(markup, /階級/)
   assert.match(markup, /<input\b(?=[^>]*type="radio")(?=[^>]*value="numeric")(?=[^>]*checked="")[^>]*>/)
   const ratingRadio = /<input\b(?=[^>]*type="radio")(?=[^>]*value="rating")[^>]*>/.exec(markup)?.[0]
@@ -517,5 +519,6 @@ test('独立した棒グラフ作成ルートをナビゲーションから開�
     assert.deepEqual(parseHashRoute(hash), { view: 'bar-chart-workbench' })
   }
   assert.equal(APP_NAV_ITEMS.find(item => item.id === 'bar-chart-workbench')?.href, '#/charts/bar')
+  assert.equal(getStandardPageTitle('bar-chart-workbench'), '棒グラフ作成')
   assert.deepEqual(parseHashRoute('#/charts/bar/extra'), { view: 'operators' })
 })

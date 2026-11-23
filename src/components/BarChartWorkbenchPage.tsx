@@ -14,9 +14,9 @@ import { ENEMY_RANK_BAND_STATISTIC_LABELS } from '../lib/enemyRankBandStatistics
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
+import { PageLayout, PageOutputHeader } from './PageLayout'
 import { BarChartFigure } from './BarChartPlot'
 import { BarChartImageDialog, createBarChartImageSnapshot, type BarChartImageSnapshot } from './BarChartImageDialog'
-import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 import './BarChartWorkbenchPage.css'
 
@@ -66,15 +66,10 @@ export function BarChartWorkbenchPage() {
     setSnapshot(createBarChartImageSnapshot(document, settings, variants))
   }
 
-  return <section className="calculator-page enemy-analysis-route bar-chart-workbench">
-    <header className="page-intro bar-chart-workbench-intro">
-      <h1>棒グラフ作成</h1>
-      <button type="button" className="button secondary" disabled={!document} aria-haspopup="dialog"
-        onClick={openImage}>画像を保存</button>
-    </header>
+  const dataSettings = (
     <section className="bar-chart-workbench-data" aria-label="グラフに渡すデータ">
-      <div className={`bar-chart-data-selectors${isComparison ? ' is-comparison' : ''}`}>
-        <label className="bar-chart-source">データ
+      <div className="bar-chart-data-selectors">
+        <label className="bar-chart-source bar-chart-provider">データ
           <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => setSourceId(event.target.value as BarChartProviderId)}>
             {BAR_CHART_PROVIDERS.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
           </select>
@@ -84,25 +79,21 @@ export function BarChartWorkbenchPage() {
             {ENEMY_STAT_METRICS.map(metric => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
           </select>
         </label>}
-        {isRatingComparison && <div className="bar-chart-pair-selectors">
-          {([{ side: 'left', label: '左側', value: leftStatKey, change: setLeftStatKey },
-            { side: 'right', label: '右側', value: rightStatKey, change: setRightStatKey }] as const).map(item =>
-            <label key={item.side} className="bar-chart-source">{item.label}
-              <select aria-label={`${item.label}のステータス`} value={item.value} onChange={event => item.change(event.target.value as EnemyRatingStat)}>
-                {ENEMY_STAT_METRICS.filter(metric => isEnemyRatingStat(metric.key)).map(metric =>
-                  <option key={metric.key} value={metric.key}>{metric.label}</option>)}
-              </select>
-            </label>)}
-        </div>}
+        {isRatingComparison && ([
+          { side: 'left', label: '左側', value: leftStatKey, change: setLeftStatKey },
+          { side: 'right', label: '右側', value: rightStatKey, change: setRightStatKey },
+        ] as const).map(item =>
+          <label key={item.side} className="bar-chart-source">{item.label}
+            <select aria-label={`${item.label}のステータス`} value={item.value} onChange={event => item.change(event.target.value as EnemyRatingStat)}>
+              {ENEMY_STAT_METRICS.filter(metric => isEnemyRatingStat(metric.key)).map(metric =>
+                <option key={metric.key} value={metric.key}>{metric.label}</option>)}
+            </select>
+          </label>)}
         {isRankStatistics && <label className="bar-chart-source">順位帯幅
           <select aria-label="順位帯幅" value={rankBandStep} onChange={event => setRankBandStep(Number(event.target.value) as 5 | 10 | 20)}>
             {([5, 10, 20] as const).map(step => <option key={step} value={step}>{step}ポイント</option>)}
           </select>
         </label>}
-      </div>
-      <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
-        <EnemyAggregationSelector state={aggregation} />
-        <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data || loading} />
         {supportsRating && <fieldset className="enemy-chart-visibility enemy-analysis-scope" disabled={!data || loading}>
           <legend>階級</legend>
           <div>{(['numeric', 'rating'] as const).map(mode => <label key={mode} className={binning === mode ? 'active' : ''}>
@@ -111,25 +102,32 @@ export function BarChartWorkbenchPage() {
           </label>)}</div>
         </fieldset>}
       </div>
-      {document && presentation && <div className="bar-chart-auto-labels" aria-live="polite">
-        <span>自動設定</span>
-        <dl className="bar-chart-auto-values">
-          <div><dt>{isComparison ? '棒の長さ' : '横軸'}</dt><dd><strong>{document.xAxisTitle}</strong></dd></div>
-          <div><dt>{isComparison ? '並び' : '縦軸'}</dt><dd><strong>{document.yAxisTitle}</strong></dd></div>
-          <div><dt>描画方式</dt><dd><strong>{presentation.type}</strong><span className="bar-chart-auto-mark">自動</span></dd></div>
-          <div><dt>棒幅</dt><dd><strong>{presentation.width}</strong>{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
-          {document.layout === 'mirrored' && <>
-            <div><dt>系列数</dt><dd><strong>{document.series?.length}</strong></dd></div>
-            <div><dt>目盛り</dt><dd><strong>左右共通・{getBarChartComparisonAxis(document).minimum}〜{getBarChartComparisonAxis(document).maximum}{document.semantics.comparisonValue === 'value' ? document.semantics.xUnit ?? '' : '%'}</strong></dd></div>
-          </>}
-          {(document.semantics.kind === 'histogram' || isRankStatistics) && document.source.parameters.map(parameter =>
-            <div key={parameter.label}><dt>{parameter.label}</dt><dd><strong>{parameter.value}</strong></dd></div>)}
-        </dl>
-      </div>}
+      <div className="enemy-analysis-aggregation" role="group" aria-label="データの集計設定">
+        <EnemyAggregationSelector state={aggregation} />
+        <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data || loading} />
+      </div>
     </section>
+  )
+
+  return <PageLayout page="bar-chart-workbench" className="enemy-analysis-route bar-chart-workbench" settings={dataSettings}>
     <EnemyDataContent loading={loading} error={error} onRetry={aggregation.retry}>
       {result?.error && <p role="status">{result.error}</p>}
       {document && <>
+        <PageOutputHeader segments={[document.title]}>
+          <button type="button" className="button secondary" aria-haspopup="dialog" onClick={openImage}>画像を保存</button>
+        </PageOutputHeader>
+        {presentation && <dl className="bar-chart-auto-values" aria-label="自動設定" aria-live="polite">
+          <div><dt>描画方式</dt><dd>{presentation.type}</dd></div>
+          <div><dt>棒幅</dt><dd>{presentation.width}{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
+          <div><dt>{isComparison ? '棒の長さ' : '横軸'}</dt><dd>{document.xAxisTitle}</dd></div>
+          <div><dt>{isComparison ? '並び' : '縦軸'}</dt><dd>{document.yAxisTitle}</dd></div>
+          {document.layout === 'mirrored' && <>
+            <div><dt>系列数</dt><dd>{document.series?.length}</dd></div>
+            <div><dt>目盛り</dt><dd>左右共通・{getBarChartComparisonAxis(document).minimum}〜{getBarChartComparisonAxis(document).maximum}{document.semantics.comparisonValue === 'value' ? document.semantics.xUnit ?? '' : '%'}</dd></div>
+          </>}
+          {(document.semantics.kind === 'histogram' || isRankStatistics) && document.source.parameters.map(parameter =>
+            <div key={parameter.label}><dt>{parameter.label}</dt><dd>{parameter.value}</dd></div>)}
+        </dl>}
         {isRankStatistics && <label className="bar-chart-source bar-chart-statistic-option">統計量
           <select aria-label="グラフの統計量" value={rankBandMetric} onChange={event => setRankBandMetric(event.target.value as keyof EnemyRankBandStatValues)}>
             {(Object.keys(ENEMY_RANK_BAND_STATISTIC_LABELS) as (keyof EnemyRankBandStatValues)[]).map(key =>
@@ -185,5 +183,5 @@ export function BarChartWorkbenchPage() {
       </>}
     </EnemyDataContent>
     {snapshot && <BarChartImageDialog snapshot={snapshot} onClose={() => setSnapshot(null)} />}
-  </section>
+  </PageLayout>
 }
