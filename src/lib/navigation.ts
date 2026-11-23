@@ -9,6 +9,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'enemy-defense-resistance-formula'
   | 'bar-chart-workbench'
   | 'td-maps'
+  | 'skill-dps-analysis'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -31,6 +32,7 @@ export const STANDARD_PAGE_TITLES = {
   'bar-chart-workbench': '棒グラフ作成',
   'damage-three-comparison': 'DC3 スキル比較',
   'damage-three-power-by-year': '火力水準の比較',
+  'skill-dps-analysis': 'スキルDPS分析',
   'enemy-defense-resistance': '防御力と術耐性の対応',
   'td-maps': 'TDマップ詳細',
 } satisfies Partial<Record<AppRoute['view'], string>>
@@ -46,6 +48,14 @@ export const DAMAGE_THREE_POWER_BY_YEAR_ITEM: NavigationItem = {
   id: 'damage-three-power-by-year',
   href: '#/damage-3/power-by-year',
   label: STANDARD_PAGE_TITLES['damage-three-power-by-year'],
+  description: '',
+  section: 'analysis',
+}
+
+export const SKILL_DPS_ANALYSIS_ITEM: NavigationItem = {
+  id: 'skill-dps-analysis',
+  href: '#/analysis/skills/dps-relationships',
+  label: STANDARD_PAGE_TITLES['skill-dps-analysis'],
   description: '',
   section: 'analysis',
 }
@@ -293,6 +303,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
+  SKILL_DPS_ANALYSIS_ITEM,
   {
     id: 'code-analysis',
     href: '#/analysis/code',

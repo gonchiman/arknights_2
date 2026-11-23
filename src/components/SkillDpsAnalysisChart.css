@@ -1,0 +1,14 @@
+.skill-dps-chart { width: 100%; min-width: 0; }
+.skill-dps-chart-svg { display: block; width: 100%; height: 310px; overflow: visible; }
+.skill-dps-chart-tick,
+.skill-dps-chart-label { fill: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.skill-dps-chart-label { fill: var(--text-soft); font-weight: 500; }
+.skill-dps-chart-grid { stroke: var(--border); stroke-width: 1; }
+.skill-dps-chart-axis { stroke: var(--border-strong); stroke-width: 1; }
+.skill-dps-chart-point { fill: var(--link); opacity: .7; }
+.skill-dps-chart-fit { stroke: var(--text-soft); stroke-width: 2; }
+.skill-dps-chart-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; color: var(--text-soft); font-size: 12px; }
+.skill-dps-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.skill-dps-chart-point-key { width: 8px; height: 8px; border-radius: 50%; background: var(--link); }
+.skill-dps-chart-fit-key { width: 20px; height: 2px; background: var(--text-soft); }
+.skill-dps-chart-empty { padding: 20px 0; margin: 0; color: var(--text-soft); font-size: 13px; }
