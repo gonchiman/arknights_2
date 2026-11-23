@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
@@ -147,22 +147,23 @@ interface MapBoardProps {
   detail: MapDetail
   name: string
   markedEntrance?: { row: number; col: number }
+  showEntranceLabels?: boolean
   routeDescription?: string
   routeLegend?: ReactNode
+  boardOverlay?: ReactNode
   children?: ReactNode
 }
 
-export function MapBoard({ detail, name, markedEntrance, routeDescription, routeLegend, children }: MapBoardProps) {
-  const blockedPatternId = useId()
-  if (!detail.grid.length || !detail.grid[0]?.length) return <p className="map-empty">マス配置のデータがありません</p>
+function boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children }: MapBoardProps, blockedPatternId: string) {
+  if (!detail.grid[0]?.length) return null
   const rows = detail.grid.length
   const columns = detail.grid[0].length
-  const entrances = getMapEntrances(detail).filter((entrance) => !markedEntrance
+  const entrances = showEntranceLabels === false ? [] : getMapEntrances(detail).filter((entrance) => !markedEntrance
     || entrance.row === markedEntrance.row && entrance.col === markedEntrance.col)
   const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
   const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
-  return <figure className="map-board-figure">
+  const terrain = (
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
       <desc>{[...entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`), routeDescription].filter(Boolean).join('。')}</desc>
       <defs>
@@ -184,6 +185,24 @@ export function MapBoard({ detail, name, markedEntrance, routeDescription, route
       }))}
       {children}
     </svg>
+  )
+  const legend = (
     <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}{routeLegend}</figcaption>
+  )
+  return { terrain, legend }
+}
+
+export function MapBoard({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, boardOverlay, children }: MapBoardProps) {
+  const blockedPatternId = useId()
+  // Moving markers can update many times per second over the same terrain.
+  const board = useMemo(() => boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children }, blockedPatternId),
+    [detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children, blockedPatternId])
+  if (!board) return <p className="map-empty">マス配置のデータがありません</p>
+  return <figure className="map-board-figure">
+    {boardOverlay == null ? board.terrain : <div className="map-board-layers">
+      {board.terrain}
+      <div className="map-board-overlay">{boardOverlay}</div>
+    </div>}
+    {board.legend}
   </figure>
 }
