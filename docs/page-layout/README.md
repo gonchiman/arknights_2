@@ -20,7 +20,7 @@
 
 ## 最小の使用例
 
-次は登録したルート名を `sample-results`、表示名を「集計結果」とした場合の例。コンポーネントは `src/components/` に置く想定。引数 `result` にページ固有の出力を渡すと、右端のボタンは「集計結果」をコピーする。
+次は登録したルート名を `sample-results`、表示名を「集計結果」とした場合の例。コンポーネントは `src/components/` に置く想定。引数 `result` にページ固有の出力を渡すと、右端のボタンは `〈集計結果〉` をコピーする。
 
 ```tsx
 import type { ReactNode } from 'react'

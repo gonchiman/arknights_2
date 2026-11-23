@@ -28,7 +28,7 @@ export function ElementLocationCopyButton({ segments, className, disabled = fals
     setCopying(true)
     setFeedback(null)
     try {
-      await writeClipboardText(copiedText)
+      await writeClipboardText(`〈${copiedText}〉`)
       if (currentText.current === copiedText) setFeedback({ text: copiedText, state: 'copied' })
     } catch {
       if (currentText.current === copiedText) setFeedback({ text: copiedText, state: 'failed' })
