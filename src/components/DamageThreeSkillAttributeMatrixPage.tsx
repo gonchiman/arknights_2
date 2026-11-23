@@ -11,12 +11,15 @@ import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDataContent } from './EnemyPageShared'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { PageLayout, PageOutputTabs } from './PageLayout'
+import { PageViewSwitch, viewLabel } from './PageViewSwitch'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
 import './DamageThreeSkillAttributeMatrixPage.css'
 
 const MODES = [['virtual', '主攻撃の属性変更'], ['actual', '実際のダメージ内訳']] as const
 type Mode = typeof MODES[number][0]
+const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
+type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
 const PAGE_SIZE = 15
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const OPERATOR_ORDER = new Intl.Collator('ja', { numeric: true })
@@ -41,6 +44,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [mode, setMode] = useState<Mode>('virtual')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [layout, setLayout] = useState<AttributeLayout>('columns')
+  const [selectedResistances, setSelectedResistances] = useState<number[]>([0, 50, 60])
   const tabId = useId()
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const { data } = aggregation
@@ -67,12 +72,18 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const start = activePage * PAGE_SIZE
   const pageEntries = useMemo(() => filtered.slice(start, start + PAGE_SIZE), [filtered, start])
   const tabs = { idPrefix: tabId, activeTab: mode }
+  function toggleResistance(value: number) {
+    setSelectedResistances(previous => {
+      if (!previous.includes(value)) return [...previous, value]
+      return previous.length === 1 ? previous : previous.filter(resistance => resistance !== value)
+    })
+  }
   return <PageLayout page="damage-three-skill-attribute-matrix" className="dc3-matrix" settings={<>
     <EnemyAggregationSelector state={aggregation} />
     <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
     {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
   </>}>
-    <PageOutputTabs {...tabs} tabs={MODES} onChange={setMode} label="比較方法" format="表" />
+    <PageOutputTabs {...tabs} tabs={MODES} onChange={setMode} label="比較方法" format={`表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`} />
     <AnalysisTabPanel {...tabs} tab={mode}>
       <div className="dc3-matrix-controls">
         <label className="dc3-matrix-search">スキル検索
@@ -92,6 +103,29 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           : !rows.length ? <p role="alert">オペレーターデータを取得できません。</p>
           : !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
+            <div className="dc3-matrix-display-options">
+              <fieldset className="dc3-matrix-option-group">
+                <legend>表示する術耐性</legend>
+                <div className="dc3-matrix-option-buttons">
+                  {distribution.resistanceThresholds.map(({ resistance }) => {
+                    const selected = selectedResistances.includes(resistance)
+                    return <button key={resistance} type="button" className="button secondary"
+                      aria-label={`術耐性 ${resistance}`} aria-pressed={selected}
+                      disabled={selected && selectedResistances.length === 1}
+                      onClick={() => toggleResistance(resistance)}>{resistance}</button>
+                  })}
+                  <button type="button" className="button secondary"
+                    disabled={selectedResistances.length === distribution.resistanceThresholds.length}
+                    onClick={() => setSelectedResistances(distribution.resistanceThresholds.map(pair => pair.resistance))}>
+                    すべて表示
+                  </button>
+                </div>
+              </fieldset>
+              <div className="dc3-matrix-option-group">
+                <span className="dc3-matrix-option-label">属性の並べ方</span>
+                <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={setLayout} label="属性の並べ方" />
+              </div>
+            </div>
             <div className="dc3-matrix-table-heading">
               <h2>{mode === 'virtual' ? '出現順位別の主攻撃ダメージ' : '出現順位別の直接ダメージ内訳'}</h2>
               <nav aria-label="スキル一覧のページ切り替え">
@@ -105,6 +139,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
               </nav>
             </div>
             <SkillDamageTable entries={pageEntries} pairs={distribution.resistanceThresholds} mode={mode}
+              selectedResistances={selectedResistances} stacked={layout === 'rows'}
               showLevel={commonLevel === null} showUnit={commonUnit === null} />
           </>}
       </EnemyDataContent>
@@ -112,62 +147,88 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   </PageLayout>
 }
 
-function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit }: {
+function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, selectedResistances }: {
   entries: readonly DamageThreeAttributeEntry[]
   pairs: readonly EnemyResistanceThreshold[]
   mode: Mode
   showLevel: boolean
   showUnit: boolean
+  stacked: boolean
+  selectedResistances: readonly number[]
 }) {
   const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, pairs, mode) })),
     [entries, pairs, mode])
   const [errorKey, setErrorKey] = useState<string | null>(null)
   const errorRow = results.find(row => row.entry.key === errorKey && row.errors.length)
   const showStatus = results.some(row => row.hasUnsupportedTalentDamage || row.errors.length)
+  const columns = pairs.map((pair, index) => ({ pair, index }))
+    .filter(({ pair }) => selectedResistances.includes(pair.resistance))
+  const headerRows = stacked ? 2 : 3
+  const rowsPerSkill = stacked ? 2 : 1
+  const columnsPerPair = stacked ? 1 : 2
+  const physicalLabel = mode === 'virtual' ? '物理化' : '物理'
+  const artsLabel = mode === 'virtual' ? '術化' : '術'
   const label = mode === 'virtual' ? '主攻撃を物理・術に変更したダメージ' : '直接ダメージの物理・術内訳'
   return <div className="damage-two-table-wrap dc3-matrix-scroll" tabIndex={0} role="region" aria-label={label}>
-    <table className="damage-two-table dc3-matrix-table" aria-label={label}>
-      <colgroup span={5 + Number(showLevel) + Number(showUnit) + Number(showStatus)} />
-      {pairs.map(pair => <colgroup key={pair.resistance} span={2} />)}
+    <table className={`damage-two-table dc3-matrix-table${stacked ? ' dc3-matrix-stacked' : ''}`} aria-label={label}>
+      <colgroup span={5 + Number(showLevel) + Number(showUnit) + Number(showStatus) + Number(stacked)} />
+      {columns.map(({ pair }) => <colgroup key={pair.resistance} span={columnsPerPair} />)}
       <thead>
         <tr>
-          <th scope="col" rowSpan={3} className="dc3-matrix-operator">オペレーター</th>
-          <th scope="col" rowSpan={3} className="dc3-matrix-number">S番号</th>
-          <th scope="col" rowSpan={3} className="dc3-matrix-stage">段階</th>
-          <th scope="col" rowSpan={3} className="dc3-matrix-name">スキル名</th>
-          {showLevel && <th scope="col" rowSpan={3} className="dc3-matrix-metadata">スキルLv</th>}
-          {showUnit && <th scope="col" rowSpan={3} className="dc3-matrix-metadata">単位</th>}
-          <th scope="col" rowSpan={3} className="dc3-matrix-metadata">算出方法</th>
-          {showStatus && <th scope="col" rowSpan={3} className="dc3-matrix-metadata">計算状態</th>}
-          {pairs.map(pair => <th key={pair.resistance} scope="colgroup" colSpan={2}>術耐性 {pair.resistance}</th>)}
+          <th scope="col" rowSpan={headerRows} className="dc3-matrix-operator">オペレーター</th>
+          <th scope="col" rowSpan={headerRows} className="dc3-matrix-number">S番号</th>
+          <th scope="col" rowSpan={headerRows} className="dc3-matrix-stage">段階</th>
+          <th scope="col" rowSpan={headerRows} className="dc3-matrix-name">スキル名</th>
+          {showLevel && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">スキルLv</th>}
+          {showUnit && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">単位</th>}
+          <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">算出方法</th>
+          {showStatus && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">計算状態</th>}
+          {stacked && <th scope="row" className="dc3-matrix-attribute">術耐性</th>}
+          {columns.map(({ pair }) => <th key={pair.resistance} scope={stacked ? 'col' : 'colgroup'}
+            colSpan={columnsPerPair} aria-label={`術耐性 ${pair.resistance}`}>
+            {!stacked && '術耐性 '}{pair.resistance}
+          </th>)}
         </tr>
-        <tr>{pairs.map(pair => <th key={pair.resistance} scope="colgroup" colSpan={2}>対応防御力 {formatValue(pair.defense)}</th>)}</tr>
-        <tr>{pairs.map(pair => <Fragment key={pair.resistance}>
-          <th scope="col">{mode === 'virtual' ? '物理化' : '物理'}</th>
-          <th scope="col" className="dc3-matrix-pair-end">{mode === 'virtual' ? '術化' : '術'}</th>
-        </Fragment>)}</tr>
+        <tr>
+          {stacked && <th scope="row" className="dc3-matrix-attribute">対応防御力</th>}
+          {columns.map(({ pair }) => <th key={pair.resistance} scope={stacked ? 'col' : 'colgroup'}
+            colSpan={columnsPerPair} aria-label={`対応防御力 ${formatValue(pair.defense)}`}>
+            {!stacked && '対応防御力 '}{formatValue(pair.defense)}
+          </th>)}
+        </tr>
+        {!stacked && <tr>{columns.map(({ pair }) => <Fragment key={pair.resistance}>
+          <th scope="col">{physicalLabel}</th>
+          <th scope="col" className="dc3-matrix-pair-end">{artsLabel}</th>
+        </Fragment>)}</tr>}
       </thead>
-      <tbody>{results.map(({ entry, cells, errors, isExpectedValue, hasUnsupportedTalentDamage }) => {
+      {results.map(({ entry, cells, errors, isExpectedValue, hasUnsupportedTalentDamage }) => {
         const stages = entry.structure.guardRecipe?.stages ?? entry.structure.effectStructure.stages
-        return <tr key={entry.key}>
-          <th scope="row" className="dc3-matrix-operator">{entry.skill.operatorName}</th>
-          <td className="dc3-matrix-number">S{entry.skill.skillIndex}</td>
-          <td className="dc3-matrix-stage">{stages.length > 1 ? entry.stageLabel : '—'}</td>
-          <td className="dc3-matrix-name">{entry.skill.skillName}</td>
-          {showLevel && <td className="dc3-matrix-metadata">{entry.structure.basicInfo.skillLevel}</td>}
-          {showUnit && <td className="dc3-matrix-metadata">{UNIT[entry.kind]}</td>}
-          <td className="dc3-matrix-metadata">{isExpectedValue ? '期待値' : '—'}</td>
-          {showStatus && <td className="dc3-matrix-metadata">{errors.length > 0
-            ? <button type="button" className="text-button dc3-matrix-status-button" aria-haspopup="dialog" onClick={() => setErrorKey(entry.key)}>
-                {cells.some(cell => cell.physical !== null || cell.arts !== null) ? '一部計算不可' : '計算不可'}
-              </button>
-            : hasUnsupportedTalentDamage ? '一部未対応' : '—'}</td>}
-          {cells.map(({ physical, arts }, i) => <Fragment key={pairs[i].resistance}>
-            <td className="dc3-matrix-damage">{formatValue(physical)}</td>
-            <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(arts)}</td>
-          </Fragment>)}
-        </tr>
-      })}</tbody>
+        return <tbody key={entry.key}>
+          <tr>
+            <th scope={stacked ? 'rowgroup' : 'row'} rowSpan={rowsPerSkill} className="dc3-matrix-operator">{entry.skill.operatorName}</th>
+            <td rowSpan={rowsPerSkill} className="dc3-matrix-number">S{entry.skill.skillIndex}</td>
+            <td rowSpan={rowsPerSkill} className="dc3-matrix-stage">{stages.length > 1 ? entry.stageLabel : '—'}</td>
+            <td rowSpan={rowsPerSkill} className="dc3-matrix-name">{entry.skill.skillName}</td>
+            {showLevel && <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{entry.structure.basicInfo.skillLevel}</td>}
+            {showUnit && <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{UNIT[entry.kind]}</td>}
+            <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{isExpectedValue ? '期待値' : '—'}</td>
+            {showStatus && <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{errors.length > 0
+              ? <button type="button" className="text-button dc3-matrix-status-button" aria-haspopup="dialog" onClick={() => setErrorKey(entry.key)}>
+                  {cells.some(cell => cell.physical !== null || cell.arts !== null) ? '一部計算不可' : '計算不可'}
+                </button>
+              : hasUnsupportedTalentDamage ? '一部未対応' : '—'}</td>}
+            {stacked && <th scope="row" className="dc3-matrix-attribute">{physicalLabel}</th>}
+            {columns.map(({ pair, index }) => <Fragment key={pair.resistance}>
+              <td className="dc3-matrix-damage">{formatValue(cells[index].physical)}</td>
+              {!stacked && <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(cells[index].arts)}</td>}
+            </Fragment>)}
+          </tr>
+          {stacked && <tr>
+            <th scope="row" className="dc3-matrix-attribute">{artsLabel}</th>
+            {columns.map(({ pair, index }) => <td key={pair.resistance} className="dc3-matrix-damage">{formatValue(cells[index].arts)}</td>)}
+          </tr>}
+        </tbody>
+      })}
     </table>
     {errorRow && <GoldenglowDetailModal title={`${errorRow.entry.skill.operatorName} S${errorRow.entry.skill.skillIndex} の計算状態`}
       closeLabel="計算状態を閉じる" onClose={() => setErrorKey(null)}>
