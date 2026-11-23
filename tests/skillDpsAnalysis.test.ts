@@ -5,6 +5,7 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
   analyzeSkillDps, buildSkillDpsAnalysisDataset, DEFAULT_SKILL_DPS_ANALYSIS_CONFIG,
+  calculateSkillDpsInitialSpRatio, getSkillDpsAnalysisAxisValue, SKILL_DPS_ANALYSIS_AXES, SKILL_DPS_ANALYSIS_X_LABELS,
   type SkillDpsAnalysisConfig, type SkillDpsAnalysisDataset, type SkillDpsObservation,
 } from '../src/lib/skillDpsAnalysis.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
@@ -61,6 +62,14 @@ test('one operator/skill is one observation and its DPS is ordinary DC3 at the s
   assert.equal(actual.spCost, 40)
   assert.equal(actual.initialSp, 25)
   assert.equal(actual.spGap, 15)
+  close(actual.uptime!, 30 / (30 + 40) * 100)
+  assert.equal(actual.uptimeUnavailableReason, null)
+  assert.equal(actual.deploymentCost, 11)
+  close(actual.initialRatio!, 62.5)
+  assert.equal(actual.attack, expected.finalAttack)
+  assert.equal(actual.attackInterval, expected.output!.attackInterval)
+  assert.equal(actual.maxTargets, expected.output!.maxTargetCount)
+  assert.notEqual(actual.maxTargets, expected.actualTargetCount)
 })
 
 test('multiple NORMAL stages and non-NORMAL skills never become a best-DPS sample', () => {
@@ -101,6 +110,8 @@ test('permanent and ammunition durations stay missing without removing their SP/
     assert.equal(dataset.excludedCount, 0)
     assert.equal(dataset.observations.length, 1)
     assert.equal(dataset.observations[0].durationSeconds, null)
+    assert.equal(dataset.observations[0].uptime, null)
+    assert.ok(dataset.observations[0].uptimeUnavailableReason)
     assert.notEqual(dataset.observations[0].directDps, null)
     assert.equal(analyzeSkillDps(dataset, 'duration', 'direct').missingValueCount, 1)
     assert.equal(analyzeSkillDps(dataset, 'spCost', 'direct').missingValueCount, 0)
@@ -177,6 +188,8 @@ const sampleSkill = record('char_264_f12yin', 3)
 function sample(id: number, patch: Partial<SkillDpsObservation> = {}): SkillDpsObservation {
   return { id: String(id), skill: sampleSkill, stageLabel: 'スキル中', durationSeconds: id,
     spCost: id, initialSp: 5, spGap: id - 5, directDps: id * 3, combinedDps: id * 3 + 2,
+    deploymentCost: id, initialRatio: id * 10, uptime: id * 5, uptimeUnavailableReason: null,
+    maxTargets: id + 1, attack: id * 100, attackInterval: id / 10,
     damageType: 'PHYSICAL', ...patch }
 }
 function dataset(observations: SkillDpsObservation[]): SkillDpsAnalysisDataset {
@@ -223,4 +236,123 @@ test('negative correlation and outliers are retained, while insufficient or cons
     assert.ok(result.error)
     assert.equal(result.observations.length, rows.length)
   }
+})
+
+test('nine axes share stable keys, concise names and correctly labelled units', () => {
+  assert.deepEqual(SKILL_DPS_ANALYSIS_AXES.map(([key]) => key), [
+    'duration', 'spCost', 'spGap', 'deploymentCost', 'initialRatio', 'uptime', 'maxTargets', 'attack', 'interval',
+  ])
+  assert.equal(new Set(SKILL_DPS_ANALYSIS_AXES.map(([key]) => key)).size, 9)
+  assert.equal(SKILL_DPS_ANALYSIS_X_LABELS.initialRatio, '初期SP率（%）')
+  assert.equal(SKILL_DPS_ANALYSIS_X_LABELS.uptime, '理論稼働率（%）')
+  assert.equal(SKILL_DPS_ANALYSIS_X_LABELS.interval, '攻撃間隔（秒）')
+  assert.equal(SKILL_DPS_ANALYSIS_X_LABELS.maxTargets, '最大対象数（体）')
+  assert.equal(SKILL_DPS_ANALYSIS_X_LABELS.attack, '軽減前攻撃力')
+})
+
+test('initial SP ratio retains zero and values above 100%, but never divides by absent or zero cost', () => {
+  assert.equal(calculateSkillDpsInitialSpRatio(0, 10), 0)
+  assert.equal(calculateSkillDpsInitialSpRatio(10, 10), 100)
+  assert.equal(calculateSkillDpsInitialSpRatio(15, 10), 150)
+  for (const [initial, cost] of [[0, 0], [5, 0], [5, null], [null, 5], [5, -1],
+    [Infinity, 5], [5, NaN], [-1, 5]] as const) {
+    assert.equal(calculateSkillDpsInitialSpRatio(initial, cost), null)
+  }
+})
+
+test('base deployment cost comes from the max-growth operator, preserving zero and missing independently of DPS', () => {
+  const missing = record('char_264_f12yin', 3)
+  for (const frame of missing.operatorProfile.phases[2].attributesKeyFrames ?? []) {
+    if (frame.data) delete frame.data.cost
+  }
+  const zero = record('char_350_surtr', 2)
+  for (const frame of zero.operatorProfile.phases[2].attributesKeyFrames ?? []) {
+    if (frame.data) frame.data.cost = 0
+  }
+  const values = buildSkillDpsAnalysisDataset([missing, zero], config())
+  assert.equal(values.observations.length, 2)
+  assert.equal(values.excludedCount, 0)
+  assert.equal(values.observations[0].deploymentCost, null)
+  assert.equal(values.observations[1].deploymentCost, 0)
+  assert.equal(analyzeSkillDps(values, 'deploymentCost', 'direct').missingValueCount, 1)
+  assert.equal(analyzeSkillDps(values, 'spCost', 'direct').missingValueCount, 0)
+})
+
+test('confirmed unlimited targets remain a category, distinct from unknown capacity and the common enemy count', () => {
+  const values = buildSkillDpsAnalysisDataset([record('char_017_huang', 3)], config())
+  assert.equal(values.observations.length, 1)
+  assert.equal(values.observations[0].maxTargets, 'UNLIMITED')
+  const input = dataset([sample(0, { maxTargets: 1 }), sample(1, { maxTargets: 3 }),
+    sample(2, { maxTargets: 'UNLIMITED' }), sample(3, { maxTargets: null }),
+    sample(4, { maxTargets: 0 }), sample(5, { maxTargets: Infinity }),
+    sample(6, { maxTargets: 'UNLIMITED', directDps: null }),
+  ])
+  const result = analyzeSkillDps(input, 'maxTargets', 'direct')
+  assert.deepEqual(result.observations.map(({ x }) => x), [1, 3, 'UNLIMITED'])
+  assert.equal(result.observations[0].y, 0)
+  assert.equal(result.missingValueCount, 4)
+  assert.equal(result.fit, null)
+  assert.equal(result.correlation, null)
+  assert.equal(result.error, null)
+  assert.deepEqual(result.missingValueReasons, [{ label: '最大対象数・DPS未確定', count: 4 }])
+})
+
+test('non-unique attack values are missing only on the attack axis, without replacing them by maximum or mean', () => {
+  // Mountain's ordinary and critical strikes have different pre-mitigation values.
+  const values = buildSkillDpsAnalysisDataset([record('char_264_f12yin', 3)], config())
+  assert.equal(values.observations.length, 1)
+  assert.ok(Number.isFinite(values.observations[0].directDps))
+  assert.equal(values.observations[0].attack, null)
+  assert.equal(analyzeSkillDps(values, 'attack', 'direct').missingValueCount, 1)
+  assert.equal(analyzeSkillDps(values, 'duration', 'direct').missingValueCount, 0)
+})
+
+test('a unique pre-mitigation attack value and effective interval match the ordinary DC3 result', () => {
+  const skill = record('char_350_surtr', 2)
+  const values = buildSkillDpsAnalysisDataset([skill], config({ defense: 500, resistance: 35 }))
+  assert.equal(values.observations.length, 1)
+  const entry = getDamageThreeComparisonEntries([skill]).find(entry => entry.kind === 'NORMAL')!
+  const expected = evaluateDamageThreeComparisonEntry(entry, { defense: 500, resistance: 35, enemyCount: 1 })
+  assert.ok(Number.isFinite(expected.finalAttack))
+  assert.equal(values.observations[0].attack, expected.finalAttack)
+  assert.equal(values.observations[0].attackInterval, expected.output!.attackInterval)
+  assert.equal(values.observations[0].deploymentCost, 21)
+})
+
+test('new numeric axes use independent observations and the ordinary unweighted OLS', () => {
+  const input = dataset([1, 2, 3, 4].map(index => sample(index)))
+  for (const axis of ['deploymentCost', 'initialRatio', 'uptime', 'attack', 'interval'] as const) {
+    const result = analyzeSkillDps(input, axis, 'direct')
+    assert.equal(result.observations.length, 4)
+    assert.equal(result.missingValueCount, 0)
+    assert.deepEqual(result.missingValueReasons, [])
+    assert.equal(result.error, null)
+    close(result.correlation!, 1)
+    result.observations.forEach(observation => assert.equal(observation.x, getSkillDpsAnalysisAxisValue(observation, axis)))
+  }
+  const incomplete = dataset([sample(0), sample(1, { attack: null }), sample(2, { attackInterval: 0 }),
+    sample(3, { initialRatio: Infinity }), sample(4, { deploymentCost: null }),
+  ])
+  assert.equal(analyzeSkillDps(incomplete, 'attack', 'direct').missingValueCount, 1)
+  assert.equal(analyzeSkillDps(incomplete, 'interval', 'direct').missingValueCount, 2)
+  assert.equal(analyzeSkillDps(incomplete, 'initialRatio', 'direct').missingValueCount, 1)
+  assert.equal(analyzeSkillDps(incomplete, 'deploymentCost', 'direct').missingValueCount, 1)
+  assert.equal(analyzeSkillDps(incomplete, 'spCost', 'direct').missingValueCount, 0)
+})
+
+test('unavailable uptime reasons are counted once per missing pair, after DPS missingness', () => {
+  const input = dataset([
+    sample(0, { uptime: null, uptimeUnavailableReason: '反復周期未確認', directDps: null }),
+    sample(1, { uptime: null, uptimeUnavailableReason: '反復周期未確認' }),
+    sample(2, { uptime: null, uptimeUnavailableReason: '有限期間なし' }),
+    sample(3, { uptime: 0 }),
+  ])
+  const result = analyzeSkillDps(input, 'uptime', 'direct')
+  assert.equal(result.missingValueCount, 3)
+  assert.deepEqual(result.missingValueReasons, [
+    { label: '理論稼働率・DPS未確定', count: 1 }, { label: '反復周期未確認', count: 1 }, { label: '有限期間なし', count: 1 },
+  ])
+  assert.equal(result.observations[0].x, 0)
+  assert.equal(result.missingValueReasons.reduce((total, row) => total + row.count, 0), result.missingValueCount)
+  assert.equal(analyzeSkillDps(input, 'spCost', 'direct').missingValueCount, 1)
 })

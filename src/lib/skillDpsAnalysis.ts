@@ -7,9 +7,21 @@ import { validateDamageCalculatorThreeEnemy } from './damageCalculatorThreeEnemy
 import { resolveDamageThreeStageDuration } from './damageCalculatorThreePeriodTotal.ts'
 import { getDamageCalculatorThreeSkillInformationValues } from './damageCalculatorThreeSkillInformation.ts'
 import { fitMultipleLinearRegression, type MultipleLinearRegressionResult } from './multipleLinearRegression.ts'
+import { buildOperatorDatabaseRecords } from './operatorDatabase.ts'
 import type { SkillStructure } from './skillStructure.ts'
+import { resolveSkillDpsUptime } from './skillDpsUptime.ts'
 
-export type SkillDpsAnalysisAxis = 'duration' | 'spCost' | 'spGap'
+export const SKILL_DPS_ANALYSIS_AXES = [
+  ['duration', '持続時間'], ['spCost', '必要SP'], ['spGap', '必要SP−初期SP'],
+  ['deploymentCost', '配置コスト'], ['initialRatio', '初期SP率'], ['uptime', '理論稼働率'],
+  ['maxTargets', '最大対象数'], ['attack', '攻撃力'], ['interval', '攻撃間隔'],
+] as const
+export type SkillDpsAnalysisAxis = typeof SKILL_DPS_ANALYSIS_AXES[number][0]
+export const SKILL_DPS_ANALYSIS_X_LABELS: Record<SkillDpsAnalysisAxis, string> = {
+  duration: '持続時間（秒）', spCost: '必要SP', spGap: '必要SP−初期SP',
+  deploymentCost: '配置コスト', initialRatio: '初期SP率（%）', uptime: '理論稼働率（%）',
+  maxTargets: '最大対象数（体）', attack: '軽減前攻撃力', interval: '攻撃間隔（秒）',
+}
 export type SkillDpsAnalysisMetric = 'direct' | 'combined'
 export type SkillDpsDamageType = 'PHYSICAL' | 'ARTS' | 'TRUE' | 'ELEMENTAL' | 'MIXED'
 export type SkillDpsSpRecovery = Exclude<SkillStructure['activationSettings']['spRecovery'], 'NO_SP'>
@@ -38,6 +50,13 @@ export interface SkillDpsObservation {
   initialSp: number | null
   /** Literal signed SP cost minus initial SP, never a recharge/cycle time. */
   spGap: number | null
+  deploymentCost: number | null
+  initialRatio: number | null
+  uptime: number | null
+  uptimeUnavailableReason: string | null
+  maxTargets: number | 'UNLIMITED' | null
+  attack: number | null
+  attackInterval: number | null
   directDps: number | null
   /** DC3's combined rate, including steady DoT where supported. */
   combinedDps: number | null
@@ -52,8 +71,9 @@ export interface SkillDpsAnalysisDataset {
 }
 
 export interface SkillDpsAnalysisResult {
-  observations: (SkillDpsObservation & { x: number; y: number })[]
+  observations: (SkillDpsObservation & { x: number | 'UNLIMITED'; y: number })[]
   missingValueCount: number
+  missingValueReasons: { label: string; count: number }[]
   fit: MultipleLinearRegressionResult | null
   correlation: number | null
   error: string | null
@@ -70,6 +90,43 @@ function skillKey(skill: SkillRecord): string {
 
 function finite(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function positiveFinite(value: number | null | undefined): number | null {
+  const result = finite(value)
+  return result !== null && result > 0 ? result : null
+}
+
+/** Initial charge is a proportion of SP, never an elapsed time or cycle cost. */
+export function calculateSkillDpsInitialSpRatio(initialSp: number | null, spCost: number | null): number | null {
+  const initial = finite(initialSp), cost = positiveFinite(spCost)
+  return initial === null || initial < 0 || cost === null ? null : finite(initial / cost * 100)
+}
+
+/** Only a successful reviewed DC3 output can certify an unlimited target cap. */
+function getMaximumTargets(value: number | null | undefined): SkillDpsObservation['maxTargets'] {
+  return value === null ? 'UNLIMITED'
+    : typeof value === 'number' && Number.isSafeInteger(value) && value >= 1 ? value : null
+}
+
+export function getSkillDpsAnalysisAxisValue(
+  observation: SkillDpsObservation, axis: SkillDpsAnalysisAxis,
+): number | 'UNLIMITED' | null {
+  switch (axis) {
+    case 'duration': return finite(observation.durationSeconds)
+    case 'spCost': return finite(observation.spCost)
+    case 'spGap': return finite(observation.spGap)
+    case 'deploymentCost': {
+      const value = finite(observation.deploymentCost)
+      return value !== null && value >= 0 ? value : null
+    }
+    case 'initialRatio': return finite(observation.initialRatio)
+    case 'uptime': return finite(observation.uptime)
+    case 'maxTargets': return observation.maxTargets === 'UNLIMITED' ? 'UNLIMITED'
+      : observation.maxTargets === null ? null : getMaximumTargets(observation.maxTargets)
+    case 'attack': return finite(observation.attack)
+    case 'interval': return positiveFinite(observation.attackInterval)
+  }
 }
 
 function isOwnerNormalStage(entry: DamageThreeComparisonEntry): boolean {
@@ -104,6 +161,9 @@ export function buildSkillDpsAnalysisDataset(
     if (!values.some(candidate => candidate.key === entry.key)) values.push(entry)
     grouped.set(key, values)
   }
+  // The database already defines max-promotion/max-level, potential-1 base cost.
+  // Reuse that source calculation once per operator rather than per skill.
+  const costs = new Map(buildOperatorDatabaseRecords(scoped).map(operator => [operator.operatorId, operator.stats.deploymentCost]))
   const counts = new Map<ExclusionLabel, number>()
   const exclude = (label: ExclusionLabel) => counts.set(label, (counts.get(label) ?? 0) + 1)
   const observations: SkillDpsObservation[] = []
@@ -142,8 +202,15 @@ export function buildSkillDpsAnalysisDataset(
     const durationSeconds = raw?.durationType === 'AMMO' ? null : resolveDamageThreeStageDuration(stage, {
       sourceDuration: raw?.duration, blackboard: raw?.blackboard, conditions: result.output.guard?.conditions,
     })
+    const uptime = resolveSkillDpsUptime({ entry, output: result.output, skill, durationSeconds, spCost })
+    const deploymentCost = finite(costs.get(skill.operatorId))
     observations.push({ id, skill, stageLabel: entry.stageLabel, durationSeconds, spCost, initialSp,
       spGap: spCost === null || initialSp === null ? null : finite(spCost - initialSp),
+      deploymentCost: deploymentCost !== null && deploymentCost >= 0 ? deploymentCost : null,
+      initialRatio: calculateSkillDpsInitialSpRatio(initialSp, spCost),
+      uptime: finite(uptime.percentage), uptimeUnavailableReason: uptime.reason,
+      maxTargets: getMaximumTargets(result.output.maxTargetCount),
+      attack: finite(result.finalAttack), attackInterval: positiveFinite(result.output.attackInterval),
       directDps, combinedDps, damageType })
   }
   const exclusions = EXCLUSION_LABELS.flatMap(label => counts.has(label) ? [{ label, count: counts.get(label)! }] : [])
@@ -151,26 +218,37 @@ export function buildSkillDpsAnalysisDataset(
     excludedCount: exclusions.reduce((total, row) => total + row.count, 0), exclusions }
 }
 
-/** Each tab fits its own unweighted single-predictor OLS on finite pairs only.
+/** Numeric axes fit an unweighted single-predictor OLS on their finite pairs.
+ * Target capacities are categories, including UNLIMITED, and never enter OLS.
  * Zero DPS and signed SP gaps remain observations; no outlier is removed.
  */
 export function analyzeSkillDps(
   dataset: SkillDpsAnalysisDataset, axis: SkillDpsAnalysisAxis, metric: SkillDpsAnalysisMetric,
 ): SkillDpsAnalysisResult {
+  const missingReasons = new Map<string, number>()
+  const axisLabel = SKILL_DPS_ANALYSIS_AXES.find(([key]) => key === axis)![1]
+  const missing = (label: string) => missingReasons.set(label, (missingReasons.get(label) ?? 0) + 1)
   const observations = dataset.observations.flatMap(observation => {
-    const x = finite(axis === 'duration' ? observation.durationSeconds
-      : axis === 'spCost' ? observation.spCost : observation.spGap)
     const y = finite(metric === 'direct' ? observation.directDps : observation.combinedDps)
-    return x === null || y === null ? [] : [{ ...observation, x, y }]
+    if (y === null) { missing(`${axisLabel}・DPS未確定`); return [] }
+    const x = getSkillDpsAnalysisAxisValue(observation, axis)
+    if (x === null) {
+      missing(axis === 'uptime' ? observation.uptimeUnavailableReason ?? '理論稼働率未確定' : `${axisLabel}・DPS未確定`)
+      return []
+    }
+    return [{ ...observation, x, y }]
   })
   const missingValueCount = dataset.observations.length - observations.length
+  const missingValueReasons = [...missingReasons].map(([label, count]) => ({ label, count }))
+  if (axis === 'maxTargets') return { observations, missingValueCount, missingValueReasons,
+    fit: null, correlation: null, error: null }
   try {
-    const fit = fitMultipleLinearRegression(observations.map(({ x }) => [x]), observations.map(({ y }) => y))
+    const fit = fitMultipleLinearRegression(observations.map(({ x }) => [x as number]), observations.map(({ y }) => y))
     // With exactly one predictor and an intercept, standardized beta equals Pearson r.
     const correlation = Math.max(-1, Math.min(1, fit.standardizedCoefficients[0]))
-    return { observations, missingValueCount, fit, correlation, error: null }
+    return { observations, missingValueCount, missingValueReasons, fit, correlation, error: null }
   } catch (cause) {
-    return { observations, missingValueCount, fit: null, correlation: null,
+    return { observations, missingValueCount, missingValueReasons, fit: null, correlation: null,
       error: cause instanceof Error ? cause.message : '回帰分析を計算できません。' }
   }
 }

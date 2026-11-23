@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { getChartImageSavePicker, selectChartImageDestination } from '../lib/chartImageDestination'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { SKILL_DPS_ANALYSIS_X_LABELS } from '../lib/skillDpsAnalysis'
+import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
 import {
   getSkillDpsChartImageConditions, getSkillDpsChartImageFilename, getSkillDpsChartImageTitle,
   type SkillDpsChartImageSnapshot,
@@ -10,10 +12,11 @@ import { ChartImageFrame, type ChartImageFrameProps } from './ChartImageFrame'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ChartFrameImagePreview } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
+import { SkillDpsTargetBoxplot, SkillDpsTargetBoxplotLegend, SKILL_DPS_TARGET_BOXPLOT_HEIGHT } from './SkillDpsTargetBoxplot'
 import { saveComparisonChartImage } from './saveComparisonChartImage'
 import './SkillDpsAnalysisImageDialog.css'
 
-const X_LABELS = { duration: '持続時間（秒）', spCost: '必要SP', spGap: '必要SP−初期SP' }
+const X_LABELS = SKILL_DPS_ANALYSIS_X_LABELS
 const METRIC_LABELS = { direct: '直接DPS', combined: '合計DPS' }
 const ESTIMATE = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 4 })
 const SUMMARY_HEIGHT = 34
@@ -24,6 +27,18 @@ export function getSkillDpsChartImageFrame(snapshot: SkillDpsChartImageSnapshot)
   const xLabel = X_LABELS[snapshot.axis]
   const yLabel = METRIC_LABELS[snapshot.metric]
   const hasLine = snapshot.showFit && snapshot.fit !== null
+  if (snapshot.axis === 'maxTargets') {
+    const groups = buildSkillDpsTargetGroups(snapshot.points.map(({ id, x, y }) => ({ id, targetCount: x, y })))
+    return {
+      title: getSkillDpsChartImageTitle(snapshot),
+      conditions: getSkillDpsChartImageConditions(snapshot),
+      axisTitle: xLabel,
+      naturalChartHeight: SKILL_DPS_TARGET_BOXPLOT_HEIGHT,
+      legend: <SkillDpsTargetBoxplotLegend imageMode />,
+      children: size => <SkillDpsTargetBoxplot groups={groups} yLabel={yLabel} imageSize={size} />,
+    }
+  }
+  const numericPoints = snapshot.points.flatMap(({ id, x, y }) => typeof x === 'number' ? [{ id, x, y }] : [])
   return {
     title: getSkillDpsChartImageTitle(snapshot),
     conditions: getSkillDpsChartImageConditions(snapshot),
@@ -42,7 +57,7 @@ export function getSkillDpsChartImageFrame(snapshot: SkillDpsChartImageSnapshot)
       </li>}
     </ul>,
     children: size => <div className="skill-dps-image-content" style={size}>
-      <SkillDpsAnalysisChart points={snapshot.points} xLabel={xLabel} yLabel={yLabel}
+      <SkillDpsAnalysisChart points={numericPoints} xLabel={xLabel} yLabel={yLabel}
         fit={snapshot.fit} showFit={snapshot.showFit} imageSize={{ width: size.width, height: size.height - SUMMARY_HEIGHT }} />
       <div className="skill-dps-image-statistics">
         <span>Pearson r = {formatEstimate(snapshot.correlation)}</span>

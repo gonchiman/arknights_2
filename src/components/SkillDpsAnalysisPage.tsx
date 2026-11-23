@@ -4,15 +4,18 @@ import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { formatSkillStructureSpRecovery } from '../lib/skillStructure'
 import {
   analyzeSkillDps, buildSkillDpsAnalysisDataset, DEFAULT_SKILL_DPS_ANALYSIS_CONFIG,
+  getSkillDpsAnalysisAxisValue, SKILL_DPS_ANALYSIS_AXES, SKILL_DPS_ANALYSIS_X_LABELS,
   type SkillDpsAnalysisAxis, type SkillDpsAnalysisConfig, type SkillDpsAnalysisMetric,
   type SkillDpsDamageType, type SkillDpsObservation, type SkillDpsSpRecovery,
 } from '../lib/skillDpsAnalysis'
 import type { SkillDpsChartImageSnapshot } from '../lib/skillDpsChartImage'
+import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel, type TableChartView } from './PageViewSwitch'
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
 import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
+import { SkillDpsTargetBoxplot } from './SkillDpsTargetBoxplot'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsAnalysisPage.css'
 
@@ -22,11 +25,9 @@ interface Props {
   error?: string | null
 }
 
-const TABS = [['duration', '持続時間'], ['spCost', '必要SP'], ['spGap', '必要SP−初期SP']] as const
+const TABS = SKILL_DPS_ANALYSIS_AXES
 const VIEWS = [['chart', 'グラフ'], ['table', '表']] as const
-const X_LABELS: Record<SkillDpsAnalysisAxis, string> = {
-  duration: '持続時間（秒）', spCost: '必要SP', spGap: '必要SP−初期SP',
-}
+const X_LABELS = SKILL_DPS_ANALYSIS_X_LABELS
 const METRIC_LABELS: Record<SkillDpsAnalysisMetric, string> = { direct: '直接DPS', combined: '合計DPS' }
 const DAMAGE_TYPES: readonly (readonly [SkillDpsDamageType, string])[] = [
   ['PHYSICAL', '物理'], ['ARTS', '術'], ['TRUE', '確定'], ['ELEMENTAL', '元素'], ['MIXED', '複合'],
@@ -39,7 +40,7 @@ const ESTIMATE = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 4 })
 const COUNT = new Intl.NumberFormat('ja-JP')
 
 type DraftConfig = Omit<SkillDpsAnalysisConfig, 'defense' | 'resistance'> & { defense: string; resistance: string }
-type SortKey = 'operator' | 'skillIndex' | 'skillName' | 'durationSeconds' | 'spCost' | 'initialSp' | 'spGap' | 'dps'
+type SortKey = 'operator' | 'skillIndex' | 'skillName' | 'durationSeconds' | 'spCost' | 'initialSp' | 'spGap' | 'selectedAxis' | 'dps'
 
 function formatNumber(value: number | null | undefined) {
   return value !== null && value !== undefined && Number.isFinite(value) ? NUMBER.format(value) : '—'
@@ -91,6 +92,12 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   }, [rows, applied, loading, error])
   const analysis = useMemo(() => calculation.dataset ? analyzeSkillDps(calculation.dataset, axis, metric) : null,
     [calculation.dataset, axis, metric])
+  const categorical = axis === 'maxTargets'
+  const numericPoints = useMemo(() => analysis?.observations.flatMap(({ id, x, y }) =>
+    typeof x === 'number' ? [{ id, x, y }] : []) ?? [], [analysis])
+  const targetGroups = useMemo(() => categorical ? buildSkillDpsTargetGroups(
+    analysis?.observations.map(({ id, x, y }) => ({ id, targetCount: x, y })) ?? [],
+  ) : [], [analysis, categorical])
   const dataset = calculation.dataset
   const fit = analysis?.fit ?? null
   const slope = fit?.coefficients[0]
@@ -180,34 +187,37 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
             <label className="skill-dps-inline-label">DPS<select value={metric} onChange={event => setMetric(event.target.value as SkillDpsAnalysisMetric)}>
               <option value="direct">直接DPS</option><option value="combined">合計DPS</option>
             </select></label>
-            {view === 'chart' && <label className="skill-dps-inline-label"><input type="checkbox" checked={showFit}
+            {view === 'chart' && !categorical && <label className="skill-dps-inline-label"><input type="checkbox" checked={showFit}
               onChange={event => setShowFit(event.target.checked)} />回帰線</label>}
             <span className="skill-dps-count" role="status">使用 {COUNT.format(analysis.observations.length)}件 ／ 除外 {COUNT.format(excludedCount)}件</span>
             {view === 'chart' && <button className="button" type="button"
               disabled={loading || busy || Boolean(sourceError) || analysis.observations.length === 0}
               onClick={() => setImageSnapshot({
-                config: { ...applied }, axis, metric, showFit,
+                config: { ...applied }, axis, metric, showFit: !categorical && showFit,
                 points: analysis.observations.map(({ id, x, y }) => ({ id, x, y })),
                 fit: chartFit ? { ...chartFit } : null,
                 correlation: analysis.correlation, rSquared: fit?.rSquared ?? null,
               })}>画像を保存</button>}
           </div>
-          <dl className="skill-dps-statistics">
+          {!categorical && <dl className="skill-dps-statistics">
             <div><dt>Pearson r</dt><dd>{formatEstimate(analysis.correlation)}</dd></div>
             <div><dt>R²</dt><dd>{formatEstimate(fit?.rSquared)}</dd></div>
             <div><dt>傾き</dt><dd>{formatEstimate(slope)}</dd></div>
-          </dl>
+          </dl>}
+          {axis === 'uptime' && <p className="skill-dps-result-condition">SP回復1/秒・反復固定周期・回復支援なし</p>}
           {analysis.error && <p role="status" className="skill-dps-result-status">{analysis.error}</p>}
           {view === 'chart'
-            ? <SkillDpsAnalysisChart points={analysis.observations} xLabel={X_LABELS[axis]} yLabel={METRIC_LABELS[metric]}
-                fit={chartFit} showFit={showFit} />
-            : <SkillDpsAnalysisTable observations={analysis.observations} metric={metric} />}
+            ? categorical
+              ? <SkillDpsTargetBoxplot groups={targetGroups} yLabel={METRIC_LABELS[metric]} />
+              : <SkillDpsAnalysisChart points={numericPoints} xLabel={X_LABELS[axis]} yLabel={METRIC_LABELS[metric]}
+                  fit={chartFit} showFit={showFit} />
+            : <SkillDpsAnalysisTable observations={analysis.observations} metric={metric} axis={axis} />}
           {fit && slope !== undefined && <p className="skill-dps-equation" aria-label="回帰式">
             {METRIC_LABELS[metric]} = {formatEstimate(slope)} × {X_LABELS[axis]} {fit.intercept < 0 ? '−' : '+'} {formatEstimate(Math.abs(fit.intercept))}
           </p>}
           {(dataset.exclusions.length > 0 || analysis.missingValueCount > 0) && <dl className="skill-dps-exclusions" aria-label="除外理由">
             {dataset.exclusions.filter(item => item.count > 0).map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
-            {analysis.missingValueCount > 0 && <div><dt>{TABS.find(([key]) => key === axis)![1]}・DPS未確定</dt><dd>{COUNT.format(analysis.missingValueCount)}件</dd></div>}
+            {analysis.missingValueReasons.map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
           </dl>}
         </div>
       </AnalysisTabPanel>
@@ -216,37 +226,45 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   </PageLayout>
 }
 
-export function SkillDpsAnalysisTable({ observations, metric }: {
+export function SkillDpsAnalysisTable({ observations, metric, axis = 'duration' }: {
   observations: readonly SkillDpsObservation[]
   metric: SkillDpsAnalysisMetric
+  axis?: SkillDpsAnalysisAxis
 }) {
+  const extraColumn = axis !== 'duration' && axis !== 'spCost' && axis !== 'spGap'
   const [sort, setSort] = useState<TableSort<SortKey>>({ key: 'dps', direction: 'desc' })
+  const activeSort: TableSort<SortKey> = sort.key === 'selectedAxis' && !extraColumn
+    ? { key: 'dps', direction: 'desc' } : sort
   const ordered = useMemo(() => [...observations].sort((left, right) => {
     const value = (observation: SkillDpsObservation): string | number | null => {
-      if (sort.key === 'operator') return observation.skill.operatorName
-      if (sort.key === 'skillIndex') return observation.skill.skillIndex
-      if (sort.key === 'skillName') return observation.skill.skillName
-      if (sort.key === 'dps') return metric === 'direct' ? observation.directDps : observation.combinedDps
-      return observation[sort.key]
+      if (activeSort.key === 'operator') return observation.skill.operatorName
+      if (activeSort.key === 'skillIndex') return observation.skill.skillIndex
+      if (activeSort.key === 'skillName') return observation.skill.skillName
+      if (activeSort.key === 'dps') return metric === 'direct' ? observation.directDps : observation.combinedDps
+      if (activeSort.key === 'selectedAxis') return getSkillDpsAnalysisAxisValue(observation, axis)
+      return observation[activeSort.key]
     }
     const first = value(left), second = value(right)
     if (first === null || second === null) return first === second ? left.id.localeCompare(right.id) : first === null ? 1 : -1
-    const comparison = typeof first === 'string' && typeof second === 'string'
+    const comparison = first === 'UNLIMITED' || second === 'UNLIMITED'
+      ? first === second ? 0 : first === 'UNLIMITED' ? 1 : -1
+      : typeof first === 'string' && typeof second === 'string'
       ? first.localeCompare(second, 'ja') : Number(first) - Number(second)
-    return (sort.direction === 'asc' ? comparison : -comparison)
+    return (activeSort.direction === 'asc' ? comparison : -comparison)
       || left.skill.operatorName.localeCompare(right.skill.operatorName, 'ja')
       || left.skill.skillIndex - right.skill.skillIndex || left.id.localeCompare(right.id)
-  }), [observations, metric, sort])
+  }), [observations, metric, activeSort.key, activeSort.direction, axis])
   function changeSort(key: SortKey) {
     setSort(current => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }))
   }
   const headers: readonly (readonly [SortKey, string])[] = [
     ['operator', 'オペレーター'], ['skillIndex', 'S'], ['skillName', 'スキル名'], ['durationSeconds', '持続（秒）'],
-    ['spCost', '必要SP'], ['initialSp', '初期SP'], ['spGap', '必要SP−初期SP'], ['dps', METRIC_LABELS[metric]],
+    ['spCost', '必要SP'], ['initialSp', '初期SP'], ['spGap', '必要SP−初期SP'],
+    ...(extraColumn ? [['selectedAxis', X_LABELS[axis]] as const] : []), ['dps', METRIC_LABELS[metric]],
   ]
   return <div className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="分析対象のスキル">
     <table className="skill-dps-table">
-      <thead><tr>{headers.map(([key, label]) => <TableSortHeader key={key} label={label} sortKey={key} sort={sort}
+      <thead><tr>{headers.map(([key, label]) => <TableSortHeader key={key} label={label} sortKey={key} sort={activeSort}
         onSort={changeSort} ariaLabel={`${key === 'skillIndex' ? 'スキル番号' : label}で並べ替え`} />)}</tr></thead>
       <tbody>{ordered.length ? ordered.map(observation => <tr key={observation.id}>
         <th scope="row">{observation.skill.operatorName}</th>
@@ -256,6 +274,8 @@ export function SkillDpsAnalysisTable({ observations, metric }: {
         <td>{formatNumber(observation.spCost)}</td>
         <td>{formatNumber(observation.initialSp)}</td>
         <td>{formatNumber(observation.spGap)}</td>
+        {extraColumn && <td>{getSkillDpsAnalysisAxisValue(observation, axis) === 'UNLIMITED' ? '上限なし'
+          : formatNumber(getSkillDpsAnalysisAxisValue(observation, axis) as number | null)}</td>}
         <td>{formatNumber(metric === 'direct' ? observation.directDps : observation.combinedDps)}</td>
       </tr>) : <tr><td colSpan={headers.length} className="skill-dps-table-empty">対象なし</td></tr>}</tbody>
     </table>

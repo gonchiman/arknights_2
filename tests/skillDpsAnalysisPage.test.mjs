@@ -48,6 +48,10 @@ test('initial analysis uses finite duration only and exposes the standard graph/
   assert.match(markup, /aria-label="スキルDPS分析 \/ 計算条件の場所をコピー"/)
   assert.match(markup, /aria-label="スキルDPS分析 \/ 持続時間 \/ グラフの場所をコピー"/)
   assert.match(markup, /role="tab" aria-selected="true"[^>]*>持続時間/)
+  assert.equal((markup.match(/role="tab"/g) ?? []).length, 9)
+  for (const label of ['配置コスト', '初期SP率', '理論稼働率', '最大対象数', '攻撃力', '攻撃間隔']) {
+    assert.ok(markup.includes(`>${label}</button>`), label)
+  }
   assert.match(markup, /aria-pressed="true"[^>]*>グラフ/)
   assert.match(markup, /aria-pressed="false"[^>]*>表/)
   assert.match(markup, /<option value="INCREASE_WITH_TIME" selected="">自然回復<\/option>/)
@@ -62,6 +66,24 @@ test('initial analysis uses finite duration only and exposes the standard graph/
 test('empty analysis cannot save an image', () => {
   const markup = render(Page, { rows: [], loading: false })
   assert.match(markup, /<button class="button" type="button" disabled="">画像を保存<\/button>/)
+})
+
+test('new metric columns keep the original SP information and do not turn unlimited capacity into a number', () => {
+  const base = {
+    id: 'new-indicators', skill: rows[0], stageLabel: 'スキル中', durationSeconds: 30,
+    spCost: 20, initialSp: 25, spGap: -5, directDps: 1500, combinedDps: 1600, damageType: 'PHYSICAL',
+    deploymentCost: 18, initialRatio: 125, uptime: 60, uptimeUnavailableReason: null,
+    maxTargets: 'UNLIMITED', attack: 1900, attackInterval: 1.25,
+  }
+  for (const [axis, value] of [['deploymentCost', '18'], ['initialRatio', '125'], ['uptime', '60'],
+    ['maxTargets', '上限なし'], ['attack', '1,900'], ['interval', '1.25']]) {
+    const markup = render(Table, { observations: [base], metric: 'direct', axis })
+    assert.equal((markup.match(/scope="col"/g) ?? []).length, 9)
+    assert.match(markup, /必要SP−初期SP/)
+    assert.match(markup, /<td>20<\/td><td>25<\/td><td>-5<\/td>/)
+    assert.ok(markup.includes(`<td>${value}</td><td>1,500</td>`), axis)
+    assert.doesNotMatch(markup, /UNLIMITED|NaN|Infinity/)
+  }
 })
 
 test('the table retains a permanent duration, zero DPS and signed initial SP gap in separate columns', () => {

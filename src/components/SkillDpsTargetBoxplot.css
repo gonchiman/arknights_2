@@ -1,0 +1,24 @@
+.skill-dps-target-boxplot { width: 100%; min-width: 0; overflow-x: auto; }
+.skill-dps-target-svg { display: block; max-width: none; overflow: visible; }
+.skill-dps-target-tick,
+.skill-dps-target-label,
+.skill-dps-target-summary-value,
+.skill-dps-target-summary-label { fill: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.skill-dps-target-label { fill: var(--text-soft); font-weight: 500; }
+.skill-dps-target-summary-cell { fill: var(--surface-soft); }
+.skill-dps-target-summary-label { fill: var(--text-soft); }
+.skill-dps-target-grid { stroke: var(--border); stroke-width: 1; }
+.skill-dps-target-axis { stroke: var(--border-strong); stroke-width: 1; }
+.skill-dps-target-box { fill: var(--link); fill-opacity: .14; stroke: var(--link); stroke-width: 1.3; }
+.skill-dps-target-whisker { stroke: var(--link); stroke-width: 1.3; }
+.skill-dps-target-median { stroke: var(--link); stroke-width: 2.3; }
+.skill-dps-target-point { fill: var(--link); opacity: .7; }
+.skill-dps-target-outlier { fill: var(--surface, #fff); stroke: var(--link); stroke-width: 1.3; }
+.skill-dps-target-legend { justify-content: center; color: var(--text-soft); font-size: 12px; line-height: 18px; }
+.skill-dps-target-legend.is-image { justify-content: flex-start; font-size: inherit; }
+.skill-dps-target-boxplot.is-image { overflow: visible; }
+.skill-dps-target-boxplot.is-image .skill-dps-target-tick,
+.skill-dps-target-boxplot.is-image .skill-dps-target-summary-value,
+.skill-dps-target-boxplot.is-image .skill-dps-target-summary-label { fill: #555; font-size: 11px; }
+.skill-dps-target-boxplot.is-image .skill-dps-target-label { fill: #444; font-size: 12px; font-weight: 700; }
+.skill-dps-target-empty { padding: 20px 0; margin: 0; color: var(--text-soft); font-size: 13px; }
