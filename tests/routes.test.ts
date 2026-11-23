@@ -150,6 +150,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-three-comparison', 'damage-three-comparison'],
       ['damage-three-attribute-comparison', 'damage-three-attribute-comparison'],
       ['damage-three-power-by-year', 'damage-three-power-by-year'],
+      ['damage-three-skill-attribute-matrix', 'damage-three-skill-attribute-matrix'],
       ['physical-arts-comparison', 'physical-arts-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
@@ -525,6 +526,11 @@ test('DC3属性比較の共有URLは通常攻撃とオペレーターを復元�
     `${hash}&operatorId=other`, `${hash}&skillIndex=1&skillId=x&levelIndex=0`]) {
     assert.deepEqual(parseHashRoute(invalid), withoutSelection)
   }
+})
+
+test('スキル別の物理・術ダメージは集計版を指定したURLでも開く', () => {
+  assert.deepEqual(parseHashRoute('#/damage-3/skill-attribute-matrix?aggregationVersion=v12'),
+    { view: 'damage-three-skill-attribute-matrix' })
 })
 
 test('DC3の不完全・不正・重複したクエリは選択なしの計算機へ戻す', () => {

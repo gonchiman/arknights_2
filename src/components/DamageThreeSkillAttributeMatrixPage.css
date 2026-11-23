@@ -1,0 +1,90 @@
+.dc3-matrix {
+  --matrix-operator-width: 7rem;
+  --matrix-number-width: 2.75rem;
+  --matrix-stage-width: 5.75rem;
+}
+.dc3-matrix-population,
+.dc3-matrix-conditions,
+.dc3-matrix-table-heading nav { color: var(--text-soft); font-size: 12px; }
+
+.dc3-matrix-controls,
+.dc3-matrix-table-heading,
+.dc3-matrix-table-heading nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+.dc3-matrix-controls { align-items: end; }
+.dc3-matrix-search { display: grid; gap: 4px; font-size: 12px; color: var(--text-soft); max-width: 100%; }
+.dc3-matrix-search input {
+  width: 18rem;
+  max-width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  padding: 6px 9px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+.dc3-matrix-conditions { display: flex; flex-wrap: wrap; gap: 2px 12px; line-height: 2; }
+.dc3-matrix-conditions > span { white-space: nowrap; }
+.dc3-matrix-table-heading { justify-content: space-between; }
+.dc3-matrix-table-heading h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.dc3-matrix-table-heading nav { gap: 6px; font-variant-numeric: tabular-nums; }
+.dc3-matrix-table-heading nav span { margin-inline-end: 4px; }
+.dc3-matrix-table-heading nav button { padding: 4px 9px; min-height: 30px; font-size: 12px; }
+
+.dc3-matrix-scroll { max-width: 100%; }
+.damage-two-table.dc3-matrix-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.dc3-matrix-table :is(th, td) { padding: 6px 9px; }
+.damage-two-table.dc3-matrix-table thead th {
+  width: auto;
+  text-align: center;
+  white-space: nowrap;
+}
+.dc3-matrix-table .dc3-matrix-damage { min-width: 4.2rem; white-space: nowrap; }
+.dc3-matrix-table .dc3-matrix-pair-end,
+.dc3-matrix-table th[scope="colgroup"] { border-right-color: var(--border-strong); }
+.dc3-matrix-operator { --column-width: var(--matrix-operator-width); left: 0; }
+.dc3-matrix-number { --column-width: var(--matrix-number-width); left: var(--matrix-operator-width); }
+.dc3-matrix-stage {
+  --column-width: var(--matrix-stage-width);
+  left: calc(var(--matrix-operator-width) + var(--matrix-number-width));
+}
+.damage-two-table.dc3-matrix-table :is(.dc3-matrix-operator, .dc3-matrix-number, .dc3-matrix-stage) {
+  position: sticky;
+  top: auto;
+  z-index: 1;
+  width: var(--column-width);
+  min-width: var(--column-width);
+  max-width: var(--column-width);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.dc3-matrix-table tbody :is(.dc3-matrix-operator, .dc3-matrix-number, .dc3-matrix-stage) {
+  background: var(--surface);
+  text-align: left;
+}
+.dc3-matrix-table tbody .dc3-matrix-operator { color: var(--text); font-size: inherit; font-weight: 600; }
+.dc3-matrix-table :is(th, td).dc3-matrix-number { padding-inline: 3px; text-align: center; }
+.dc3-matrix-table .dc3-matrix-stage { border-right-color: var(--border-strong); }
+.dc3-matrix-table .dc3-matrix-name { max-width: 13rem; text-align: left; overflow-wrap: anywhere; }
+.dc3-matrix-table .dc3-matrix-metadata { text-align: center; white-space: nowrap; }
+.dc3-matrix-status-button.text-button { min-height: 24px; padding: 0; font: inherit; text-underline-offset: 3px; }
+.dc3-matrix-status-button:hover { color: var(--accent); }
+
+@media (max-width: 460px) {
+  .dc3-matrix {
+    --matrix-operator-width: 4.75rem;
+    --matrix-number-width: 2.25rem;
+    --matrix-stage-width: 4.25rem;
+  }
+  .dc3-matrix-table :is(th, td) { padding-inline: 5px; }
+}

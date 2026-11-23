@@ -31,6 +31,7 @@ export type AppRoute =
   | { view: 'damage-three-comparison' }
   | { view: 'damage-three-power-by-year' }
   | { view: 'damage-three-attribute-comparison'; selection?: DamageThreeAttributeRouteSelection }
+  | { view: 'damage-three-skill-attribute-matrix' }
   | { view: 'physical-arts-comparison' }
   | { view: 'damage-verification' }
   | { view: 'goldenglow-home' }
@@ -253,6 +254,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/damage-3/coverage') return { view: 'damage-three-coverage' }
   if (hash === '#/damage-3/comparison') return { view: 'damage-three-comparison' }
   if (hash === '#/damage-3/power-by-year') return { view: 'damage-three-power-by-year' }
+  if (matchesEnemyAggregationRoute(hash, '#/damage-3/skill-attribute-matrix')) return { view: 'damage-three-skill-attribute-matrix' }
   if (hash === '#/damage-3/physical-arts-comparison') return { view: 'physical-arts-comparison' }
   if (hash === DAMAGE_THREE_ATTRIBUTE_ROUTE) return { view: 'damage-three-attribute-comparison' }
   if (hash.startsWith(`${DAMAGE_THREE_ATTRIBUTE_ROUTE}?`)) {

@@ -6,4 +6,5 @@
 
 - 基準となる表示は「単発シミュレーション」ページの履歴テーブル。実装は [GoldenglowSingleTrialPage.css](../src/components/GoldenglowSingleTrialPage.css) を参照する。
 - 共通ルールで定める罫線の色は、既存ページと同じ `var(--border)` を使う。
+- データセルは原則1セル1項目とし、個別に見比べる項目は列を分ける。たとえばオペレーター名・スキル番号・段階はそれぞれ独立した列にする。「30秒」のように数値と単位で一つの値を表す場合は1項目として扱う。
 - 最大値・同率の強調、共通部分の結合、転置や分割を作成・変更するときは [比較表の共通ルール](shared/comparison-table.md) も読み、従う。MOD比較に固有の候補・計算式・配置・実装は [MOD比較テーブルの共通出力](../docs/comparison-table-output/README.md) が扱う。
