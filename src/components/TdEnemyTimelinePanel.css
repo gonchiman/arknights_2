@@ -11,8 +11,16 @@
 }
 .td-time-heading output { font-size: 16px; font-weight: 600; }
 .td-time-heading button, .td-time-transport button { min-height: 32px; }
-.td-time-transport button { min-width: 6em; }
-.td-time-seek { flex: 1; min-width: 0; }
+.td-time-transport > button { min-width: 6em; }
+.td-time-seek {
+  flex: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+.td-time-seek button { min-width: 44px; white-space: nowrap; }
+.td-time-range { min-width: 0; }
 .td-time-seek input { display: block; width: 100%; margin: 0; accent-color: var(--accent); }
 .td-time-limits, .td-time-footer span, .td-time-detail { color: var(--text-soft); font-size: 12px; }
 .td-time-filters { flex-wrap: wrap; gap: 4px 6px; }
@@ -60,6 +68,11 @@
 .td-time-footer { flex-wrap: wrap; }
 .td-time-footer strong { font-weight: 600; }
 .td-time-detail { margin: 0; }
+
+@media (max-width: 560px) {
+  .td-time-transport { flex-wrap: wrap; }
+  .td-time-seek { flex-basis: 100%; }
+}
 
 @media (pointer: coarse) {
   .td-time-heading button, .td-time-transport button, .td-time-filters label { min-height: 44px; }
