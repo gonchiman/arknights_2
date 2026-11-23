@@ -11,7 +11,8 @@ import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDataContent } from './EnemyPageShared'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { PageLayout, PageOutputTabs } from './PageLayout'
-import { PageViewSwitch, viewLabel } from './PageViewSwitch'
+import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
+import DamageThreeSkillRankStatisticsChart from './DamageThreeSkillRankStatisticsChart'
 import DamageThreeSkillRankStatisticsTable, { STATISTIC_VIEWS, type StatisticView } from './DamageThreeSkillRankStatisticsTable'
 import { useDamageThreeSkillRankStatistics } from './useDamageThreeSkillRankStatistics'
 import './DamageCalculatorTwo.css'
@@ -48,6 +49,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [page, setPage] = useState(0)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
+  const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [selectedResistances, setSelectedResistances] = useState<number[]>([0, 50, 60])
   const tabId = useId()
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
@@ -72,7 +74,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const statsActive = mode === 'statistics'
   const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds)
-  const format = statsActive ? viewLabel(STATISTIC_VIEWS, statisticView) : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
+  const format = statsActive
+    ? [viewLabel(STATISTIC_VIEWS, statisticView), viewLabel(TABLE_CHART_VIEWS, statisticFormat)]
+    : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
+  const StatisticsOutput = statisticFormat === 'table' ? DamageThreeSkillRankStatisticsTable : DamageThreeSkillRankStatisticsChart
   const pages = Math.ceil(filtered.length / PAGE_SIZE)
   const activePage = Math.min(page, Math.max(0, pages - 1))
   const start = activePage * PAGE_SIZE
@@ -136,9 +141,13 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                   <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={setLayout} label="属性の並べ方" />
                 </>}
               </div>
+              {statsActive && <div className="dc3-matrix-option-group">
+                <span className="dc3-matrix-option-label">表示形式</span>
+                <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />
+              </div>}
             </div>
             {statsActive ? (
-              statistics ? <DamageThreeSkillRankStatisticsTable rows={statistics} view={statisticView} />
+              statistics ? <StatisticsOutput rows={statistics} view={statisticView} />
                 : <p role="status">主攻撃のダメージを集計中…</p>
             ) : <>
               <div className="dc3-matrix-table-heading">

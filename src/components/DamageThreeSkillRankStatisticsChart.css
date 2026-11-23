@@ -1,0 +1,62 @@
+.dc3-stat-chart {
+  --stat-physical: #387590;
+  --stat-tie: #b6b8bb;
+  --stat-arts: #a85b2e;
+  --stat-key-columns: 3.4rem 4.8rem;
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.dc3-stat-chart [data-series="physical"] { color: var(--stat-physical); }
+.dc3-stat-chart [data-series="tie"] { color: var(--stat-tie); }
+.dc3-stat-chart [data-series="arts"] { color: var(--stat-arts); }
+.dc3-stat-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 16px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+  color: var(--text-soft);
+}
+.dc3-stat-chart-legend li { display: flex; align-items: center; gap: 5px; }
+.dc3-stat-chart-legend i { width: 11px; height: 11px; background: currentColor; }
+.dc3-stat-chart-legend .is-circle { width: 8px; height: 8px; border-radius: 50%; }
+.dc3-stat-chart-legend .is-diamond { width: 7px; height: 7px; transform: rotate(45deg); }
+
+.dc3-stat-chart-heading,
+.dc3-stat-chart-row {
+  display: grid;
+  grid-template-columns: var(--stat-key-columns) minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  border-bottom: 1px solid var(--border);
+}
+.dc3-stat-chart-heading { min-height: 42px; align-items: end; padding-bottom: 4px; color: var(--text-soft); }
+.dc3-stat-chart-heading > span,
+.dc3-stat-chart-row > span { text-align: right; }
+.dc3-stat-chart-track,
+.dc3-stat-chart-scale { margin-inline: 8px; min-width: 0; }
+.dc3-stat-chart-ticks {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.dc3-stat-chart-ticks > :nth-child(2) { position: absolute; left: 50%; transform: translateX(-50%); }
+.dc3-stat-chart-track { display: flex; align-items: center; }
+.dc3-stat-chart-intervals { width: 100%; height: 32px; overflow: visible; }
+.dc3-stat-chart-stack { display: flex; width: 100%; height: 18px; }
+.dc3-stat-chart-stack span { background: currentColor; }
+.dc3-stat-chart-empty { color: var(--text-muted); }
+
+@media (max-width: 500px) {
+  .dc3-stat-chart { --stat-key-columns: 3.1rem 3.8rem; }
+  .dc3-stat-chart-heading, .dc3-stat-chart-row { gap: 5px; }
+}
