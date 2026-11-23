@@ -5,7 +5,7 @@ import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 
 export type DamageThreeSkillRankMode = 'virtual' | 'actual'
 type RankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense' | 'percentage'>
-interface DamageCell {
+export interface DamageCell {
   physical: number | null
   arts: number | null
 }

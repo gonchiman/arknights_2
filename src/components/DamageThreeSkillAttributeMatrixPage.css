@@ -98,6 +98,15 @@
 .dc3-matrix-status-button.text-button { min-height: 24px; padding: 0; font: inherit; text-underline-offset: 3px; }
 .dc3-matrix-status-button:hover { color: var(--accent); }
 
+.damage-two-table.dc3-statistics-table { min-width: 510px; table-layout: auto; }
+.dc3-statistics-table :is(th, td) { padding: 5px 7px; white-space: nowrap; }
+.damage-two-table.dc3-statistics-table th { width: auto; text-align: center; }
+.damage-two-table.dc3-statistics-table tbody th { text-align: right; font: inherit; color: var(--text); }
+.damage-two-table.dc3-statistics-table .dc3-statistics-attribute { text-align: center; }
+.dc3-statistics-table .dc3-statistics-median { font-weight: 600; }
+.dc3-statistics-table tbody:not(:last-of-type) tr:last-child > * { border-bottom: 1px solid var(--border); }
+.dc3-statistics-table tbody:last-of-type [rowspan] { border-bottom: 0; }
+
 @media (max-width: 460px) {
   .dc3-matrix {
     --matrix-operator-width: 4.25rem;

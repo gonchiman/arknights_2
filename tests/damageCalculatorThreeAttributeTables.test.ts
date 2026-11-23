@@ -5,6 +5,7 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { evaluateDamageThreeSkillRankRow } from '../src/lib/damageThreeSkillRankMatrix.ts'
+import { evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
   evaluateAttackAttributeTables,
@@ -84,6 +85,40 @@ function ordinary(value: DamageThreeAttributeTablesInput, type: 'PHYSICAL' | 'AR
 function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
+
+test('術耐性別の要約には1攻撃単位の段階を使い、主攻撃を属性変更した表と同じ値を返す', () => {
+  const pairs = [{ resistance: 60, defense: 1200, percentage: 4, rankCutoff: 1 }]
+  const mountain = input('char_264_f12yin', 2).entry
+  assert.deepEqual(evaluateSkillRankStatisticsStage(mountain, pairs), evaluateDamageThreeSkillRankRow(mountain, pairs, 'virtual').cells)
+  assert.equal(evaluateSkillRankStatisticsStage(input('char_010_chen', 2).entry, pairs), null)
+})
+
+test('各条件の共通有効段階から四分位数と丸め前の勝敗を求め、対応値のない列は空にする', () => {
+  const pairs = [
+    { resistance: 50, defense: 300, percentage: 16, rankCutoff: 10 },
+    { resistance: 0, defense: 0, percentage: 100, rankCutoff: 20 },
+    { resistance: 100, defense: null, percentage: 0, rankCutoff: 0 },
+  ]
+  const cell = (physical: number | null, arts: number | null) => ({ physical, arts })
+  const stages = [
+    [cell(6, 4), cell(10, 10 + 1e-10), cell(0, 0)],
+    [cell(2, 10), cell(2.24, 2.25), cell(0, 0)],
+    [cell(0, 0), cell(Infinity, 1), cell(null, null)],
+    [cell(4, 6), cell(30, NaN), cell(null, null)],
+    [cell(null, 100), cell(20, null), cell(null, null)],
+  ]
+  const [first, second, missing] = summarizeSkillRankStatistics(pairs, stages.values())
+  assert.deepEqual(first, {
+    resistance: 50, defense: 300, count: 4,
+    physical: { q1: 1.5, median: 3, q3: 4.5 }, arts: { q1: 3, median: 5, q3: 7 },
+    physicalWins: 1, ties: 1, artsWins: 2,
+  })
+  assert.equal(second.count, 2)
+  assert.deepEqual([second.physicalWins, second.ties, second.artsWins], [0, 1, 1])
+  assert.deepEqual(missing, {
+    resistance: 100, defense: null, count: 0, physical: null, arts: null, physicalWins: 0, ties: 0, artsWins: 0,
+  })
+})
 
 test('スキル別の行は元の混合攻撃の内訳と主攻撃の属性変更を区別し、空の順位を保つ', () => {
   const entry = input('char_010_chen', 2).entry
