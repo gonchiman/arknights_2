@@ -155,6 +155,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-wiki-stats', 'enemy-wiki-stats'],
       ['roguelike', 'roguelike'],
       ['maps', 'maps'],
+      ['td-maps', 'td-maps'],
       ['goldenglow-home', 'goldenglow-home'],
       ['surtr-home', 'surtr-home'],
       ['slide-maker', 'slide-maker'],
@@ -853,6 +854,14 @@ test('マップデータベースは敵のページと同じカテゴリから�
   for (const suffix of ['/', '/extra', '?map=1-7', '-extra']) {
     assert.deepEqual(parseHashRoute(`#/maps${suffix}`), { view: 'operators' })
   }
+})
+
+test('TDマップ詳細をメニューとステージ別のリンクから開ける', () => {
+  const entry = APP_NAV_ITEMS.find((item) => item.id === 'td-maps')
+  assert.equal(entry?.href, '#/maps/td')
+  assert.deepEqual(parseHashRoute('#/maps/td'), { view: 'td-maps' })
+  assert.deepEqual(parseHashRoute('#/maps/td?stage=TD-TR-1'), { view: 'td-maps', stageCode: 'TD-TR-1' })
+  assert.deepEqual(parseHashRoute('#/maps/td/extra'), { view: 'operators' })
 })
 
 test('全スキル一覧ページのhashを解析する', () => {

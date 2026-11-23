@@ -1,0 +1,131 @@
+.td-map-layout {
+  display: grid;
+  grid-template-columns: minmax(185px, 230px) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(16px, 3vw, 36px);
+}
+
+.td-map-picker {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+}
+
+.td-map-picker h2,
+.td-map-picker-toggle {
+  margin: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.td-map-picker h2 { padding: 9px 0; }
+.td-map-picker-toggle { display: none; }
+.td-map-picker-options { padding-block: 12px; }
+
+.td-map-search {
+  display: grid;
+  gap: 5px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.td-map-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.td-map-list {
+  display: grid;
+  margin-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.td-map-list a {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.td-map-list strong {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-map-list a span {
+  color: var(--text-soft);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.td-map-list a:hover { background: var(--surface-soft); }
+.td-map-list a[aria-current="page"] {
+  box-shadow: inset 3px 0 var(--link);
+  background: var(--surface-hover);
+}
+
+.td-map-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 12px;
+}
+
+.td-map-heading p {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.td-map-heading h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(17px, 2.2vw, 22px);
+  font-weight: 600;
+}
+
+.td-map-heading h2 span { font-variant-numeric: tabular-nums; }
+.td-map-detail > .map-battle-facts { gap: 7px 18px; margin: 0; }
+.td-map-detail > .analysis-tab-content { min-width: 0; }
+
+@container (max-width: 700px) {
+  .td-map-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .td-map-picker { border-right: 0; padding-right: 0; }
+  .td-map-picker h2 { display: none; }
+  .td-map-picker-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 6px 0 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .td-map-picker-toggle span { color: var(--text-muted); font-size: 11px; }
+  .td-map-picker-options:not(.is-open) { display: none; }
+  .td-map-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .td-map-list a:nth-child(odd) { border-right: 1px solid var(--border); }
+}
+
+@media (pointer: coarse) {
+  .td-map-search input { min-height: 44px; font-size: 16px; }
+}

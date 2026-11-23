@@ -8,6 +8,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'main-enemy-spawns'
   | 'enemy-defense-resistance-formula'
   | 'bar-chart-workbench'
+  | 'td-maps'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -31,6 +32,7 @@ export const STANDARD_PAGE_TITLES = {
   'damage-three-comparison': 'DC3 スキル比較',
   'damage-three-power-by-year': '火力水準の比較',
   'enemy-defense-resistance': '防御力と術耐性の対応',
+  'td-maps': 'TDマップ詳細',
 } satisfies Partial<Record<AppRoute['view'], string>>
 
 export function getStandardPageTitle(view: AppRoute['view']): string | undefined {
@@ -438,6 +440,13 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     href: '#/maps',
     label: 'マップデータベース',
     description: 'マップの検索・地形・出現する敵',
+    section: 'analysis',
+  },
+  {
+    id: 'td-maps',
+    href: '#/maps/td',
+    label: STANDARD_PAGE_TITLES['td-maps'],
+    description: '泡影を穿つ碧雷のステージ・地形・出現敵',
     section: 'analysis',
   },
   {

@@ -1,0 +1,28 @@
+.td-map-terrain { --td-route-color: #944a24; }
+.td-boss-route-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+}
+.td-boss-route-switch input { margin: 0; accent-color: var(--accent); }
+.td-boss-link { stroke: var(--td-route-color); stroke-width: 2; stroke-dasharray: 4 3; }
+.td-boss-arrow { fill: var(--td-route-color); }
+.td-boss-waypoint { fill: var(--surface); stroke: var(--td-route-color); stroke-width: 1.8; }
+.td-boss-step, .td-boss-wait { font-family: inherit; font-weight: 700; }
+.td-boss-step { fill: var(--td-route-color); font-size: 11px; }
+.td-boss-wait-badge { fill: var(--td-route-color); }
+.td-boss-wait { fill: #fff; font-size: 9px; }
+.map-board-legend i.td-boss-legend-line {
+  width: 18px;
+  height: 0;
+  border-top: 2px dashed var(--td-route-color);
+  background: none;
+}
+@media (pointer: coarse) {
+  .td-boss-route-switch { min-height: 44px; }
+}

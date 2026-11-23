@@ -22,6 +22,11 @@ const HOME_PANELS = [
     ],
   },
   {
+    id: 'maps',
+    title: 'マップ',
+    links: APP_NAV_ITEMS.filter((item) => item.id === 'maps' || item.id === 'td-maps'),
+  },
+  {
     id: 'operator-analysis',
     title: 'オペレーター個別分析',
     links: APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'),

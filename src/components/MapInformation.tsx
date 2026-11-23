@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import type { ReactNode } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
 import { getMapCoverageReasons, getMapCoverageStatus, getMapCoverageStatusLabel } from '../lib/enemyMapCoverage'
@@ -39,8 +40,6 @@ export function MapInformation({
     })
     return () => { active = false }
   }, [map, detailLoader, revision])
-  const enemies = detail?.enemies ?? []
-  const statLabel = (label: string) => showBaseStatLabels ? `${label}（基礎）` : label
   return <>
     <header className="map-detail-heading" aria-live="polite"><h2>{map.code && <span>{map.code}</span>}{map.name}</h2><p>{[map.zoneName, variantLabel ?? difficultyLabel(map)].filter(Boolean).join(' ／ ')}</p></header>
     {map.status === 'missing' ? <p className="map-empty" role="status">このマップの配置・敵情報は未取得です。</p>
@@ -49,22 +48,11 @@ export function MapInformation({
           : <div className={`map-information-content${layout === 'side-by-side' ? ' map-information-columns' : ''}`}>
             <div className="map-information-terrain">
             <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
-            <dl className="map-battle-facts">
-              <div><dt>登録敵</dt><dd>{formatNumber(enemies.length)}種類</dd></div>
-              <div><dt>出現数</dt><dd>{map.status === 'supported' ? `${formatNumber(map.spawnCount)}体` : '未確定'}</dd></div>
-              {map.spawnAggregation && getMapCoverageStatus(map, 'SPAWNS') === 'included'
-                && <div><dt>{map.spawnAggregation.kind === 'expected-lower-bound' ? '期待出現数（下限）' : '下限集計'}</dt><dd>{formatNumber(map.spawnAggregation.count)}体</dd></div>}
-              <div><dt>耐久値</dt><dd>{formatNumber(detail.life)}</dd></div>
-              <div><dt>初期コスト</dt><dd>{formatNumber(detail.initialCost)}</dd></div>
-              <div><dt>配置上限</dt><dd>{formatNumber(detail.deployLimit)}</dd></div>
-            </dl>
+            <MapBattleFacts map={map} detail={detail} />
             </div>
             <div className="map-information-enemies">
             <h3 className="map-enemy-heading">{enemyHeading}</h3>
-            {enemies.length ? <div className="map-table-scroll map-enemy-scroll" tabIndex={0} role="region" aria-label={`${enemyHeading}の一覧`}><table className="map-enemy-table"><thead><tr><th scope="col">敵名</th><th scope="col" className="map-numeric">体数</th><th scope="col" className="map-numeric">{statLabel('HP')}</th><th scope="col" className="map-numeric">{statLabel('攻撃力')}</th><th scope="col" className="map-numeric">{statLabel('防御力')}</th><th scope="col" className="map-numeric">{statLabel('術耐性')}</th></tr></thead><tbody>{enemies.map((enemy) => {
-              const base = index.enemies[enemy.id]
-              return <tr key={enemy.id}><th scope="row">{base?.name ?? enemy.id}</th><td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td><td className="map-numeric">{formatNumber(base?.hp)}</td><td className="map-numeric">{formatNumber(base?.attack)}</td><td className="map-numeric">{formatNumber(base?.defense)}</td><td className="map-numeric">{formatNumber(base?.resistance)}</td></tr>
-            })}</tbody></table></div> : <p className="map-empty">登録された敵はありません</p>}
+            <MapEnemyTable detail={detail} index={index} heading={enemyHeading} showBaseStatLabels={showBaseStatLabels} />
             </div>
           </div>}
     {showDataInfo && <details className="map-data-information"><summary>データ情報</summary>
@@ -95,6 +83,43 @@ export function MapInformation({
   </>
 }
 
+export function MapBattleFacts({ map, detail }: { map: MapSummary; detail: MapDetail }) {
+  return <dl className="map-battle-facts">
+    <div><dt>登録敵</dt><dd>{formatNumber(detail.enemies.length)}種類</dd></div>
+    <div><dt>出現数</dt><dd>{map.status === 'supported' ? `${formatNumber(map.spawnCount)}体` : '未確定'}</dd></div>
+    {map.spawnAggregation && getMapCoverageStatus(map, 'SPAWNS') === 'included'
+      && <div><dt>{map.spawnAggregation.kind === 'expected-lower-bound' ? '期待出現数（下限）' : '下限集計'}</dt><dd>{formatNumber(map.spawnAggregation.count)}体</dd></div>}
+    <div><dt>耐久値</dt><dd>{formatNumber(detail.life)}</dd></div>
+    <div><dt>初期コスト</dt><dd>{formatNumber(detail.initialCost)}</dd></div>
+    <div><dt>配置上限</dt><dd>{formatNumber(detail.deployLimit)}</dd></div>
+  </dl>
+}
+
+export function MapEnemyTable({ detail, index, heading, showBaseStatLabels = false }: {
+  detail: MapDetail; index: MapIndex; heading: string; showBaseStatLabels?: boolean
+}) {
+  const statLabel = (label: string) => showBaseStatLabels ? `${label}（基礎）` : label
+  if (!detail.enemies.length) return <p className="map-empty">登録された敵はありません</p>
+  return <div className="map-table-scroll map-enemy-scroll" tabIndex={0} role="region" aria-label={`${heading}の一覧`}>
+    <table className="map-enemy-table">
+      <thead><tr><th scope="col">敵名</th><th scope="col" className="map-numeric">体数</th>
+        {['HP', '攻撃力', '防御力', '術耐性'].map((label) => <th key={label} scope="col" className="map-numeric">{statLabel(label)}</th>)}
+      </tr></thead>
+      <tbody>{detail.enemies.map((enemy) => {
+        const base = index.enemies[enemy.id]
+        return <tr key={enemy.id}>
+          <th scope="row">{base?.name ?? enemy.id}</th>
+          <td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td>
+          <td className="map-numeric">{formatNumber(base?.hp)}</td>
+          <td className="map-numeric">{formatNumber(base?.attack)}</td>
+          <td className="map-numeric">{formatNumber(base?.defense)}</td>
+          <td className="map-numeric">{formatNumber(base?.resistance)}</td>
+        </tr>
+      })}</tbody>
+    </table>
+  </div>
+}
+
 const TILE_LABELS = { ground: '地上', high: '高台', blocked: '配置不可', start: '出現口', end: '防衛地点', hole: '穴', special: '特殊マス' }
 type TileKind = keyof typeof TILE_LABELS
 function tileKind(tile: MapTile | undefined): TileKind {
@@ -108,18 +133,28 @@ function tileKind(tile: MapTile | undefined): TileKind {
   return tile.heightType === 'HIGHLAND' ? 'high' : 'ground'
 }
 
-export function MapBoard({ detail, name }: { detail: MapDetail; name: string }) {
+interface MapBoardProps {
+  detail: MapDetail
+  name: string
+  markedEntrance?: { row: number; col: number }
+  routeDescription?: string
+  routeLegend?: ReactNode
+  children?: ReactNode
+}
+
+export function MapBoard({ detail, name, markedEntrance, routeDescription, routeLegend, children }: MapBoardProps) {
   const blockedPatternId = useId()
   if (!detail.grid.length || !detail.grid[0]?.length) return <p className="map-empty">マス配置のデータがありません</p>
   const rows = detail.grid.length
   const columns = detail.grid[0].length
-  const entrances = getMapEntrances(detail)
+  const entrances = getMapEntrances(detail).filter((entrance) => !markedEntrance
+    || entrance.row === markedEntrance.row && entrance.col === markedEntrance.col)
   const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
   const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
   return <figure className="map-board-figure">
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
-      <desc>{entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`).join('。')}</desc>
+      <desc>{[...entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`), routeDescription].filter(Boolean).join('。')}</desc>
       <defs>
         <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="6.4" height="6.4" />
@@ -137,7 +172,8 @@ export function MapBoard({ detail, name }: { detail: MapDetail; name: string }) 
           {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
         </g>
       }))}
+      {children}
     </svg>
-    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}</figcaption>
+    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}{routeLegend}</figcaption>
   </figure>
 }
