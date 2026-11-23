@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-22T20:06:43.693Z",
+  "observedAt": "2026-11-23T07:51:31.499Z",
   "throughDate": "2026-11-22",
   "entries": [
     {
@@ -768,7 +768,7 @@
         "2026-11-02": 1,
         "2026-11-06": 3
       },
-      "total": 220
+      "total": 222
     },
     {
       "operatorId": "char_261_sddrag",
@@ -861,7 +861,7 @@
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%82%B9%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC",
       "coveredFrom": "2026-10-24",
       "counts": {},
-      "total": 689
+      "total": 690
     },
     {
       "operatorId": "char_265_sophia",
@@ -1117,7 +1117,7 @@
       "counts": {
         "2026-11-06": 1
       },
-      "total": 4406
+      "total": 4407
     },
     {
       "operatorId": "char_367_swllow",
@@ -1290,7 +1290,7 @@
       "counts": {
         "2026-11-09": 1
       },
-      "total": 74
+      "total": 75
     },
     {
       "operatorId": "char_388_mint",
@@ -2342,7 +2342,7 @@
         "2026-11-13": 3,
         "2026-11-16": 2
       },
-      "total": 824
+      "total": 825
     },
     {
       "operatorId": "char_112_siege",
@@ -2387,7 +2387,7 @@
         "2026-11-20": 1,
         "2026-11-21": 2
       },
-      "total": 1538
+      "total": 1542
     },
     {
       "operatorId": "char_479_sleach",
@@ -2479,7 +2479,7 @@
         "2026-11-20": 7,
         "2026-11-21": 7
       },
-      "total": 872
+      "total": 875
     },
     {
       "operatorId": "char_4087_ines",
@@ -2838,7 +2838,7 @@
         "2026-11-06": 1,
         "2026-11-17": 1
       },
-      "total": 492
+      "total": 494
     },
     {
       "operatorId": "char_245_cello",
@@ -2891,7 +2891,7 @@
         "2026-11-17": 3,
         "2026-11-20": 3
       },
-      "total": 1396
+      "total": 1397
     },
     {
       "operatorId": "char_1502_crosly",
@@ -3657,14 +3657,14 @@
         "2026-11-21": 5,
         "2026-11-22": 7
       },
-      "total": 321
+      "total": 326
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
       "coveredFrom": "2026-10-24",
       "counts": {},
-      "total": 870
+      "total": 871
     },
     {
       "operatorId": "wiki:%E3%82%B8%E3%83%B3%E3%82%AA%E3%82%A6S%E3%82%AB%E3%82%BF%E3%83%91%E3%83%AB%E3%83%88",
@@ -3689,7 +3689,7 @@
         "2026-11-21": 2,
         "2026-11-22": 1
       },
-      "total": 124
+      "total": 128
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%8C%BB%E7%99%82)",
