@@ -128,17 +128,39 @@ export function extractMapGeometry(source) {
   return { grid: grid.map((row) => row.map((index) => translated.get(index))), tiles }
 }
 
+function routePosition(raw) {
+  const point = record(raw)
+  return point && Number.isSafeInteger(point.row) && Number.isSafeInteger(point.col)
+    ? { row: point.row, col: point.col } : null
+}
+
+function extractRouteCheckpoints(raw) {
+  // Upstream also encodes an empty list as {}. Null or malformed data stays unknown.
+  if (record(raw) && Object.keys(raw).length === 0) return []
+  if (!Array.isArray(raw) || raw.some(point => !text(record(point)?.type))) return null
+  return raw.map(point => {
+    const type = text(point.type)
+    return {
+      type,
+      position: type === 'MOVE' || type === 'APPEAR_AT_POS' ? routePosition(point.position) : null,
+      time: type.startsWith('WAIT') ? nonnegative(point.time) : null,
+    }
+  })
+}
+
 /** Keep original indices, including unusable routes, so actions still refer to the same entry. */
-export function extractMapRoutes(source) {
+export function extractMapRoutes(source, { includeGeometry = false } = {}) {
   const routes = record(source)?.routes
   if (!Array.isArray(routes)) return null
   return routes.map((raw) => {
     const route = record(raw)
     if (!route) return null
-    const start = record(route.startPosition)
     return {
-      startPosition: start && Number.isSafeInteger(start.row) && Number.isSafeInteger(start.col)
-        ? { row: start.row, col: start.col } : null,
+      startPosition: routePosition(route.startPosition),
+      ...(includeGeometry ? {
+        endPosition: routePosition(route.endPosition),
+        checkpoints: extractRouteCheckpoints(route.checkpoints),
+      } : {}),
     }
   })
 }
@@ -399,15 +421,17 @@ export function buildMapDatabase({
     }
     const options = record(record(source)?.options)
     const detailFile = mapDetailFile(levelId)
+    const includeGeometry = zoneId.startsWith('act50side_') && base.code.startsWith('TD-')
     const enemies = enemyIds.map((id) => ({ id, count: supported ? analysis.counts.get(id) ?? 0 : null }))
     details[detailFile].maps[levelId] = {
       levelId, ...geometry, life: nonnegative(options?.maxLifePoint), initialCost: nonnegative(options?.initialCost),
-      deployLimit: nonnegative(options?.characterLimit), enemies, routes: extractMapRoutes(source), waves,
+      deployLimit: nonnegative(options?.characterLimit), enemies, routes: extractMapRoutes(source, { includeGeometry }), waves,
     }
     return {
       ...base, status: supported ? 'supported' : 'excluded',
       spawnCount: supported ? enemies.reduce((sum, enemy) => sum + enemy.count, 0) : null,
       enemyIds, enemyRoutes: extractMapEnemyRoutes(source, waves, geometry), enemySpawnCounts: extractMapEnemySpawnCounts(source, waves),
+      ...(includeGeometry ? { hasRouteGeometry: true } : {}),
       features: extractMapFeatures(source, geometry), reasons, detailFile,
       ...(['lower-bound', 'expected-lower-bound'].includes(aggregation?.kind) ? { spawnAggregation: {
         kind: aggregation.kind, count: aggregation.count, reasons: aggregation.reasons,

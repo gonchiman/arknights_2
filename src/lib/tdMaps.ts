@@ -26,7 +26,10 @@ async function readTdDatabase(): Promise<TdMapDatabase> {
   const index = parseMapIndex(document.index)
   if (source.mode === 'local' && Date.parse(source.version) > Date.parse(index.generatedAt)) {
     const updated = selectTdMapIndex(await loadMapDatabase())
-    if (updated.maps.length > 0) return { index: updated, loadDetail: loadMapDetail }
+    // Use a complete event from one revision. Older snapshot generators stored only route starts.
+    if (updated.maps.length > 0 && updated.maps.every(map => map.hasRouteGeometry)) {
+      return { index: updated, loadDetail: loadMapDetail }
+    }
   }
   const details = parseMapDetailShard(document.details)
   if (index.generatedAt !== details.generatedAt) throw new Error('TDマップ一覧と詳細のデータ版が一致しません。')

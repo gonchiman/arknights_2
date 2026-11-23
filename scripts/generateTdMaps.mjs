@@ -12,6 +12,7 @@ export async function generateTdMaps(mapDirectory, outputPath = resolve(bundledM
   const source = await readJson(resolve(mapDirectory, 'index.json'))
   const index = parseMapIndex(selectTdMapIndex(source))
   if (!index.maps.length) throw new Error('指定のマップデータにはTDステージが含まれていません。')
+  if (index.maps.some(map => !map.hasRouteGeometry)) throw new Error('TD経路を収録したマップデータを再生成してください。')
   const details = { schemaVersion: 1, generatedAt: index.generatedAt, maps: {} }
   const files = new Set(index.maps.flatMap(map => map.detailFile ? [map.detailFile] : []))
   for (const file of files) {
