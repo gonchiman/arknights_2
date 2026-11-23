@@ -55,7 +55,13 @@ test('initial analysis uses finite duration only and exposes the standard graph/
   assert.match(text(markup), /持続時間・DPS未確定1件/)
   assert.match(text(markup), /通常攻撃型・1スキル1件/)
   assert.match(text(markup), /個別条件 DC3既定/)
+  assert.match(markup, /<button class="button" type="button">画像を保存<\/button>/)
   assert.doesNotMatch(markup, /NaN|Infinity|<table\b/)
+})
+
+test('empty analysis cannot save an image', () => {
+  const markup = render(Page, { rows: [], loading: false })
+  assert.match(markup, /<button class="button" type="button" disabled="">画像を保存<\/button>/)
 })
 
 test('the table retains a permanent duration, zero DPS and signed initial SP gap in separate columns', () => {

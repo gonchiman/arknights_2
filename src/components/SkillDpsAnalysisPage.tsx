@@ -7,10 +7,12 @@ import {
   type SkillDpsAnalysisAxis, type SkillDpsAnalysisConfig, type SkillDpsAnalysisMetric,
   type SkillDpsDamageType, type SkillDpsObservation, type SkillDpsSpRecovery,
 } from '../lib/skillDpsAnalysis'
+import type { SkillDpsChartImageSnapshot } from '../lib/skillDpsChartImage'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel, type TableChartView } from './PageViewSwitch'
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
+import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsAnalysisPage.css'
 
@@ -69,6 +71,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const [view, setView] = useState<TableChartView>('chart')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
   const [showFit, setShowFit] = useState(true)
+  const [imageSnapshot, setImageSnapshot] = useState<SkillDpsChartImageSnapshot | null>(null)
   const [draft, setDraft] = useState<DraftConfig>(() => ({
     ...DEFAULT_SKILL_DPS_ANALYSIS_CONFIG,
     defense: String(DEFAULT_SKILL_DPS_ANALYSIS_CONFIG.defense),
@@ -180,6 +183,14 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
             {view === 'chart' && <label className="skill-dps-inline-label"><input type="checkbox" checked={showFit}
               onChange={event => setShowFit(event.target.checked)} />回帰線</label>}
             <span className="skill-dps-count" role="status">使用 {COUNT.format(analysis.observations.length)}件 ／ 除外 {COUNT.format(excludedCount)}件</span>
+            {view === 'chart' && <button className="button" type="button"
+              disabled={loading || busy || Boolean(sourceError) || analysis.observations.length === 0}
+              onClick={() => setImageSnapshot({
+                config: { ...applied }, axis, metric, showFit,
+                points: analysis.observations.map(({ id, x, y }) => ({ id, x, y })),
+                fit: chartFit ? { ...chartFit } : null,
+                correlation: analysis.correlation, rSquared: fit?.rSquared ?? null,
+              })}>画像を保存</button>}
           </div>
           <dl className="skill-dps-statistics">
             <div><dt>Pearson r</dt><dd>{formatEstimate(analysis.correlation)}</dd></div>
@@ -201,6 +212,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
         </div>
       </AnalysisTabPanel>
     </>}
+    {imageSnapshot && <SkillDpsAnalysisImageDialog snapshot={imageSnapshot} onClose={() => setImageSnapshot(null)} />}
   </PageLayout>
 }
 

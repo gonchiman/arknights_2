@@ -12,3 +12,6 @@
 .skill-dps-chart-point-key { width: 8px; height: 8px; border-radius: 50%; background: var(--link); }
 .skill-dps-chart-fit-key { width: 20px; height: 2px; background: var(--text-soft); }
 .skill-dps-chart-empty { padding: 20px 0; margin: 0; color: var(--text-soft); font-size: 13px; }
+
+.skill-dps-chart.is-image .skill-dps-chart-tick { fill: #555; font-size: 11px; }
+.skill-dps-chart.is-image .skill-dps-chart-label { fill: #444; font-size: 12px; font-weight: 700; }
