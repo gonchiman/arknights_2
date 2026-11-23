@@ -10,6 +10,7 @@ interface Props {
   yLabel: string
   fit: { slope: number; intercept: number } | null
   showFit: boolean
+  imageSize?: { width: number; height: number }
 }
 
 const HEIGHT = 310
@@ -18,17 +19,21 @@ const compact = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFra
 const formatTick = (value: number) => Math.abs(value) >= 10_000 ? compact.format(value) : number.format(value)
 
 /** The graph deliberately has no point selection, tooltip, pan or zoom. */
-export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit }: Props) {
+export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit, imageSize }: Props) {
   const id = useId()
   const container = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(640)
+  const [measuredWidth, setMeasuredWidth] = useState(640)
+  const forImage = imageSize !== undefined
+  const width = imageSize?.width ?? measuredWidth
+  const height = imageSize?.height ?? HEIGHT
   useLayoutEffect(() => {
+    if (forImage) return
     const element = container.current
     if (!element) return
     let frame = 0
     const measure = () => {
       const next = Math.floor(element.clientWidth)
-      if (next > 0) setWidth(previous => previous === next ? previous : next)
+      if (next > 0) setMeasuredWidth(previous => previous === next ? previous : next)
     }
     measure()
     const observer = new ResizeObserver(() => {
@@ -37,7 +42,7 @@ export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit }: 
     })
     observer.observe(element)
     return () => { observer.disconnect(); cancelAnimationFrame(frame) }
-  }, [])
+  }, [forImage])
 
   const values = useMemo(() => points.filter(point => Number.isFinite(point.x) && Number.isFinite(point.y)), [points])
   const xAxis = useMemo(() => getHpChartValueAxis(values.map(point => point.x)), [values])
@@ -45,7 +50,7 @@ export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit }: 
   const left = width < 430 ? 54 : 66
   const right = Math.max(left + 1, width - 20)
   const top = 29
-  const bottom = HEIGHT - 53
+  const bottom = height - (forImage ? 28 : 53)
   const x = (value: number) => left + (value - xAxis.lowerLimit) / (xAxis.upperLimit - xAxis.lowerLimit) * (right - left)
   const y = (value: number) => bottom - (value - yAxis.lowerLimit) / (yAxis.upperLimit - yAxis.lowerLimit) * (bottom - top)
   const ticks = (axis: typeof xAxis) => width >= 430 || axis.yTicks.length <= 4
@@ -57,10 +62,10 @@ export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit }: 
     return min !== max && Number.isFinite(first) && Number.isFinite(last) ? { min, max, first, last } : null
   }, [showFit, fit, values])
 
-  return <div className="skill-dps-chart" ref={container}>
+  return <div className={`skill-dps-chart${forImage ? ' is-image' : ''}`} ref={container} style={imageSize}>
     {values.length === 0 ? <p className="skill-dps-chart-empty" role="status">分析対象は0件です。</p>
       : <>
-        <svg className="skill-dps-chart-svg" width={width} height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`}
+        <svg className="skill-dps-chart-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={imageSize}
           role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} focusable="false">
           <title id={`${id}-title`}>{`${xLabel}と${yLabel}`}</title>
           <desc id={`${id}-description`}>横軸は{xLabel}、縦軸は{yLabel}。{values.length}件のスキルを点で表示します。
@@ -80,12 +85,12 @@ export function SkillDpsAnalysisChart({ points, xLabel, yLabel, fit, showFit }: 
           {fitEnds && <g clipPath={`url(#${id}-clip)`}><line className="skill-dps-chart-fit"
             x1={x(fitEnds.min)} x2={x(fitEnds.max)} y1={y(fitEnds.first)} y2={y(fitEnds.last)} /></g>}
           <text className="skill-dps-chart-label" x={left} y={14}>{yLabel}</text>
-          <text className="skill-dps-chart-label" x={(left + right) / 2} y={HEIGHT - 7} textAnchor="middle">{xLabel}</text>
+          {!forImage && <text className="skill-dps-chart-label" x={(left + right) / 2} y={height - 7} textAnchor="middle">{xLabel}</text>}
         </svg>
-        <div className="skill-dps-chart-legend" aria-label="凡例">
+        {!forImage && <div className="skill-dps-chart-legend" aria-label="凡例">
           <span><i className="skill-dps-chart-point-key" aria-hidden="true" />スキル</span>
           {fitEnds && <span><i className="skill-dps-chart-fit-key" aria-hidden="true" />単回帰</span>}
-        </div>
+        </div>}
       </>}
   </div>
 }

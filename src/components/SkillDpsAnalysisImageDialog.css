@@ -1,0 +1,12 @@
+.skill-dps-image-content { display: grid; grid-template-rows: minmax(0, 1fr) 34px; }
+.skill-dps-image-statistics {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  color: #555;
+  font-size: 11px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.skill-dps-image-statistics > span { white-space: nowrap; }
