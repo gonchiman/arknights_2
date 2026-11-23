@@ -89,6 +89,7 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   const [excluded, setExcluded] = useState<Set<string>>(() => new Set())
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
   const duration = timeline?.duration ?? 0
+  const displayedSecond = Math.floor(seconds)
   const playing = startTime !== null && active
   useEffect(() => {
     if (startTime === null) return
@@ -121,6 +122,11 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   const columns = detail.grid[0].length
   const { cells, moving, waiting, hidden } = groupPositions(getTdEnemyPositions(timeline, seconds), excluded, rows)
   const selected = selectedCell === null ? undefined : cells.get(selectedCell)
+  function seek(second: number) {
+    setStartTime(null)
+    setSeconds(Math.min(duration, Math.max(0, second)))
+    setSelectedCell(null)
+  }
   function togglePlayback() {
     if (playing) { setStartTime(null); return }
     const from = seconds >= duration ? 0 : seconds
@@ -139,18 +145,20 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   }
   return <div className="td-time-panel">
     <div className="td-time-heading"><label htmlFor={sliderId}>マップ開始から</label>
-      <output htmlFor={sliderId} aria-live="off">{Math.floor(seconds)} 秒</output></div>
+      <output htmlFor={sliderId} aria-live="off">{displayedSecond} 秒</output></div>
     <div className="td-time-transport">
       <button type="button" className="button secondary" disabled={duration === 0}
         onClick={togglePlayback}>{playing ? '一時停止' : '再生'}</button>
       <div className="td-time-seek">
-        <input id={sliderId} type="range" min={0} max={duration} step={1} value={Math.floor(seconds)}
-          aria-valuetext={`${Math.floor(seconds)}秒`} onChange={event => {
-            setStartTime(null)
-            setSeconds(event.currentTarget.valueAsNumber)
-            setSelectedCell(null)
-          }} />
-        <div className="td-time-limits" aria-hidden="true"><span>0 秒</span><span>{duration} 秒</span></div>
+        <button type="button" className="button secondary" aria-label="1秒戻す"
+          disabled={displayedSecond === 0} onClick={() => seek(displayedSecond - 1)}>−1秒</button>
+        <div className="td-time-range">
+          <input id={sliderId} type="range" min={0} max={duration} step={1} value={displayedSecond}
+            aria-valuetext={`${displayedSecond}秒`} onChange={event => seek(event.currentTarget.valueAsNumber)} />
+          <div className="td-time-limits" aria-hidden="true"><span>0 秒</span><span>{duration} 秒</span></div>
+        </div>
+        <button type="button" className="button secondary" aria-label="1秒進める"
+          disabled={displayedSecond === duration} onClick={() => seek(displayedSecond + 1)}>＋1秒</button>
       </div>
     </div>
     <div className="td-time-heading"><span>表示する敵</span>
