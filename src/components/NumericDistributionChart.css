@@ -1,0 +1,23 @@
+.numeric-distribution-chart { width: 100%; min-width: 0; }
+.numeric-distribution-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.numeric-distribution-svg { display: block; max-width: none; overflow: visible; }
+.numeric-distribution-tick,
+.numeric-distribution-label,
+.numeric-distribution-value { fill: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.numeric-distribution-label { fill: var(--text-soft); font-weight: 500; }
+.numeric-distribution-value { fill: var(--text-soft); }
+.numeric-distribution-grid { stroke: var(--border); stroke-width: 1; }
+.numeric-distribution-axis { stroke: var(--border-strong); stroke-width: 1; }
+.numeric-distribution-bar { fill: var(--link); opacity: .7; }
+.numeric-distribution-bar.is-overflow { fill: var(--danger); }
+.numeric-distribution-whisker { stroke: var(--link); stroke-width: 1.5; }
+.numeric-distribution-box { fill: var(--link); fill-opacity: .12; stroke: var(--link); stroke-width: 1.5; }
+.numeric-distribution-median { stroke: var(--link); stroke-width: 2.5; }
+.numeric-distribution-outlier { fill: var(--surface); stroke: var(--link); stroke-width: 1.5; }
+.numeric-distribution-empty { margin: 0; padding: 20px 0; color: var(--text-soft); }
+.numeric-distribution-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; color: var(--text-soft); font-size: 12px; }
+.numeric-distribution-legend > span { display: inline-flex; align-items: center; gap: 7px; }
+.numeric-distribution-box-key { width: 15px; height: 10px; border: 1.5px solid var(--link); background: color-mix(in srgb, var(--link) 12%, transparent); }
+.numeric-distribution-median-key { width: 2px; height: 12px; background: var(--link); }
+.numeric-distribution-whisker-key { width: 18px; height: 1.5px; background: var(--link); }
+.numeric-distribution-outlier-key { width: 7px; height: 7px; border: 1.5px solid var(--link); border-radius: 50%; }
