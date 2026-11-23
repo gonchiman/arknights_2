@@ -6,30 +6,44 @@
 }
 
 .power-year-page .standard-page-settings { gap: 6px 12px; }
-.power-year-settings, .power-year-tools, .power-year-key, .power-year-total, .power-year-status {
+.power-year-page .standard-page-settings > .page-output-header { flex: 0 0 100%; }
+.power-year-page .page-output-heading h2 { margin: 0; font-size: 14px; }
+.power-year-settings, .power-year-period, .power-year-tools, .power-year-summary, .power-year-key, .power-year-total, .power-year-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
 }
 .power-year-settings > strong { font-size: 13px; font-weight: 600; }
-.power-year-settings .page-view-switch button { font-size: 12px; }
+.power-year-page .page-view-switch button { font-size: 12px; }
+.power-year-settings select {
+  min-height: 34px;
+  max-width: 100%;
+  padding: 3px 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+.power-year-period { gap: 8px 18px; }
 .power-year-meta {
   display: flex;
-  flex: 0 0 100%;
   flex-wrap: wrap;
   gap: 2px 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 12px;
 }
-.power-year-tools { justify-content: space-between; }
+.power-year-tools, .power-year-summary { justify-content: space-between; }
+.power-year-summary h2 { margin: 0; font-size: 16px; }
 .power-year-key, .power-year-note { color: var(--text-soft); font-size: 12px; }
 .power-year-key > span { display: inline-flex; gap: 5px; align-items: center; }
 .power-year-key i { width: 13px; height: 8px; }
 .power-year-color-overall { background: var(--power-year-overall); }
 .power-year-color-physical { background: var(--power-year-physical); }
 .power-year-color-arts { background: var(--power-year-arts); }
-.power-year-note { margin: 0; }
+.power-year-note { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .power-year-total { border-top: 1px solid var(--border); padding-top: 8px; font-size: 13px; }
 
 .power-year-chart {
@@ -54,18 +68,27 @@
 .power-year-line > strong, .power-year-year { font-weight: 600; }
 .power-year-count, .power-year-axis { color: var(--text-muted); }
 .power-year-track {
+  position: relative;
   align-self: stretch;
   display: flex;
   align-items: center;
   border-inline: 1px solid var(--border);
   background: repeating-linear-gradient(to right, transparent 0 calc(20% - 1px), var(--border) calc(20% - 1px) 20%);
 }
+.power-year-chart.is-timed { --value-width: 5rem; }
+.power-year-chart.has-negative-and-positive .power-year-track::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 50%;
+  border-left: 1px solid var(--border-strong);
+}
 .power-year-bar { display: block; height: 13px; }
 .power-year-chart.is-split .power-year-bars { padding-block: 3px; border-bottom: 1px solid var(--border); }
 .power-year-chart.is-split .power-year-bars .power-year-line { min-height: 22px; }
 .power-year-chart.is-split .power-year-bar { height: 9px; }
 .power-year-axis { min-height: 24px; font-size: 12px; }
-.power-year-axis > div { grid-column: 2; display: flex; justify-content: space-between; }
+.power-year-axis > div { position: relative; grid-column: 2; display: flex; justify-content: space-between; }
+.power-year-axis-zero { position: absolute; left: 50%; transform: translateX(-50%); }
 
 .power-year-table.damage-two-table { min-width: 0; table-layout: auto; }
 .power-year-table.damage-two-table th:first-child { width: auto; }
@@ -73,8 +96,14 @@
 .power-year-table tfoot > tr > * { border-top: 1px solid var(--border); border-bottom: 0; background: var(--surface-soft); font-weight: 600; }
 
 @media (max-width: 540px) {
+  .power-year-page .analysis-tabs-underline { column-gap: 7px; }
   .power-year-chart { --year-width: 2.2rem; --value-width: 2.8rem; --count-width: 3.8rem; }
+  .power-year-chart.is-timed { --value-width: 4rem; }
   .power-year-line { column-gap: 5px; }
   .power-year-head { font-size: 11px; }
   .power-year-table :is(th, td) { padding: 7px 5px; }
+}
+
+@media (pointer: coarse) {
+  .power-year-settings select { min-height: 44px; }
 }

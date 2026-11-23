@@ -2,15 +2,17 @@ import type { SkillRecord } from '../types/skill.ts'
 import type { DamageCalculatorThreeOutput } from './damageCalculatorThree.ts'
 import {
   evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries,
-  type DamageThreeComparisonCommon,
+  type DamageThreeComparisonCommon, type DamageThreeComparisonEntry,
 } from './damageCalculatorThreeComparison.ts'
 import type { CoverageSnapshot } from './damageCalculatorThreeCoverageHistory.ts'
+import { evaluateTimedPowerSkill } from './damageThreeTimedSkills.ts'
 import { calculateBoxPlotStatistics } from './enemyStatistics.ts'
 import { getOperatorReleaseDateJp } from './operatorReleaseDates.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
 
 export type PowerYearEnemy = 'zero' | 'standard'
 export type PowerYearUnit = 'operator' | 'skill'
+export type PowerYearMetric = 'dps' | 'total' | 'gain'
 const ENEMIES: Record<PowerYearEnemy, DamageThreeComparisonCommon> = {
   zero: { defense: 0, resistance: 0, enemyCount: 1 },
   standard: { defense: 120, resistance: 20, enemyCount: 1 },
@@ -34,9 +36,13 @@ export interface PowerYearResult {
 }
 
 type PowerAttribute = 'PHYSICAL' | 'ARTS' | 'OTHER'
+interface PowerValue {
+  value: number
+  attribute: PowerAttribute
+}
 interface PowerObservation {
   year: number
-  best: { dps: number; attribute: PowerAttribute } | null
+  best: PowerValue | null
 }
 
 function getPowerAttribute(output: DamageCalculatorThreeOutput, damageOverTimeDps: number | null): PowerAttribute {
@@ -49,23 +55,28 @@ function getPowerAttribute(output: DamageCalculatorThreeOutput, damageOverTimeDp
   return type
 }
 
-function summarizeDps(values: number[]): PowerSample {
+function summarizeValues(values: number[]): PowerSample {
   return { count: values.length, median: calculateBoxPlotStatistics(values)?.median ?? null }
 }
 
 function summarizePower(year: number | null, observations: PowerObservation[]): PowerYearRow {
   const samples = observations.flatMap(observation => observation.best ? [observation.best] : [])
-  const physical = summarizeDps(samples.filter(sample => sample.attribute === 'PHYSICAL').map(sample => sample.dps))
-  const arts = summarizeDps(samples.filter(sample => sample.attribute === 'ARTS').map(sample => sample.dps))
+  const physical = summarizeValues(samples.filter(sample => sample.attribute === 'PHYSICAL').map(sample => sample.value))
+  const arts = summarizeValues(samples.filter(sample => sample.attribute === 'ARTS').map(sample => sample.value))
   return {
-    year, rosterCount: observations.length, ...summarizeDps(samples.map(sample => sample.dps)),
+    year, rosterCount: observations.length, ...summarizeValues(samples.map(sample => sample.value)),
     physical, arts, otherCount: samples.length - physical.count - arts.count,
   }
 }
 
+function selectBest(observation: PowerObservation, value: number, attribute: PowerAttribute) {
+  if (!observation.best || value > observation.best.value) observation.best = { value, attribute }
+  else if (value === observation.best.value && attribute !== observation.best.attribute) observation.best.attribute = 'OTHER'
+}
+
 export function buildDamageThreePowerByYear(
   rows: readonly SkillRecord[], snapshot: CoverageSnapshot, enemy: PowerYearEnemy,
-  unit: PowerYearUnit = 'operator',
+  unit: PowerYearUnit = 'operator', metric: PowerYearMetric = 'dps', seconds = 60, incomingInterval: number | null = 2,
 ): PowerYearResult {
   const roster = new Map<string, PowerObservation>()
   const supportedSkills = new Map<string, PowerObservation>()
@@ -87,17 +98,29 @@ export function buildDamageThreePowerByYear(
   }
 
   const supportedRows = rows.filter(skill => supportedSkills.has(createSkillJsonSelectionKey(skill)))
+  const timedEntries = new Map<string, DamageThreeComparisonEntry[]>()
   for (const entry of getDamageThreeComparisonEntries(supportedRows)) {
-    if (entry.kind !== 'NORMAL' || entry.phaseIndex !== 2 || entry.operatorLevel !== 90 || entry.levelIndex !== 9) continue
-    const observation = supportedSkills.get(createSkillJsonSelectionKey(entry.skill))!
+    if (entry.phaseIndex !== 2 || entry.operatorLevel !== 90 || entry.levelIndex !== 9) continue
+    const skillKey = createSkillJsonSelectionKey(entry.skill)
+    if (metric !== 'dps') {
+      const group = timedEntries.get(skillKey)
+      if (group) group.push(entry)
+      else timedEntries.set(skillKey, [entry])
+      continue
+    }
+    if (entry.kind !== 'NORMAL') continue
     const result = evaluateDamageThreeComparisonEntry(entry, ENEMIES[enemy])
     const dps = result.combinedDps
     if (!result.output || result.errors.length || result.output.hasUnsupportedTalentDamage
       || dps === null || !Number.isFinite(dps) || dps <= 0) continue
 
-    const attribute = getPowerAttribute(result.output, result.damageOverTimeDps)
-    if (!observation.best || dps > observation.best.dps) observation.best = { dps, attribute }
-    else if (dps === observation.best.dps && attribute !== observation.best.attribute) observation.best.attribute = 'OTHER'
+    selectBest(supportedSkills.get(skillKey)!, dps, getPowerAttribute(result.output, result.damageOverTimeDps))
+  }
+  for (const [key, stages] of timedEntries) {
+    const result = evaluateTimedPowerSkill(stages, ENEMIES[enemy], seconds, incomingInterval)
+    if (!result) continue
+    const value = metric === 'gain' ? result.total - result.baseline : result.total
+    if (Number.isFinite(value)) selectBest(supportedSkills.get(key)!, value, result.attribute)
   }
 
   const byYear = new Map<number, PowerObservation[]>()

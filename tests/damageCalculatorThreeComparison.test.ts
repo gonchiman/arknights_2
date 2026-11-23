@@ -7,6 +7,7 @@ import { buildDamageCalculatorThreeOutput, getDamageCalculatorThreeStructures,
 import { getDamageThreeComparisonEntries, evaluateDamageThreeComparisonEntry,
   type DamageThreeComparisonEntry } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { buildDamageThreePowerByYear } from '../src/lib/damageThreePowerByYear.ts'
+import { evaluateTimedPowerSkill } from '../src/lib/damageThreeTimedSkills.ts'
 import type { CoverageSnapshot } from '../src/lib/damageCalculatorThreeCoverageHistory.ts'
 import type { ExpandedOperatorSource } from '../src/lib/expandedCombatTypes.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
@@ -108,6 +109,45 @@ function entry(operatorId: string, skillIndex: number, stageId?: string): Damage
   assert.ok(value, `${operatorId}/S${skillIndex}/${stageId}`)
   return value
 }
+
+test('ブレイズS3は固定の8打と爆発を別時刻に計上し、効果終了まで通常攻撃を停止する', () => {
+  const skill = record('char_017_huang', 3)
+  const stages = getDamageThreeComparisonEntries([skill])
+  const enemy = { defense: 120, resistance: 20, enemyCount: 1 }
+  const at = (seconds: number) => {
+    const result = evaluateTimedPowerSkill(stages, enemy, seconds, null)
+    assert.ok(result)
+    return result.total
+  }
+  const cut = entry(skill.operatorId, 3, 'normal'), burst = entry(skill.operatorId, 3, 'end')
+  let sum = at(10)
+  assert.equal(at(11.4), sum)
+  for (let i = 1; i <= 8; i++) {
+    sum += evaluateDamageThreeComparisonEntry(cut, enemy, { 'guard.currentAtkBonus': 0.8 * i / 9 }).perAttack!
+    assert.ok(Math.abs(at(10.4 + i + 0.01) - sum) < 1e-6)
+  }
+  assert.equal(at(19), sum)
+  sum += evaluateDamageThreeComparisonEntry(burst, enemy).perAttack!
+  assert.equal(at(19.01), sum)
+  assert.equal(at(20), sum)
+})
+
+test('期間指標は1スキルを1件、1人を指標ごとの最高値で集計し、未発動の増加0も採用する', () => {
+  const skills = [1, 2, 3].map(index => record('char_017_huang', index))
+  const summary = (rows: SkillRecord[], metric: 'gain' | 'total', seconds: number, unit: 'skill' | 'operator') =>
+    buildDamageThreePowerByYear(rows, coverageV11, 'zero', unit, metric, seconds, null).total
+  const delayed = summary([skills[1]], 'gain', 30, 'skill')
+  assert.deepEqual([delayed.count, delayed.median], [1, 0])
+  assert.ok(summary([skills[1]], 'gain', 120, 'skill').median! > 0)
+  for (const metric of ['total', 'gain'] as const) {
+    const values = skills.map(skill => summary([skill], metric, 60, 'skill').median!).sort((a, b) => a - b)
+    const perSkill = summary(skills, metric, 60, 'skill')
+    const perOperator = summary(skills, metric, 60, 'operator')
+    assert.deepEqual([perSkill.rosterCount, perSkill.count, perSkill.physical.count, perSkill.median], [393, 3, 3, values[1]])
+    assert.deepEqual([perOperator.rosterCount, perOperator.count, perOperator.median], [131, 1, values[2]])
+    assert.equal(summary([], metric, 60, 'skill').median, null)
+  }
+})
 function evaluate(operatorId: string, skillIndex: number, stageId?: string,
   overrides: Parameters<typeof evaluateDamageThreeComparisonEntry>[2] = {}) {
   return evaluateDamageThreeComparisonEntry(entry(operatorId, skillIndex, stageId), common, overrides)
@@ -511,4 +551,57 @@ test('配置後の強化・一撃だけの強化・命中数による変化を�
   assert.equal(ammunition.durationSeconds, null)
   assert.equal(ammunition.totalDamage, null)
   assert.match(ammunition.totalDamageReason!, /弾薬/)
+})
+
+test('配置後の次撃強化は通常攻撃を置き換える', () => {
+  const enemy = { defense: 120, resistance: 20, enemyCount: 1 }
+  const blaze = entry('char_017_huang', 1)
+  const normal = evaluateDamageThreeComparisonEntry(blaze, enemy, {}, { normalAttack: true })
+  const next = evaluateDamageThreeComparisonEntry(blaze, enemy)
+  const threeAttacks = normal.output!.attackInterval! * 3 + 0.01
+  const result = evaluateTimedPowerSkill([blaze], enemy, threeAttacks, null)!
+  assert.equal(result.baseline, normal.perAttack! * 3)
+  assert.equal(result.total, 2 * normal.perAttack! + next.perAttack!)
+  assert.equal(result.attribute, 'PHYSICAL')
+
+})
+
+test('ウルピアヌスの錨1発に通常攻撃を二重計上せず、発動時刻を扱えるS2のみ期間集計する', () => {
+  const enemy = { defense: 120, resistance: 20, enemyCount: 1 }
+  const anchor = entry('char_4145_ulpia', 1)
+  assert.ok(evaluateDamageThreeComparisonEntry(anchor, enemy).perAttack! > 0)
+  assert.equal(evaluateTimedPowerSkill([anchor], enemy, 60, 2), null)
+  const permanent = [entry('char_4145_ulpia', 2)]
+  assert.equal(evaluateTimedPowerSkill(permanent, enemy, 60, 2)!.gain, 0)
+  assert.ok(evaluateTimedPowerSkill(permanent, enemy, 120, 2)!.gain > 0)
+})
+
+test('被撃を起点とする反撃と防御回復を区別し、スキル終了までの通常攻撃停止も算入する', () => {
+  const enemy = { defense: 120, resistance: 20, enemyCount: 1 }
+  const hoshi = entries.filter(e => e.skill.operatorId === 'char_136_hsguma' && e.skill.skillIndex === 2)
+  const counter = evaluateDamageThreeComparisonEntry(hoshi.find(e => e.stageId === 'counter')!, enemy).perAttack!
+  const noIncoming = evaluateTimedPowerSkill(hoshi, enemy, 30, null)!
+  assert.equal(noIncoming.gain, 0)
+  for (const period of [2, 4]) {
+    const withIncoming = evaluateTimedPowerSkill(hoshi, enemy, 30, period)!
+    assert.equal(withIncoming.baseline, noIncoming.baseline)
+    assert.equal(withIncoming.gain, Math.floor(29 / period) * counter)
+  }
+  const nian = [entry('char_2014_nian', 2)]
+  assert.ok(evaluateTimedPowerSkill(nian, enemy, 30, null)!.gain < 0)
+  assert.equal(evaluateTimedPowerSkill(nian, enemy, 30, 2)!.attribute, 'OTHER')
+  const mudrock = [entry('char_311_mudrok', 2)]
+  assert.equal(evaluateTimedPowerSkill(mudrock, enemy, 30, null)!.gain, 0)
+  assert.ok(evaluateTimedPowerSkill(mudrock, enemy, 30, 2)!.gain > 0)
+})
+
+test('配置時のみ発動する有限スキルは再発動せず、SPデータが失われたスキルは未算出にする', () => {
+  const enemy = { defense: 0, resistance: 0, enemyCount: 1 }
+  const skadi = [entry('char_263_skadi', 2)]
+  const gain = evaluateTimedPowerSkill(skadi, enemy, 60, null)!.gain
+  assert.ok(gain > 0)
+  assert.equal(evaluateTimedPowerSkill(skadi, enemy, 120, null)!.gain, gain)
+  const changed = structuredClone(entry('char_017_huang', 1))
+  changed.skill.skillLevels[changed.levelIndex].spData = {}
+  assert.equal(evaluateTimedPowerSkill([changed], enemy, 60, null), null)
 })
