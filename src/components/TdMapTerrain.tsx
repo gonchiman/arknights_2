@@ -59,24 +59,30 @@ function RouteBoard({ detail, name, selection }: {
   </>
 }
 
-interface RoutePanelProps { map: MapSummary; detail: MapDetail; enemyId: string; enemyName: string }
+interface RoutePanelProps { map: MapSummary; detail: MapDetail; enemyId: string; enemyName: string; onClear: () => void }
 
-export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName }: RoutePanelProps) {
+export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: RoutePanelProps) {
   const [selected, setSelected] = useState(0)
   const routes = getTdEnemyRoutes(map, detail, enemyId)
   const position = selected < routes.length ? selected : 0
   const selection = routes[position]
-  if (!selection) return <p className="map-empty" role="status">この敵の経路データはありません。</p>
   return <div className="td-map-route-panel">
-    <PageOutputHeader segments={['出現敵', '経路']}>
+    <PageOutputHeader segments={['地形', '経路']}>
+      <strong>{enemyName}</strong>
       {routes.length > 1 ? <label className="map-wave-picker">経路
         <select value={position} onChange={event => setSelected(Number(event.currentTarget.value))}>
           {routes.map(({ index, entrance }, i) => <option key={index} value={i}>
             {i + 1} / {routes.length}{entrance && `　出現口${entrance}`}
           </option>)}
         </select>
-      </label> : <span>経路{selection.entrance && `　出現口${selection.entrance}`}</span>}
+      </label> : selection?.entrance && <span>出現口{selection.entrance}</span>}
+      <button className="button secondary" type="button" onClick={onClear}>経路を消す</button>
     </PageOutputHeader>
-    <RouteBoard detail={detail} name={`${map.code} ${enemyName} 経路${position + 1}`} selection={selection} />
+    {selection
+      ? <RouteBoard detail={detail} name={`${map.code} ${enemyName} 経路${position + 1}`} selection={selection} />
+      : <>
+        <p className="map-empty" role="status">この敵の経路データはありません。</p>
+        <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+      </>}
   </div>
 }

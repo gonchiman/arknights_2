@@ -105,25 +105,23 @@
 .td-map-detail > .map-battle-facts { gap: 7px 18px; margin: 0; }
 .td-map-detail > .analysis-tab-content { min-width: 0; }
 
-.td-map-page .map-enemy-scroll { container-type: inline-size; }
-.td-map-page .map-enemy-table th:first-child { width: 20%; }
-.td-map-page .map-enemy-table .map-enemy-route-action {
-  width: 1%;
-  padding: 3px 6px;
-  white-space: nowrap;
+.map-enemy-table .map-enemy-route-row { cursor: pointer; }
+.map-enemy-table .map-enemy-route-row:hover,
+.map-enemy-table .map-enemy-route-row:focus-within {
+  background: var(--surface-hover);
 }
-.map-enemy-route-action button {
-  min-width: 6.5em;
-  min-height: 32px;
-  font-size: 12px;
-}
-.td-map-page .map-enemy-route-cell { padding: 0; }
-.map-enemy-route-content {
-  position: sticky;
-  left: 0;
-  box-sizing: border-box;
-  width: min(100%, calc(100cqi - 2px));
-  padding: 12px;
+.map-enemy-route-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
 }
 
 @container (max-width: 700px) {
@@ -149,5 +147,5 @@
 
 @media (pointer: coarse) {
   .td-map-search input { min-height: 44px; font-size: 16px; }
-  .map-enemy-route-action button { min-height: 44px; }
+  .map-enemy-route-row { height: 44px; }
 }
