@@ -5,12 +5,16 @@ import { AnalysisTabPanel } from './AnalysisTabs'
 import { MapBattleFacts, MapBoard, MapEnemyTable } from './MapInformation'
 import { MapWaveDetail } from './MapWaveInformation'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
+import { PageViewSwitch, viewLabel } from './PageViewSwitch'
+import { TdEnemyTimelinePanel } from './TdEnemyTimelinePanel'
 import { TdEnemyRoutePanel } from './TdMapTerrain'
 import './MapDatabase.css'
 import './TdMapPage.css'
 
 const TABS = [['terrain', '地形'], ['enemies', '出現敵'], ['waves', 'ウェーブ']] as const
+const TERRAIN_VIEWS = [['route', '経路'], ['timeline', '時間別の位置']] as const
 type MapTab = typeof TABS[number][0]
+type TerrainView = typeof TERRAIN_VIEWS[number][0]
 const PICKER_TITLE = 'マップを選ぶ'
 
 function useMapResource<T>(load: () => Promise<T>) {
@@ -88,9 +92,13 @@ function StageOutput({ map, index, tab, setTab }: {
   const resource = useMapResource(load)
   const detail = resource.data
   const [routeEnemyId, setRouteEnemyId] = useState<string | null>(null)
+  const [terrainView, setTerrainView] = useState<TerrainView>('route')
+  const hasTimeline = map.code === 'TD-8'
+  const showTimeline = hasTimeline && terrainView === 'timeline'
   const tabProps = { activeTab: tab, idPrefix: 'td-map' }
   function showTerrain(enemyId: string | null) {
     setRouteEnemyId(enemyId)
+    setTerrainView('route')
     setTab('terrain')
     document.getElementById(`${tabProps.idPrefix}-tab-terrain`)?.focus()
   }
@@ -101,13 +109,21 @@ function StageOutput({ map, index, tab, setTab }: {
     </header>
     {detail ? <>
       <MapBattleFacts map={map} detail={detail} />
-      <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab} />
+      <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab}
+        format={tab === 'terrain' && showTimeline ? viewLabel(TERRAIN_VIEWS, terrainView) : undefined} />
       <AnalysisTabPanel {...tabProps} tab="terrain">
-        {routeEnemyId === null
-          ? <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
-          : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
-            enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
-            onClear={() => showTerrain(null)} />}
+        {hasTimeline && <PageViewSwitch views={TERRAIN_VIEWS} selected={terrainView}
+          onChange={setTerrainView} label="地形の表示形式" />}
+        <div hidden={showTimeline}>
+          {routeEnemyId === null
+            ? <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+            : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
+              enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
+              onClear={() => showTerrain(null)} />}
+        </div>
+        {hasTimeline && <div hidden={!showTimeline}>
+          <TdEnemyTimelinePanel map={map} detail={detail} index={index} active={tab === 'terrain' && showTimeline} />
+        </div>}
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="enemies">
         <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels onSelectEnemy={showTerrain} />

@@ -102,7 +102,10 @@
   .map-information-columns { grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr); align-items: start; }
 }
 .map-board-figure { --map-blocked-line: #c2c6c5; margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
-.map-board { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
+.map-board, .map-board-layers { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
+.map-board-layers { position: relative; }
+.map-board-overlay { position: absolute; inset: 0; pointer-events: none; }
+.map-board-overlay button { pointer-events: auto; }
 .map-tile rect, .map-blocked-pattern rect { fill: var(--map-tile-fill); }
 .map-blocked-pattern path { fill: none; stroke: var(--map-blocked-line); }
 .map-tile text { fill: var(--text); font-family: inherit; font-size: 9px; font-weight: 600; }
