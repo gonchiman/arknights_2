@@ -34,10 +34,10 @@ export function PageOutputHeader({ segments = [], children }: {
 }
 
 export function PageOutputTabs<T extends string>({ format, ...tabProps }: Omit<AnalysisTabsProps<T>, 'appearance'> & {
-  format?: string | null
+  format?: string | readonly string[] | null
 }) {
   const segments = [viewLabel(tabProps.tabs, tabProps.activeTab)]
-  if (format) segments.push(format)
+  if (format) segments.push(...(typeof format === 'string' ? [format] : format))
   return <PageOutputHeader segments={segments}>
     <AnalysisTabs {...tabProps} appearance="underline" />
   </PageOutputHeader>
