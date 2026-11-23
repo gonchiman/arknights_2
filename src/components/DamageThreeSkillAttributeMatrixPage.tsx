@@ -1,6 +1,6 @@
 import { Fragment, useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
-import { evaluateDamageThreeSkillRankRow } from '../lib/damageThreeSkillRankMatrix'
+import { evaluateDamageThreeSkillRankRow, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
@@ -12,11 +12,13 @@ import { EnemyDataContent } from './EnemyPageShared'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { PageLayout, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel } from './PageViewSwitch'
+import DamageThreeSkillRankStatisticsTable, { STATISTIC_VIEWS, type StatisticView } from './DamageThreeSkillRankStatisticsTable'
+import { useDamageThreeSkillRankStatistics } from './useDamageThreeSkillRankStatistics'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
 import './DamageThreeSkillAttributeMatrixPage.css'
 
-const MODES = [['virtual', '主攻撃の属性変更'], ['actual', '実際のダメージ内訳']] as const
+const MODES = [['virtual', '主攻撃の属性変更'], ['actual', '実際のダメージ内訳'], ['statistics', '術耐性別の統計']] as const
 type Mode = typeof MODES[number][0]
 const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
 type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
@@ -45,6 +47,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
+  const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [selectedResistances, setSelectedResistances] = useState<number[]>([0, 50, 60])
   const tabId = useId()
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
@@ -66,7 +69,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     })
   }, [query, entries])
   const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
-  const commonUnit = commonValue(filtered, entry => UNIT[entry.kind])
+  const statsActive = mode === 'statistics'
+  const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
+  const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds)
+  const format = statsActive ? viewLabel(STATISTIC_VIEWS, statisticView) : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
   const pages = Math.ceil(filtered.length / PAGE_SIZE)
   const activePage = Math.min(page, Math.max(0, pages - 1))
   const start = activePage * PAGE_SIZE
@@ -83,7 +89,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
     {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
   </>}>
-    <PageOutputTabs {...tabs} tabs={MODES} onChange={setMode} label="比較方法" format={`表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`} />
+    <PageOutputTabs {...tabs} tabs={MODES} onChange={setMode} label="比較方法" format={format} />
     <AnalysisTabPanel {...tabs} tab={mode}>
       <div className="dc3-matrix-controls">
         <label className="dc3-matrix-search">スキル検索
@@ -104,7 +110,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           : !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
             <div className="dc3-matrix-display-options">
-              <fieldset className="dc3-matrix-option-group">
+              {!statsActive && <fieldset className="dc3-matrix-option-group">
                 <legend>表示する術耐性</legend>
                 <div className="dc3-matrix-option-buttons">
                   {distribution.resistanceThresholds.map(({ resistance }) => {
@@ -120,27 +126,37 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                     すべて表示
                   </button>
                 </div>
-              </fieldset>
+              </fieldset>}
               <div className="dc3-matrix-option-group">
-                <span className="dc3-matrix-option-label">属性の並べ方</span>
-                <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={setLayout} label="属性の並べ方" />
+                {statsActive ? <>
+                  <span className="dc3-matrix-option-label">統計の表示</span>
+                  <PageViewSwitch views={STATISTIC_VIEWS} selected={statisticView} onChange={setStatisticView} label="統計の表示" />
+                </> : <>
+                  <span className="dc3-matrix-option-label">属性の並べ方</span>
+                  <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={setLayout} label="属性の並べ方" />
+                </>}
               </div>
             </div>
-            <div className="dc3-matrix-table-heading">
-              <h2>{mode === 'virtual' ? '出現順位別の主攻撃ダメージ' : '出現順位別の直接ダメージ内訳'}</h2>
-              <nav aria-label="スキル一覧のページ切り替え">
-                <span aria-live="polite">{start + 1}–{start + pageEntries.length} / {filtered.length}件</span>
-                {pages > 1 && <>
-                  <button type="button" className="button secondary" disabled={activePage === 0}
-                    onClick={() => setPage(activePage - 1)}>前へ</button>
-                  <button type="button" className="button secondary" disabled={activePage + 1 >= pages}
-                    onClick={() => setPage(activePage + 1)}>次へ</button>
-                </>}
-              </nav>
-            </div>
-            <SkillDamageTable entries={pageEntries} pairs={distribution.resistanceThresholds} mode={mode}
-              selectedResistances={selectedResistances} stacked={layout === 'rows'}
-              showLevel={commonLevel === null} showUnit={commonUnit === null} />
+            {statsActive ? (
+              statistics ? <DamageThreeSkillRankStatisticsTable rows={statistics} view={statisticView} />
+                : <p role="status">主攻撃のダメージを集計中…</p>
+            ) : <>
+              <div className="dc3-matrix-table-heading">
+                <h2>{mode === 'virtual' ? '出現順位別の主攻撃ダメージ' : '出現順位別の直接ダメージ内訳'}</h2>
+                <nav aria-label="スキル一覧のページ切り替え">
+                  <span aria-live="polite">{start + 1}–{start + pageEntries.length} / {filtered.length}件</span>
+                  {pages > 1 && <>
+                    <button type="button" className="button secondary" disabled={activePage === 0}
+                      onClick={() => setPage(activePage - 1)}>前へ</button>
+                    <button type="button" className="button secondary" disabled={activePage + 1 >= pages}
+                      onClick={() => setPage(activePage + 1)}>次へ</button>
+                  </>}
+                </nav>
+              </div>
+              <SkillDamageTable entries={pageEntries} pairs={distribution.resistanceThresholds} mode={mode}
+                selectedResistances={selectedResistances} stacked={layout === 'rows'}
+                showLevel={commonLevel === null} showUnit={commonUnit === null} />
+            </>}
           </>}
       </EnemyDataContent>
     </AnalysisTabPanel>
@@ -150,7 +166,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
 function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, selectedResistances }: {
   entries: readonly DamageThreeAttributeEntry[]
   pairs: readonly EnemyResistanceThreshold[]
-  mode: Mode
+  mode: DamageThreeSkillRankMode
   showLevel: boolean
   showUnit: boolean
   stacked: boolean
