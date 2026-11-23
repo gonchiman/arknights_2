@@ -14,10 +14,10 @@
 アドレスはページ名から始め、セクション・タブ・パネル・表示形式のうち、その場所を特定する表示名を順につなぐ。画面のラベル定義と選択中のタブ・表示形式を使う。検索語や設定値を変更しても、同じ場所は同じアドレスで指せるようにする。URLや内部IDは含めない。
 
 ```text
-防御力と術耐性の対応 / 順位帯の統計 / グラフ
+〈防御力と術耐性の対応 / 順位帯の統計 / グラフ〉
 ```
 
-[PageLayout](../../src/components/PageLayout.tsx) の `page` に登録済みのページIDを渡す。配下の `PageOutputTabs` と `PageOutputHeader` は、この登録名をアドレスの先頭に使う。右端の [ElementLocationCopyButton](../../src/components/ElementLocationCopyButton.tsx) が各要素を ` / ` でつなぎ、[writeClipboardText](../../src/lib/clipboard.ts) でコピーする。
+[PageLayout](../../src/components/PageLayout.tsx) の `page` に登録済みのページIDを渡す。配下の `PageOutputTabs` と `PageOutputHeader` は、この登録名をアドレスの先頭に使う。右端の [ElementLocationCopyButton](../../src/components/ElementLocationCopyButton.tsx) が各要素を ` / ` でつなぎ、全体を `〈〉` で囲んで [writeClipboardText](../../src/lib/clipboard.ts) でコピーする。
 
 | 対象 | コピー操作の配置と内容 |
 | --- | --- |
@@ -50,7 +50,7 @@
 [DC3 スキル比較](../../src/components/DamageCalculatorThreeComparisonPage.tsx)では、設定と結果をそれぞれの見出しからコピーできる。
 
 ```text
-DC3 スキル比較 / 絞り込み
-DC3 スキル比較 / 共通条件
-DC3 スキル比較 / 計算結果
+〈DC3 スキル比較 / 絞り込み〉
+〈DC3 スキル比較 / 共通条件〉
+〈DC3 スキル比較 / 計算結果〉
 ```
