@@ -87,7 +87,13 @@ function StageOutput({ map, index, tab, setTab }: {
   const load = useCallback(() => loadTdMapDetail(map), [map])
   const resource = useMapResource(load)
   const detail = resource.data
+  const [routeEnemyId, setRouteEnemyId] = useState<string | null>(null)
   const tabProps = { activeTab: tab, idPrefix: 'td-map' }
+  function showTerrain(enemyId: string | null) {
+    setRouteEnemyId(enemyId)
+    setTab('terrain')
+    document.getElementById(`${tabProps.idPrefix}-tab-terrain`)?.focus()
+  }
   return <article className="td-map-detail">
     <header className="td-map-heading">
       <p>泡影を穿つ碧雷{map.zoneName && <> ／ {map.zoneName}</>}</p>
@@ -97,12 +103,14 @@ function StageOutput({ map, index, tab, setTab }: {
       <MapBattleFacts map={map} detail={detail} />
       <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab} />
       <AnalysisTabPanel {...tabProps} tab="terrain">
-        <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+        {routeEnemyId === null
+          ? <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+          : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
+            enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
+            onClear={() => showTerrain(null)} />}
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="enemies">
-        <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels
-          initialRouteEnemyId={map.code === 'TD-8' ? detail.enemies.find(enemy => index.enemies[enemy.id]?.levelType === 'BOSS')?.id : undefined}
-          renderEnemyRoute={(enemyId, enemyName) => <TdEnemyRoutePanel map={map} detail={detail} enemyId={enemyId} enemyName={enemyName} />} />
+        <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels onSelectEnemy={showTerrain} />
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="waves">
         <MapWaveDetail map={map} detail={detail} index={index} showHelp={false} />

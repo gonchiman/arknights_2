@@ -7,6 +7,7 @@
   color: var(--text);
 }
 .td-map-route-panel .page-output-header { align-items: center; padding-bottom: 4px; }
+.td-map-route-panel .page-output-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .td-route-events { margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.6; }
 .td-route-link { stroke: var(--td-route-color); stroke-width: 2; stroke-dasharray: 4 3; }
 .td-route-arrow { fill: var(--td-route-color); }
