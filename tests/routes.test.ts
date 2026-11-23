@@ -139,6 +139,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-three-coverage', 'damage-three-coverage'],
       ['damage-three-comparison', 'damage-three-comparison'],
       ['damage-three-attribute-comparison', 'damage-three-attribute-comparison'],
+      ['damage-three-power-by-year', 'damage-three-power-by-year'],
       ['physical-arts-comparison', 'physical-arts-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
