@@ -1,13 +1,30 @@
-.dc3-comparison-page { min-width: 0; }
+.dc3-comparison-page .standard-page-settings { row-gap: 16px; }
+.dc3-comparison-settings-group { width: 100%; min-width: 0; }
+.dc3-comparison-page .page-output-header { align-items: center; column-gap: 12px; border-bottom: 0; }
+.dc3-comparison-settings-group h2, .dc3-comparison-results h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+}
+.dc3-comparison-filter-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dc3-comparison-settings-group .skill-directory-filter-grid { padding: 6px 0 0; }
+.dc3-comparison-settings-group label > span, .dc3-comparison-display label > span {
+  font-size: 12px;
+  font-weight: 400;
+}
+.dc3-comparison-settings-group .dc3-comparison-build,
+.dc3-comparison-settings-group .dc3-comparison-errors { padding: 6px 0 0; }
+.dc3-comparison-results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.dc3-comparison-results .page-output-header { border-top: 1px solid var(--border); padding-top: 12px; }
 .dc3-comparison-filters { grid-template-columns: minmax(165px, 1.2fr) minmax(240px, 2fr) repeat(3, minmax(100px, 1fr)); }
 .dc3-comparison-conditions { grid-template-columns: repeat(5, minmax(100px, 1fr)); }
-.dc3-comparison-display { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--border); }
-.dc3-comparison-display .dc3-comparison-skill-info-toggle { display: flex; align-items: center; gap: 7px; grid-column: 1 / -1; width: fit-content; cursor: pointer; }
+.dc3-comparison-display { display: flex; align-items: end; flex-wrap: wrap; gap: 8px 16px; border-bottom: 1px solid var(--border); padding: 0 0 8px; }
+.dc3-comparison-display label { max-width: 100%; }
+.dc3-comparison-display .dc3-comparison-skill-info-toggle { display: flex; align-items: center; gap: 7px; min-height: 34px; cursor: pointer; }
 .dc3-comparison-display .dc3-comparison-skill-info-toggle input { width: 16px; height: 16px; min-height: 0; padding: 0; margin: 0; accent-color: var(--text); }
 .dc3-comparison-display .dc3-comparison-skill-info-toggle span { color: var(--text); font-size: 12px; font-weight: 400; }
 .dc3-comparison-build { padding: 8px 10px; color: var(--text-soft); font-size: 11px; line-height: 1.8; }
-.dc3-comparison-meta { flex-wrap: wrap; }
-.dc3-comparison-table-wrap { border-right: 0; border-bottom: 0; border-left: 0; }
+.dc3-comparison-results .dc3-comparison-meta { min-height: 0; flex-wrap: wrap; justify-content: flex-start; gap: 4px 12px; border: 0; padding: 0; font-size: 12px; }
 .dc3-comparison-table { min-width: 1100px; table-layout: auto; }
 .dc3-comparison-table-normal { min-width: 1400px; }
 .dc3-comparison-table th:nth-child(n) { width: auto; }
@@ -69,12 +86,12 @@
 .dc3-comparison-individual-fields input:disabled, .dc3-comparison-individual-fields select:disabled { color: var(--text-soft); background: var(--surface-soft); opacity: 1; }
 .dc3-comparison-notes { margin: 0; padding: 10px 26px; color: var(--text-soft); font-size: 12px; line-height: 1.8; }
 @media (max-width: 850px) {
-  .dc3-comparison-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dc3-comparison-conditions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dc3-comparison-filters, .dc3-comparison-conditions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dc3-comparison-filters label:has(input[type="search"]) { grid-column: span 2; }
 }
 @media (max-width: 560px) {
-  .dc3-comparison-filters { grid-template-columns: minmax(0, 1fr); }
-  .dc3-comparison-conditions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dc3-comparison-filters, .dc3-comparison-conditions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dc3-comparison-filters label:has(input[type="search"]) { grid-column: auto; }
   .dc3-comparison-individual-fields { grid-template-columns: minmax(0, 1fr); }
   .dc3-comparison-table-compact th, .dc3-comparison-table-compact td { padding: 9px 6px; }
   .dc3-comparison-table-compact .dc3-comparison-numeric-heading button { padding: 10px 6px; gap: 4px; }
@@ -83,6 +100,7 @@
 @media (pointer: coarse) {
   .dc3-comparison-page input, .dc3-comparison-page select,
   .dc3-comparison-dialog input, .dc3-comparison-dialog select { min-height: 44px; font-size: 16px; }
+  .dc3-comparison-filter-heading .filter-reset-button,
   .dc3-comparison-numeric-heading button, .dc3-comparison-text-heading button,
   .dc3-comparison-display .dc3-comparison-skill-info-toggle { min-height: 44px; }
 }
