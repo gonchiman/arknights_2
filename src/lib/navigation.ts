@@ -26,6 +26,7 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const STANDARD_PAGE_TITLES = {
+  'bar-chart-workbench': '棒グラフ作成',
   'enemy-defense-resistance': '防御力と術耐性の対応',
 } satisfies Partial<Record<AppRoute['view'], string>>
 
@@ -149,7 +150,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'bar-chart-workbench',
     href: '#/charts/bar',
-    label: '棒グラフ作成',
+    label: STANDARD_PAGE_TITLES['bar-chart-workbench'],
     description: '',
     section: 'analysis',
   },

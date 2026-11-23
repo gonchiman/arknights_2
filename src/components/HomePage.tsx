@@ -1,11 +1,11 @@
-import { APP_NAV_ITEMS, SKILL_LEARNING_ITEMS } from '../lib/navigation'
+import { APP_NAV_ITEMS, SKILL_LEARNING_ITEMS, STANDARD_PAGE_TITLES } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
   {
     id: 'charts',
     title: 'グラフ作成',
-    links: [{ label: '棒グラフ作成', href: '#/charts/bar' }],
+    links: [{ label: STANDARD_PAGE_TITLES['bar-chart-workbench'], href: '#/charts/bar' }],
   },
   {
     id: 'operators',
