@@ -19,6 +19,7 @@ import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
 import { OperatorDetailLink } from './OperatorDetailLink'
+import { PageLayout, PageOutputHeader } from './PageLayout'
 import { SkillEffectModal } from './SkillEffectModal'
 import { SkillInformationTable } from './SkillInformationTable'
 import { TableSortHeader } from './TableSortHeader'
@@ -43,6 +44,9 @@ type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
 const OUTPUT_KINDS: OutputKind[] = ['NORMAL', 'NEXT_ATTACK', 'COUNTER', 'SKILL_ACTION']
+const FILTER_TITLE = '絞り込み'
+const COMMON_CONDITIONS_TITLE = '共通条件'
+const RESULT_TITLE = '計算結果'
 const DAMAGE_TYPE_LABELS: Record<string, string> = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素', MIXED: '混合' }
 const ATTACK_LABELS: Record<OutputKind, string> = {
   NORMAL: '1攻撃ダメージ', NEXT_ATTACK: '強化攻撃ダメージ', COUNTER: '反撃ダメージ', SKILL_ACTION: '1動作ダメージ',
@@ -122,11 +126,12 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const [tableDisplay, setTableDisplay] = useState<TableDisplay>('auto')
   const [showSkillInformation, setShowSkillInformation] = useState(false)
   const [displayMetric, setDisplayMetric] = useState<Metric>('combinedDps')
-  const [panelWidth, setPanelWidth] = useState(0)
+  const [resultsWidth, setResultsWidth] = useState(0)
   const [measuredFullWidth, setMeasuredFullWidth] = useState<{
     results: DamageThreeComparisonResult[] | null; precision: number; target: TargetDisplay; showSkillInformation: boolean; width: number
   }>({ results: null, precision: 0, target: 'single', showSkillInformation: false, width: 0 })
-  const panelRef = useRef<HTMLElement>(null)
+  const resultsRef = useRef<HTMLElement>(null)
+  const resultsHeadingId = useId()
   const tableRef = useRef<HTMLTableElement>(null)
   const tableRegionRef = useRef<HTMLDivElement>(null)
   const [overrides, setOverrides] = useState<Record<string, DamageThreeComparisonOverrides>>({})
@@ -135,12 +140,12 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const [description, setDescription] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const metrics = kind === 'NORMAL' ? NORMAL_METRICS : ACTION_METRICS
   useEffect(() => {
-    const panel = panelRef.current
-    if (!panel) return
-    const measure = () => setPanelWidth(panel.clientWidth)
+    const container = resultsRef.current
+    if (!container) return
+    const measure = () => setResultsWidth(container.clientWidth)
     measure()
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
-    observer?.observe(panel)
+    observer?.observe(container)
     window.addEventListener('resize', measure)
     return () => { observer?.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
@@ -192,16 +197,16 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const widthMatchesContent = measuredFullWidth.results === results && measuredFullWidth.precision === precision
     && measuredFullWidth.target === target && measuredFullWidth.showSkillInformation === showSkillInformation
   const fullWidth = Math.max((kind === 'NORMAL' ? 1400 : 1100) + (showSkillInformation ? 480 : 0), widthMatchesContent ? measuredFullWidth.width : 0)
-  const compact = tableDisplay === 'compact' || (tableDisplay === 'auto' && panelWidth < fullWidth)
+  const compact = tableDisplay === 'compact' || (tableDisplay === 'auto' && resultsWidth < fullWidth)
   useLayoutEffect(() => {
     // Long names and formatted numbers can require more than the stylesheet's minimum width.
     // Remember that width while compact, so resizing does not alternate between both layouts.
     if (compact || !tableRef.current) return
     const width = tableRef.current.scrollWidth
-    if (width > panelWidth) setMeasuredFullWidth((current) => current.results === results && current.precision === precision
+    if (width > resultsWidth) setMeasuredFullWidth((current) => current.results === results && current.precision === precision
       && current.target === target && current.showSkillInformation === showSkillInformation && current.width >= width
       ? current : { results, precision, target, showSkillInformation, width })
-  }, [compact, kind, panelWidth, results, precision, target, showSkillInformation])
+  }, [compact, kind, resultsWidth, results, precision, target, showSkillInformation])
   const hasFilters = query !== '' || profession !== 'ALL' || rarity !== 'ALL' || attackTypeFilter !== 'ALL' || kind !== 'NORMAL'
   const updateKind = (value: OutputKind) => {
     setKind(value)
@@ -279,13 +284,15 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     </td>
   }
 
-  return <section className="dc3-comparison-page">
-    <header className="page-intro"><h1>DC3 スキル比較</h1></header>
-    <section ref={panelRef} className="skill-directory-panel" aria-label="DC3のスキル比較">
-      <div className="skill-directory-filters">
-        <div className="filters-heading"><span>絞り込み</span>
-          <button type="button" className="filter-reset-button" disabled={!hasFilters} onClick={resetFilters}>条件をリセット</button>
-        </div>
+  return <PageLayout page="damage-three-comparison" className="dc3-comparison-page"
+    settings={<>
+      <section className="dc3-comparison-settings-group">
+        <PageOutputHeader segments={[FILTER_TITLE]}>
+          <div className="dc3-comparison-filter-heading">
+            <h2>{FILTER_TITLE}</h2>
+            <button type="button" className="filter-reset-button" disabled={!hasFilters} onClick={resetFilters}>条件をリセット</button>
+          </div>
+        </PageOutputHeader>
         <div className="skill-directory-filter-grid dc3-comparison-filters">
           <label><span>出力型</span><select aria-label="出力型" value={kind} onChange={(event) => updateKind(event.target.value as OutputKind)}>
             {OUTPUT_KINDS.map((value) => <option key={value} value={value}>{DAMAGE_THREE_OUTPUT_KIND_LABELS[value]}</option>)}
@@ -304,9 +311,11 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
             {Object.entries(DAMAGE_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select></label>
         </div>
-      </div>
-      <div className="skill-directory-filters">
-        <div className="filters-heading"><span>共通条件</span></div>
+      </section>
+      <section className="dc3-comparison-settings-group">
+        <PageOutputHeader segments={[COMMON_CONDITIONS_TITLE]}>
+          <h2>{COMMON_CONDITIONS_TITLE}</h2>
+        </PageOutputHeader>
         <div className="skill-directory-filter-grid dc3-comparison-conditions">
           <label><span>敵の防御力</span><input type="number" aria-label="敵の防御力" min="0" step="any" value={enemy.defense}
             aria-invalid={!Number.isFinite(common.defense) || common.defense < 0}
@@ -326,8 +335,12 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
         </div>
         <div className="dc3-comparison-build">対応昇進・最大Lv／信頼100／潜在1／MODなし／対応スキルLv</div>
         {commonErrors.length > 0 && <div className="dc3-comparison-errors" role="alert">{commonErrors.map((error) => <p key={error}>{error}</p>)}</div>}
-      </div>
-      <div className="filters-heading"><span>計算結果</span><span>{DAMAGE_THREE_OUTPUT_KIND_LABELS[kind]}</span></div>
+      </section>
+    </>}>
+    <section ref={resultsRef} className="dc3-comparison-results" aria-labelledby={resultsHeadingId}>
+      <PageOutputHeader segments={[RESULT_TITLE]}>
+        <h2 id={resultsHeadingId}>{RESULT_TITLE}</h2>
+      </PageOutputHeader>
       <div className="skill-directory-filter-grid dc3-comparison-display">
         <label><span>表の表示</span><select aria-label="表の表示" value={tableDisplay} onChange={(event) => setTableDisplay(event.target.value as TableDisplay)}>
           <option value="auto">自動</option><option value="full">全列</option><option value="compact">簡易</option>
@@ -413,7 +426,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     {detailResult && <ComparisonConditionsDialog result={detailResult} customized={Object.keys(overrides[detailResult.entry.key] ?? {}).length > 0}
       target={target} common={common} formatNumber={formatNumber} focusMetric={detail?.focusMetric}
       onChange={updateCondition} onReset={resetConditions} onClose={closeDetail} />}
-  </section>
+  </PageLayout>
 }
 
 function ComparisonConditionsDialog({ result, customized, target, common, formatNumber, focusMetric, onChange, onReset, onClose }: {

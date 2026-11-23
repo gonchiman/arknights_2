@@ -89,6 +89,24 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
+test('スキル比較の初期表示は共通ヘッドバーと単一の比較表を使い、各セクションの場所をコピーできる', async () => {
+  const { default: ComparisonPage } = await server.ssrLoadModule('/src/components/DamageCalculatorThreeComparisonPage.tsx')
+  const { getStandardPageTitle } = await server.ssrLoadModule('/src/lib/navigation.ts')
+  const route = parseHashRoute('#/damage-3/comparison')
+  assert.equal(getStandardPageTitle(route.view), 'DC3 スキル比較')
+
+  const markup = renderToStaticMarkup(createElement(ComparisonPage, { rows, loading: false }))
+  assert.doesNotMatch(markup, /<h1\b|role="tablist"/)
+  const sections = [...markup.matchAll(/<h2\b[^>]*>([^<]+)<\/h2>/g)].map(match => match[1])
+  assert.deepEqual(sections, ['絞り込み', '共通条件', '計算結果'])
+  const addresses = [...markup.matchAll(/<button\b[^>]*aria-label="([^"]+)の場所をコピー"/g)].map(match => match[1])
+  assert.deepEqual(addresses, sections.map(section => `DC3 スキル比較 / ${section}`))
+  assert.equal([...markup.matchAll(/<table\b/g)].length, 1)
+  assert.match(markup, /<th scope="col">OP<\/th>/)
+  assert.match(markup, /aria-label="表示指標"/)
+  assert.doesNotMatch(markup, /<th[^>]*>スキル名<\/th>/)
+})
+
 const tableRows = markup => [...markup.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)]
   .map(row => [...row[1].matchAll(/<(?:th|td)\b[^>]*>([\s\S]*?)<\/(?:th|td)>/g)]
     .map(cell => text(cell[1])))
