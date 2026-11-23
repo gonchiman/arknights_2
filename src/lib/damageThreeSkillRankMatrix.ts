@@ -10,6 +10,12 @@ export interface DamageCell {
   arts: number | null
 }
 
+export function getDamageDifference({ physical, arts }: DamageCell): number | null {
+  if (physical === null || arts === null) return null
+  const difference = physical - arts
+  return Number.isFinite(difference) ? difference : null
+}
+
 /** Evaluate only the skill stages currently visible, at one attack/action against one target. */
 export function evaluateDamageThreeSkillRankRow(
   entry: DamageThreeAttributeEntry, pairs: readonly RankPair[], mode: DamageThreeSkillRankMode,

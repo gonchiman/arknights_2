@@ -40,6 +40,16 @@
 .dc3-matrix-option-group legend,
 .dc3-matrix-option-label { display: block; margin-bottom: 4px; padding: 0; color: var(--text-soft); font-size: 12px; }
 .dc3-matrix-option-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.dc3-matrix-difference-toggle {
+  display: inline-flex;
+  align-self: end;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.dc3-matrix-difference-toggle input { margin: 0; accent-color: var(--text); }
 .dc3-matrix-option-group .page-view-switch button,
 .dc3-matrix-option-buttons .button { padding: 3px 7px; min-height: 28px; font-size: 12px; }
 .dc3-matrix-option-buttons .button { min-width: 2rem; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -60,6 +70,20 @@
   text-align: center;
   white-space: nowrap;
 }
+.dc3-matrix-table thead th[aria-sort] { padding: 0; }
+.dc3-matrix-table .skill-sort-button {
+  min-height: 26px;
+  padding: 3px 4px;
+  justify-content: center;
+  gap: 3px;
+  text-align: center;
+  line-height: 1.25;
+  font-weight: inherit;
+}
+.dc3-matrix-table .skill-sort-button:focus-visible { outline-offset: -2px; }
+.dc3-matrix-table .skill-sort-button > span:first-child { min-width: 0; }
+.dc3-matrix-table .skill-sort-indicator { flex: none; }
+.dc3-matrix-number .skill-sort-button { flex-direction: column; gap: 1px; }
 .dc3-matrix-table .dc3-matrix-damage { min-width: 3rem; white-space: nowrap; }
 .dc3-matrix-table .dc3-matrix-pair-end,
 .dc3-matrix-table th[scope="colgroup"] { border-right-color: var(--border-strong); }
@@ -113,8 +137,11 @@
     --matrix-number-width: 2.125rem;
     --matrix-stage-width: 4rem;
   }
+  .dc3-matrix-operator .skill-sort-button { flex-direction: column; gap: 1px; }
 }
 @media (pointer: coarse) {
+  .dc3-matrix-table .skill-sort-button { min-height: 44px; }
+  .dc3-matrix-difference-toggle { min-height: 44px; }
   .dc3-matrix-option-group .page-view-switch button,
   .dc3-matrix-option-buttons .button { min-width: 44px; min-height: 44px; }
 }
