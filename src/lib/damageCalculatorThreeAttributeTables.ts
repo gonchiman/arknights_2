@@ -60,6 +60,7 @@ export interface DamageThreeAttributeRankTable {
   reference: DamageThreeComparisonResult
   rows: DamageThreeAttributeRankRow[]
   errors: string[]
+  hasProbabilisticMainAttack: boolean
 }
 
 const finiteNonnegative = (value: number | null | undefined): value is number =>
@@ -224,9 +225,13 @@ function createAttributeEvaluator(input: DamageThreeAttributeTablesInput, table:
     if (result.actualTargetCount !== reference.actualTargetCount) rowErrors.push('属性変更で攻撃対象数が一致しません。')
     if (!rowErrors.length) {
       try {
-        const { perAttack } = getMainAttack(result)
+        const { perAttack, components } = getMainAttack(result)
         const dps = table === 'rating' ? mainAttackDps(result, perAttack) : null
-        return { perAttack, dps, settled: checkFloor && isPhysicalDamageSettled(result) }
+        // A probabilistic additional attack is not part of the main-attack rank comparison.
+        const hasProbabilisticMainAttack = table === 'rank' && !!result.output?.hasProbabilisticDamage && components.some(component =>
+          component.expectedHitCount > 0 && (component.expectedHitCount !== component.count
+            || component.branches.some(branch => branch.probability > 0 && branch.probability < 1)))
+        return { perAttack, dps, settled: checkFloor && isPhysicalDamageSettled(result), hasProbabilisticMainAttack }
       }
       catch (error) { rowErrors.push(error instanceof Error ? error.message : '主攻撃の計算結果を取得できません。') }
     }
@@ -286,13 +291,16 @@ export function evaluateDamageThreeAttributeRankTable(
 ): DamageThreeAttributeRankTable {
   const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rank')
   const invalidInput = errors.length > 0
+  let hasProbabilisticMainAttack = false
   const rows = pairs.map(({ resistance, defense, percentage }): DamageThreeAttributeRankRow => {
     const row = { resistance, defense, percentage, physical: null, arts: null }
     if (invalidInput || defense === null) return row
 
     const physical = evaluate(defense, resistance, 'PHYSICAL')
     const arts = evaluate(defense, resistance, 'ARTS')
-    return physical && arts ? { ...row, physical: physical.perAttack, arts: arts.perAttack } : row
+    if (!physical || !arts) return row
+    hasProbabilisticMainAttack ||= physical.hasProbabilisticMainAttack || arts.hasProbabilisticMainAttack
+    return { ...row, physical: physical.perAttack, arts: arts.perAttack }
   })
-  return { reference, rows, errors: [...new Set(errors)] }
+  return { reference, rows, errors: [...new Set(errors)], hasProbabilisticMainAttack }
 }

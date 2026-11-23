@@ -1,4 +1,4 @@
-import { APP_NAV_ITEMS, SKILL_LEARNING_ITEMS } from '../lib/navigation'
+import { APP_NAV_ITEMS, DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM, SKILL_LEARNING_ITEMS } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
@@ -10,7 +10,10 @@ const HOME_PANELS = [
   {
     id: 'operators',
     title: 'オペレーター',
-    links: [{ label: 'オペレーターデータベース', href: '#/operators' }],
+    links: [
+      { label: 'オペレーターデータベース', href: '#/operators' },
+      DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM,
+    ],
   },
   {
     id: 'enemies',

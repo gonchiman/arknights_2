@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { classifySkill } from '../src/lib/classifier.ts'
 import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
+import { evaluateDamageThreeSkillRankRow } from '../src/lib/damageThreeSkillRankMatrix.ts'
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
   evaluateAttackAttributeTables,
@@ -83,6 +84,69 @@ function ordinary(value: DamageThreeAttributeTablesInput, type: 'PHYSICAL' | 'AR
 function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
+
+test('スキル別の行は元の混合攻撃の内訳と主攻撃の属性変更を区別し、空の順位を保つ', () => {
+  const entry = input('char_010_chen', 2).entry
+  const pairs = [
+    { resistance: 50, defense: 300, percentage: 16 },
+    { resistance: 100, defense: null, percentage: 0 },
+  ]
+  const actual = evaluateDamageThreeSkillRankRow(entry, pairs, 'actual')
+  assert.deepEqual(actual.errors, [])
+  assert.ok(actual.cells[0].physical! > 0 && actual.cells[0].arts! > 0)
+  const base = evaluateDamageThreeComparisonEntry(entry, { enemyCount: 1, defense: 300, resistance: 50 })
+  close(actual.cells[0].physical! + actual.cells[0].arts!, base.perAttack!)
+  const virtual = evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual')
+  assert.deepEqual(virtual.errors, [])
+  assert.deepEqual(virtual.cells, evaluateDamageThreeAttributeRankTable({ entry, enemyCount: 1 }, pairs)
+    .rows.map(({ physical, arts }) => ({ physical, arts })))
+  assert.notDeepEqual(actual.cells[0], virtual.cells[0])
+  assert.deepEqual(actual.cells[1], { physical: null, arts: null })
+})
+
+test('単属性・追加攻撃・継続のみを持つスキルの直接ダメージを区別する', () => {
+  const pair = { resistance: 60, defense: 1200, percentage: 4 }
+  for (const [id, skillIndex, expectedType] of [
+    ['char_350_surtr', 3, 'arts'], ['char_103_angel', 3, 'physical'],
+    ['char_2013_cerber', 2, 'arts'], ['char_355_ethan', 1, 'physical'],
+  ] as const) {
+    const entry = input(id, skillIndex).entry
+    const actual = evaluateDamageThreeSkillRankRow(entry, [pair], 'actual')
+    const base = evaluateDamageThreeComparisonEntry(entry, { ...pair, enemyCount: 1 })
+    assert.deepEqual(actual.errors, [], entry.key)
+    close(actual.cells[0][expectedType], base.perAttack!)
+    assert.equal(actual.cells[0][expectedType === 'arts' ? 'physical' : 'arts'], 0)
+  }
+  const onlyPeriodic = evaluateDamageThreeSkillRankRow(input('char_134_ifrit', 3).entry, [pair], 'actual')
+  assert.deepEqual(onlyPeriodic.cells, [{ physical: null, arts: null }])
+  assert.ok(onlyPeriodic.errors.length)
+  assert.equal(onlyPeriodic.isExpectedValue, false)
+  assert.equal(onlyPeriodic.hasUnsupportedTalentDamage, false)
+})
+
+test('属性別の行は期待値と未対応の素質を別々に判定する', () => {
+  function assertStatus(row: ReturnType<typeof evaluateDamageThreeSkillRankRow>, expectedValue: boolean, unsupportedTalent: boolean) {
+    assert.equal(row.isExpectedValue, expectedValue)
+    assert.equal(row.hasUnsupportedTalentDamage, unsupportedTalent)
+  }
+  const pairs = [{ resistance: 50, defense: 300, percentage: 16 }]
+  const provence = input('char_145_prove', 1).entry
+  const surtr = input('char_350_surtr', 3).entry
+  for (const mode of ['actual', 'virtual'] as const) {
+    assertStatus(evaluateDamageThreeSkillRankRow(provence, pairs, mode), true, false)
+    assertStatus(evaluateDamageThreeSkillRankRow(surtr, pairs, mode), false, false)
+    assertStatus(evaluateDamageThreeSkillRankRow(provence, [{ ...pairs[0], defense: null }], mode), false, false)
+  }
+  const executor = input('char_1032_excu2', 1).entry
+  assertStatus(evaluateDamageThreeSkillRankRow(executor, pairs, 'actual'), true, false)
+  assertStatus(evaluateDamageThreeSkillRankRow(executor, pairs, 'virtual'), false, false)
+  const thorns = structuredClone(input('char_293_thorns', 3, 'second_and_later').entry)
+  for (const candidate of thorns.skill.operatorProfile.talents![0].candidates!) {
+    candidate.blackboard = candidate.blackboard!.filter(item => item.key !== 'damage[normal]')
+  }
+  assertStatus(evaluateDamageThreeSkillRankRow(thorns, pairs, 'actual'), false, true)
+  assertStatus(evaluateDamageThreeSkillRankRow(thorns, pairs, 'virtual'), false, false)
+})
 
 test('出現順位別の物理・術を同じ防御力と術耐性で計算し、弱点判定を維持する', () => {
   const pair = { resistance: 60, defense: 1000, percentage: 10 }

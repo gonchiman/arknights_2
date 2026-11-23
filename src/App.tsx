@@ -7,6 +7,7 @@ import { DamageCalculatorThree } from './components/DamageCalculatorThree'
 import { DamageCalculatorThreeCoveragePage } from './components/DamageCalculatorThreeCoveragePage'
 import DamageCalculatorThreeComparisonPage from './components/DamageCalculatorThreeComparisonPage'
 import DamageCalculatorThreeAttributePage from './components/DamageCalculatorThreeAttributePage'
+import DamageThreeSkillAttributeMatrixPage from './components/DamageThreeSkillAttributeMatrixPage'
 import PhysicalArtsComparisonPage from './components/PhysicalArtsComparisonPage'
 import { ManualDamageVerificationPage } from './components/ManualDamageVerificationPage'
 import { DataSourcesPage } from './components/DataSourcesPage'
@@ -408,6 +409,8 @@ export default function App() {
             <DamageCalculatorThreeAttributePage key={createDamageCalculatorThreeAttributeHash(displayedRoute.selection)}
               rows={classifiedRows} loading={loading} initialSelection={displayedRoute.selection} />
           </PanelStateScope.Provider>
+        ) : displayedRoute.view === 'damage-three-skill-attribute-matrix' ? (
+          <DamageThreeSkillAttributeMatrixPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'physical-arts-comparison' ? (
           <PhysicalArtsComparisonPage />
         ) : displayedRoute.view === 'comparison' ? (

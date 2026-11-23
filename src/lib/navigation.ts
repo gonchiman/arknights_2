@@ -3,6 +3,7 @@ import type { AppRoute } from './routes'
 export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-wiki-views' | 'skills' | 'skill-classification' | 'talent-classification' | 'trait-classification' | 'trait-structure' | 'talent-structure' | 'skill-effects' | 'skill-summary' | 'skill-structure' | 'structure-coverage' | 'skill-json' | 'skill-kmeans' | 'skill-hdbscan' | 'skill-hierarchical' | 'code-analysis' | 'damage' | 'damage-two' | 'damage-three' | 'damage-three-coverage' | 'damage-three-comparison' | 'damage-verification' | 'comparison' | 'enemies' | 'enemy-analysis' | 'enemy-wiki-stats' | 'enemy-regression' | 'enemy-immunities' | 'enemy-defense-resistance' | 'enemy-map-coverage' | 'main-enemy-trends' | 'maps' | 'roguelike' | 'sources' | 'slide-maker' | 'goldenglow-home' | 'surtr-home' | 'surtr-s3' | 'surtr-s3-comparison' | 'surtr-skill-comparison' | 'surtr-total-damage' | 'surtr-duration' | 'surtr-remnant-attacks' | 'goldenglow-guide' | 'goldenglow-performance' | 'goldenglow-target-switch' | 'goldenglow-target-switch-two' | 'goldenglow-target-switch-three' | 'goldenglow-single-trial' | 'goldenglow-trial-benchmark'
   | 'operator-pca-two'
   | 'damage-three-attribute-comparison'
+  | 'damage-three-skill-attribute-matrix'
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
   | 'enemy-defense-resistance-formula'
@@ -27,6 +28,7 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const STANDARD_PAGE_TITLES = {
   'enemy-defense-resistance': '防御力と術耐性の対応',
+  'damage-three-skill-attribute-matrix': 'スキル別の物理・術ダメージ',
 } satisfies Partial<Record<AppRoute['view'], string>>
 
 export function getStandardPageTitle(view: AppRoute['view']): string | undefined {
@@ -35,6 +37,14 @@ export function getStandardPageTitle(view: AppRoute['view']): string | undefined
 }
 export const GOLDENGLOW_HOME_LINK = { label: 'ゴールデングロー', href: '#/analysis/goldenglow' } as const
 export const SURTR_HOME_LINK = { label: 'スルト', href: '#/analysis/surtr' } as const
+
+export const DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM: NavigationItem = {
+  id: 'damage-three-skill-attribute-matrix',
+  href: '#/damage-3/skill-attribute-matrix',
+  label: STANDARD_PAGE_TITLES['damage-three-skill-attribute-matrix'],
+  description: '',
+  section: 'analysis',
+}
 
 export const DAMAGE_VERIFICATION_ITEM: NavigationItem = {
   id: 'damage-verification',
@@ -328,6 +338,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
+  DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM,
   {
     id: 'physical-arts-comparison',
     href: '#/damage-3/physical-arts-comparison',
