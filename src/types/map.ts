@@ -91,6 +91,8 @@ export interface MapSummary {
   enemyIds: string[]
   /** Undefined in legacy indexes, null when the spawn structure is unavailable, [] for no spawns. */
   enemyRoutes?: MapEnemyRoute[] | null
+  /** The matching detail shard includes endpoints and ordered checkpoints. */
+  hasRouteGeometry?: true
   /** Main-wave configured counts across all routes; null counts remain unknown. */
   enemySpawnCounts?: Record<string, number | null> | null
   /** Absent in earlier aggregation versions; does not imply the enemy never appears. */
@@ -124,9 +126,18 @@ export interface MapPosition {
   col: number
 }
 
+export interface MapRouteCheckpoint {
+  type: string
+  position: MapPosition | null
+  time: number | null
+}
+
 export interface MapRoute {
   /** Original route tile coordinates, which may be outside the map bounds. */
   startPosition: MapPosition | null
+  endPosition?: MapPosition | null
+  /** Empty for no intermediate checkpoints; absent in legacy start-only shards. */
+  checkpoints?: MapRouteCheckpoint[] | null
 }
 
 export interface MapSpawnResolution {

@@ -1,4 +1,4 @@
-import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapOmittedBranchSpawn, MapRoute, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
+import type { MapCategory, MapEnvironment, MapDetail, MapDetailShard, MapEnemyBase, MapEnemyRoute, MapFeatureId, MapFilters, MapIndex, MapOmittedBranchSpawn, MapPosition, MapRoute, MapRouteCheckpoint, MapSpawnResolution, MapSummary, MapTile, MapWave, MapWaveAction, MapWaveFragment } from '../types/map.ts'
 import { MAP_FEATURE_LABELS } from './mapFeatures.ts'
 import { MAP_ENEMY_IMMUNITY_KEYS } from '../types/map.ts'
 import { isSpecialActivityType } from './enemyAggregationScope.ts'
@@ -168,6 +168,7 @@ export function parseMapIndex(source: unknown): MapIndex {
       || (map.zoneType !== undefined && !isText(map.zoneType))
       || (map.difficulty !== undefined && !isText(map.difficulty))
       || (map.diffGroup !== undefined && !isText(map.diffGroup))
+      || (map.hasRouteGeometry !== undefined && map.hasRouteGeometry !== true)
       || !['supported', 'excluded', 'missing'].includes(String(map.status))
       || !isCountOrNull(map.spawnCount) || !strings(map.enemyIds) || !strings(map.reasons)
       || !(map.features === undefined || map.features === null || featureIds(map.features))
@@ -200,6 +201,7 @@ export function parseMapIndex(source: unknown): MapIndex {
       } : {}),
       features: featureIds(map.features) ? [...map.features] : null,
       enemyRoutes: parseMapEnemyRoutes(map.enemyRoutes, map.enemyIds),
+      ...(map.hasRouteGeometry === true ? { hasRouteGeometry: true } : {}),
       enemySpawnCounts: parseMapEnemySpawnCounts(map.enemySpawnCounts, map.enemyIds),
       ...(map.omittedBranchSpawns !== undefined ? {
         omittedBranchSpawns: parseOmittedBranchSpawns(map.omittedBranchSpawns, map.enemyIds),
@@ -221,18 +223,39 @@ export function parseMapIndex(source: unknown): MapIndex {
 const isTextOrNull = (value: unknown): value is string | null => value === null || isText(value)
 const isBooleanOrNull = (value: unknown): value is boolean | null => value === null || typeof value === 'boolean'
 
+function parseRoutePosition(source: unknown): MapPosition | null {
+  if (source === null) return null
+  const point = record(source)
+  if (!point || !Number.isSafeInteger(point.row) || !Number.isSafeInteger(point.col)) {
+    throw new Error('マップの経路座標に不正な値があります。')
+  }
+  return { row: point.row as number, col: point.col as number }
+}
+
+function parseRouteCheckpoints(source: unknown): MapRouteCheckpoint[] | null {
+  if (source === null) return null
+  if (!Array.isArray(source)) throw new Error('マップの経由地点を確認できませんでした。')
+  return source.map(raw => {
+    const point = record(raw)
+    if (!point || !isText(point.type) || !point.type.trim() || !isNumberOrNull(point.time)) {
+      throw new Error('マップの経由地点に不正な値があります。')
+    }
+    return { type: point.type, position: parseRoutePosition(point.position), time: point.time }
+  })
+}
+
 function parseMapRoutes(source: unknown): (MapRoute | null)[] | null {
   if (source === null) return null
   if (!Array.isArray(source)) throw new Error('マップの入口情報を確認できませんでした。')
   return source.map((raw): MapRoute | null => {
     if (raw === null) return null
     const route = record(raw)
-    const start = record(route?.startPosition)
-    if (!route || (route.startPosition !== null
-      && (!start || !Number.isSafeInteger(start.row) || !Number.isSafeInteger(start.col)))) {
-      throw new Error('マップの入口情報に不正な値があります。')
+    if (!route) throw new Error('マップの入口情報に不正な値があります。')
+    return {
+      startPosition: parseRoutePosition(route.startPosition),
+      ...(route.endPosition !== undefined ? { endPosition: parseRoutePosition(route.endPosition) } : {}),
+      ...(route.checkpoints !== undefined ? { checkpoints: parseRouteCheckpoints(route.checkpoints) } : {}),
     }
-    return { startPosition: start ? { row: start.row as number, col: start.col as number } : null }
   })
 }
 

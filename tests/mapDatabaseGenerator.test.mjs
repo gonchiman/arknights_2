@@ -524,6 +524,33 @@ test('missing route topology and malformed starting positions remain explicit wi
   ])
 })
 
+test('TD detail shards retain route order, tile positions and waits without dummy wait or disappearance tiles', () => {
+  const start = { row: 0, col: 1 }
+  const end = { row: 1, col: 2 }
+  const raw = [
+    { startPosition: start, endPosition: end, checkpoints: [
+      { type: 'MOVE', position: end, time: 0 }, { type: 'DISAPPEAR', position: { row: -1, col: -1 } },
+      { type: 'WAIT_FOR_SECONDS', time: 3, position: { row: 0, col: 0 } }, { type: 'APPEAR_AT_POS', position: start },
+    ] },
+    { startPosition: start, endPosition: end, checkpoints: {} },
+    { startPosition: start, endPosition: end, checkpoints: null },
+  ]
+  const id = 'activities/act50side/level_act50side_test'
+  const generated = buildMapDatabase(options([level(id, [spawn('enemy_a', 1, { routeIndex: 0 })], { routes: raw })], {
+    normal: stage('act50side_01', id, { zoneId: 'act50side_zone1', code: 'TD-1' }),
+  }))
+  const map = generated.index.maps[0]
+  assert.equal(map.hasRouteGeometry, true)
+  assert.deepEqual(generated.details[map.detailFile].maps[id].routes, [
+    { startPosition: start, endPosition: end, checkpoints: [
+      { type: 'MOVE', position: end, time: null }, { type: 'DISAPPEAR', position: null, time: null },
+      { type: 'WAIT_FOR_SECONDS', position: null, time: 3 }, { type: 'APPEAR_AT_POS', position: start, time: null },
+    ] },
+    { startPosition: start, endPosition: end, checkpoints: [] },
+    { startPosition: start, endPosition: end, checkpoints: null },
+  ])
+})
+
 const featureSource = (extra = {}) => ({ mapData: geometry, ...extra })
 const buff = (prefabKey, blackboard) => ({ prefabKey, blackboard })
 const device = (characterKey, extra = {}) => ({ inst: { characterKey }, hidden: false, ...extra })

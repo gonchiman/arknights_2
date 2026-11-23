@@ -1,28 +1,26 @@
-.td-map-terrain { --td-route-color: #944a24; }
-.td-boss-route-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  margin-bottom: 4px;
-  cursor: pointer;
+.td-map-route-panel {
+  --td-route-color: #944a24;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  white-space: normal;
   color: var(--text);
-  font-size: 13px;
 }
-.td-boss-route-switch input { margin: 0; accent-color: var(--accent); }
-.td-boss-link { stroke: var(--td-route-color); stroke-width: 2; stroke-dasharray: 4 3; }
-.td-boss-arrow { fill: var(--td-route-color); }
-.td-boss-waypoint { fill: var(--surface); stroke: var(--td-route-color); stroke-width: 1.8; }
-.td-boss-step, .td-boss-wait { font-family: inherit; font-weight: 700; }
-.td-boss-step { fill: var(--td-route-color); font-size: 11px; }
-.td-boss-wait-badge { fill: var(--td-route-color); }
-.td-boss-wait { fill: #fff; font-size: 9px; }
-.map-board-legend i.td-boss-legend-line {
+.td-map-route-panel .page-output-header { align-items: center; padding-bottom: 4px; }
+.td-route-events { margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.6; }
+.td-route-link { stroke: var(--td-route-color); stroke-width: 2; stroke-dasharray: 4 3; }
+.td-route-arrow { fill: var(--td-route-color); }
+.td-route-marker rect { fill: #fff; stroke: var(--td-route-color); stroke-width: 1.8; }
+.td-route-marker text { fill: var(--td-route-color); font-size: 10px; font-weight: 700; }
+.td-route-marker-start rect { fill: #994f48; stroke: #fff; stroke-width: 1; }
+.td-route-marker-end rect { fill: #436e80; stroke: #fff; stroke-width: 1; }
+.td-route-marker-start text, .td-route-marker-end text { fill: #fff; }
+.map-board-legend i.td-route-legend-line {
   width: 18px;
   height: 0;
   border-top: 2px dashed var(--td-route-color);
   background: none;
 }
 @media (pointer: coarse) {
-  .td-boss-route-switch { min-height: 44px; }
+  .td-map-route-panel select { min-height: 44px; }
 }

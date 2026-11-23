@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadTdMapDatabase, loadTdMapDetail } from '../lib/tdMaps'
 import type { MapIndex, MapSummary } from '../types/map'
 import { AnalysisTabPanel } from './AnalysisTabs'
-import { MapBattleFacts, MapEnemyTable } from './MapInformation'
+import { MapBattleFacts, MapBoard, MapEnemyTable } from './MapInformation'
 import { MapWaveDetail } from './MapWaveInformation'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
-import { TdMapTerrain } from './TdMapTerrain'
+import { TdEnemyRoutePanel } from './TdMapTerrain'
 import './MapDatabase.css'
 import './TdMapPage.css'
 
@@ -96,9 +96,13 @@ function StageOutput({ map, index, tab, setTab }: {
     {detail ? <>
       <MapBattleFacts map={map} detail={detail} />
       <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab} />
-      <AnalysisTabPanel {...tabProps} tab="terrain"><TdMapTerrain map={map} detail={detail} /></AnalysisTabPanel>
+      <AnalysisTabPanel {...tabProps} tab="terrain">
+        <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+      </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="enemies">
-        <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels />
+        <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels
+          initialRouteEnemyId={map.code === 'TD-8' ? detail.enemies.find(enemy => index.enemies[enemy.id]?.levelType === 'BOSS')?.id : undefined}
+          renderEnemyRoute={(enemyId, enemyName) => <TdEnemyRoutePanel map={map} detail={detail} enemyId={enemyId} enemyName={enemyName} />} />
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="waves">
         <MapWaveDetail map={map} detail={detail} index={index} showHelp={false} />

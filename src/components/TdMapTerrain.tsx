@@ -1,63 +1,82 @@
 import { useState } from 'react'
-import { MapBoard } from './MapInformation'
+import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdEnemyRoutes'
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
+import { MapBoard } from './MapInformation'
+import { PageOutputHeader } from './PageLayout'
 import './TdMapTerrain.css'
 
-// MOVE checkpoints and endPosition from routes[7]. The wait follows the first MOVE.
-// https://github.com/ArknightsAssets/ArknightsGamedata/blob/270115d3ef5dc0e97530bedc168eb3ddb3d14bc6/jp/gamedata/levels/activities/act50side/level_act50side_08.json
-const TD8_LEVEL = 'activities/act50side/level_act50side_08'
-const CHECKPOINTS: MapPosition[] = [
-  { row: 6, col: 2 }, { row: 6, col: 7 }, { row: 1, col: 7 },
-  { row: 1, col: 2 }, { row: 4, col: 2 },
-]
-const END: MapPosition = { row: 4, col: 10 }
+type Geometry = ReturnType<typeof describeTdRoute>
 
-function TdBossPath({ rows, start, wait }: { rows: number; start: MapPosition; wait: number }) {
-  // The level's rows run upwards; SVG coordinates run downwards from the top left.
-  const points = [start, ...CHECKPOINTS, END].map(({ col, row }) => ({
-    x: (col + 0.5) * 32, y: (rows - row - 0.5) * 32,
-  }))
-  return <g className="td-boss-path" aria-hidden="true">
-    {points.slice(1).map((point, i) => {
-      const prev = points[i]
-      const dx = point.x - prev.x
-      const dy = point.y - prev.y
-      const length = Math.hypot(dx, dy)
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI
-      return <g key={i} transform={`translate(${prev.x} ${prev.y}) rotate(${angle})`}>
-        <line x1="11" x2={length - 12} className="td-boss-link" />
-        <path d="M-3 -3.5 L4 0 L-3 3.5 Z" transform={`translate(${length / 2} 0)`} className="td-boss-arrow" />
+function tileCenter({ row, col }: MapPosition, rows: number) {
+  return { x: (col + 0.5) * 32, y: (rows - row - 0.5) * 32 }
+}
+
+function RouteOverlay({ rows, geometry }: { rows: number; geometry: Geometry }) {
+  return <g className="td-route-overlay" aria-hidden="true">
+    {geometry.links.map(({ from, to }, i) => {
+      const a = tileCenter(from, rows)
+      const b = tileCenter(to, rows)
+      const angle = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI
+      const length = Math.hypot(b.x - a.x, b.y - a.y)
+      return <g key={i} transform={`translate(${a.x} ${a.y}) rotate(${angle})`}>
+        <line x1="11" x2={length - 11} className="td-route-link" />
+        <path d="M-3 -3.5 L4 0 L-3 3.5 Z" transform={`translate(${length * 0.62} 0)`} className="td-route-arrow" />
       </g>
     })}
-    {points.slice(1, -1).map((point, i) => <g key={i} transform={`translate(${point.x} ${point.y})`}>
-      <circle className="td-boss-waypoint" r="8.5" />
-      <text className="td-boss-step" textAnchor="middle" dy=".35em">{i + 1}</text>
-    </g>)}
-    <g transform={`translate(${points[1].x} ${points[1].y - 22})`}>
-      <rect className="td-boss-wait-badge" x="-21" y="-8" width="42" height="16" rx="3" />
-      <text className="td-boss-wait" textAnchor="middle" dy=".35em">{wait}秒待機</text>
-    </g>
+    {geometry.markers.map(({ position, labels, kind }) => {
+      const { x, y } = tileCenter(position, rows)
+      const lines = []
+      for (let i = 0; i < labels.length; i += 3) lines.push(labels.slice(i, i + 3).join('·'))
+      const width = kind === 'waypoint' && labels.length === 1 ? 18 : 28
+      const height = Math.min(30, Math.max(18, lines.length * 9 + 2))
+      return <g key={`${x}-${y}`} className={`td-route-marker td-route-marker-${kind}`} transform={`translate(${x} ${y})`}>
+        <rect x={-width / 2} y={-height / 2} width={width} height={height} rx={kind === 'waypoint' ? 8 : 3} />
+        {lines.map((line, i) => <text key={i} y={(i - (lines.length - 1) / 2) * (height / lines.length)}
+          textAnchor="middle" dy=".35em" textLength={line.length > 4 ? width - 3 : undefined}
+          lengthAdjust="spacingAndGlyphs">{line}</text>)}
+      </g>
+    })}
   </g>
 }
 
-export function TdMapTerrain({ map, detail }: { map: MapSummary; detail: MapDetail }) {
-  const [showRoute, setShowRoute] = useState(true)
-  const name = `${map.code} ${map.name}`
-  const route = map.levelId === TD8_LEVEL && detail.levelId === TD8_LEVEL
-    ? map.enemyRoutes?.find((entry) => entry.enemyId === 'enemy_1573_pyczog' && entry.routeIndex === 7)
-    : undefined
-  const start = route && detail.routes?.[7]?.startPosition
-  const wait = route?.fixedWaits?.[0]
-  if (!start || wait == null) return <MapBoard detail={detail} name={name} />
-  return <div className="td-map-terrain">
-    <label className="td-boss-route-switch">
-      <input type="checkbox" checked={showRoute} onChange={(event) => setShowRoute(event.currentTarget.checked)} />
-      雷の主の全経路
-    </label>
-    <MapBoard detail={detail} name={name} markedEntrance={showRoute ? start : undefined}
-      routeDescription={showRoute ? `雷の主は出現口${route?.entrance ?? ''}から順に5地点を経由して防衛地点へ向かいます。地点1で${wait}秒待機します` : undefined}
-      routeLegend={showRoute && <span><i className="td-boss-legend-line" aria-hidden="true" />経由地点の接続</span>}>
-      {showRoute && <TdBossPath rows={detail.grid.length} start={start} wait={wait} />}
+function RouteBoard({ detail, name, selection }: {
+  detail: MapDetail; name: string; selection: TdEnemyRoute
+}) {
+  const geometry = describeTdRoute(selection)
+  const end = selection.route.endPosition
+  const tile = end && detail.grid[detail.grid.length - end.row - 1]?.[end.col]
+  const goal = tile != null && ['tile_end', 'tile_end_cooperate'].includes(detail.tiles[tile]?.tileKey)
+  const notes = goal ? [...geometry.notes, '防衛地点へ'] : geometry.notes
+  const description = geometry.markers.map(({ labels, position }) =>
+    `${labels.join('・')}は上から${detail.grid.length - position.row}行、左から${position.col + 1}列`)
+  return <>
+    <MapBoard detail={detail} name={name} markedEntrance={selection.route.startPosition ?? undefined}
+      routeDescription={[...description, ...notes].join('。')}
+      routeLegend={geometry.links.length > 0 && <span><i className="td-route-legend-line" aria-hidden="true" />経由地点の接続</span>}>
+      <RouteOverlay rows={detail.grid.length} geometry={geometry} />
     </MapBoard>
+    {notes.length > 0 && <p className="td-route-events" aria-live="polite">{notes.join(' ／ ')}</p>}
+  </>
+}
+
+interface RoutePanelProps { map: MapSummary; detail: MapDetail; enemyId: string; enemyName: string }
+
+export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName }: RoutePanelProps) {
+  const [selected, setSelected] = useState(0)
+  const routes = getTdEnemyRoutes(map, detail, enemyId)
+  const position = selected < routes.length ? selected : 0
+  const selection = routes[position]
+  if (!selection) return <p className="map-empty" role="status">この敵の経路データはありません。</p>
+  return <div className="td-map-route-panel">
+    <PageOutputHeader segments={['出現敵', '経路']}>
+      {routes.length > 1 ? <label className="map-wave-picker">経路
+        <select value={position} onChange={event => setSelected(Number(event.currentTarget.value))}>
+          {routes.map(({ index, entrance }, i) => <option key={index} value={i}>
+            {i + 1} / {routes.length}{entrance && `　出現口${entrance}`}
+          </option>)}
+        </select>
+      </label> : <span>経路{selection.entrance && `　出現口${selection.entrance}`}</span>}
+    </PageOutputHeader>
+    <RouteBoard detail={detail} name={`${map.code} ${enemyName} 経路${position + 1}`} selection={selection} />
   </div>
 }

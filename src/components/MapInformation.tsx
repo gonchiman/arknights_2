@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { Fragment, useEffect, useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
@@ -95,26 +95,47 @@ export function MapBattleFacts({ map, detail }: { map: MapSummary; detail: MapDe
   </dl>
 }
 
-export function MapEnemyTable({ detail, index, heading, showBaseStatLabels = false }: {
+export function MapEnemyTable({ detail, index, heading, showBaseStatLabels = false, renderEnemyRoute, initialRouteEnemyId }: {
   detail: MapDetail; index: MapIndex; heading: string; showBaseStatLabels?: boolean
+  renderEnemyRoute?: (enemyId: string, enemyName: string) => ReactNode
+  initialRouteEnemyId?: string
 }) {
+  const [expandedId, setExpandedId] = useState<string | null>(initialRouteEnemyId ?? null)
+  const panelId = useId()
   const statLabel = (label: string) => showBaseStatLabels ? `${label}（基礎）` : label
   if (!detail.enemies.length) return <p className="map-empty">登録された敵はありません</p>
   return <div className="map-table-scroll map-enemy-scroll" tabIndex={0} role="region" aria-label={`${heading}の一覧`}>
     <table className="map-enemy-table">
       <thead><tr><th scope="col">敵名</th><th scope="col" className="map-numeric">体数</th>
+        {renderEnemyRoute && <th scope="col">経路</th>}
         {['HP', '攻撃力', '防御力', '術耐性'].map((label) => <th key={label} scope="col" className="map-numeric">{statLabel(label)}</th>)}
       </tr></thead>
       <tbody>{detail.enemies.map((enemy) => {
         const base = index.enemies[enemy.id]
-        return <tr key={enemy.id}>
-          <th scope="row">{base?.name ?? enemy.id}</th>
-          <td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td>
-          <td className="map-numeric">{formatNumber(base?.hp)}</td>
-          <td className="map-numeric">{formatNumber(base?.attack)}</td>
-          <td className="map-numeric">{formatNumber(base?.defense)}</td>
-          <td className="map-numeric">{formatNumber(base?.resistance)}</td>
-        </tr>
+        const name = base?.name ?? enemy.id
+        const expanded = expandedId === enemy.id
+        return <Fragment key={enemy.id}>
+          <tr>
+            <th scope="row">{name}</th>
+            <td className="map-numeric">{enemy.count == null ? '未確定' : formatNumber(enemy.count)}</td>
+            {renderEnemyRoute && <td className="map-enemy-route-action">
+              <button type="button" className="button secondary" aria-expanded={expanded}
+                aria-label={`${name}の経路を${expanded ? '閉じる' : '見る'}`} aria-controls={expanded ? panelId : undefined}
+                onClick={() => setExpandedId(expanded ? null : enemy.id)}>
+                {expanded ? '閉じる' : '経路を見る'}
+              </button>
+            </td>}
+            <td className="map-numeric">{formatNumber(base?.hp)}</td>
+            <td className="map-numeric">{formatNumber(base?.attack)}</td>
+            <td className="map-numeric">{formatNumber(base?.defense)}</td>
+            <td className="map-numeric">{formatNumber(base?.resistance)}</td>
+          </tr>
+          {renderEnemyRoute && expanded && <tr>
+            <td colSpan={7} className="map-enemy-route-cell">
+              <div id={panelId} className="map-enemy-route-content">{renderEnemyRoute(enemy.id, name)}</div>
+            </td>
+          </tr>}
+        </Fragment>
       })}</tbody>
     </table>
   </div>
