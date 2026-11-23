@@ -1,6 +1,6 @@
 import { Fragment, useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
-import { evaluateDamageThreeSkillRankRow, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
+import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
@@ -15,6 +15,8 @@ import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } fro
 import DamageThreeSkillRankStatisticsChart from './DamageThreeSkillRankStatisticsChart'
 import DamageThreeSkillRankStatisticsTable, { STATISTIC_VIEWS, type StatisticView } from './DamageThreeSkillRankStatisticsTable'
 import { useDamageThreeSkillRankStatistics } from './useDamageThreeSkillRankStatistics'
+import { TableSortHeader } from './TableSortHeader'
+import { useSkillDamageMatrixSort, type MatrixSort, type MatrixSortKey } from './useSkillDamageMatrixSort'
 import './DamageCalculatorTwo.css'
 import './EnemyAnalysis.css'
 import './DamageThreeSkillAttributeMatrixPage.css'
@@ -24,12 +26,14 @@ type Mode = typeof MODES[number][0]
 const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
 type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
 const PAGE_SIZE = 15
+const DEFAULT_SORT: MatrixSort = { key: 'operator', direction: 'asc' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
+const SIGNED_DIFFERENCE = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1, signDisplay: 'exceptZero' })
 const OPERATOR_ORDER = new Intl.Collator('ja', { numeric: true })
 const UNIT = { NORMAL: '1攻撃', NEXT_ATTACK: '強化攻撃1回', COUNTER: '反撃1回', SKILL_ACTION: '1発動' } as const
 
-function formatValue(value: number | null) {
-  return value === null ? '—' : NUMBER.format(value)
+function formatValue(value: number | null, formatter = NUMBER) {
+  return value === null ? '—' : formatter.format(value)
 }
 
 function normalizeSearch(value: string) {
@@ -47,7 +51,9 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [mode, setMode] = useState<Mode>('virtual')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<MatrixSort>(DEFAULT_SORT)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
+  const [showDifference, setShowDifference] = useState(false)
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [selectedResistances, setSelectedResistances] = useState<number[]>([0, 50, 60])
@@ -72,8 +78,11 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   }, [query, entries])
   const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
   const statsActive = mode === 'statistics'
+  const canShowDifference = mode === 'virtual' && layout === 'columns'
   const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds)
+  const sortedEntries = useSkillDamageMatrixSort(filtered, mode === 'actual' ? 'actual' : 'virtual',
+    distribution?.resistanceThresholds, statsActive ? DEFAULT_SORT : sort)
   const format = statsActive
     ? [viewLabel(STATISTIC_VIEWS, statisticView), viewLabel(TABLE_CHART_VIEWS, statisticFormat)]
     : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
@@ -81,9 +90,20 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const pages = Math.ceil(filtered.length / PAGE_SIZE)
   const activePage = Math.min(page, Math.max(0, pages - 1))
   const start = activePage * PAGE_SIZE
-  const pageEntries = useMemo(() => filtered.slice(start, start + PAGE_SIZE), [filtered, start])
+  const pageEntries = useMemo(() => sortedEntries?.slice(start, start + PAGE_SIZE) ?? [], [sortedEntries, start])
   const tabs = { idPrefix: tabId, activeTab: mode }
+  function changeSort(key: MatrixSortKey, resistance?: number) {
+    const sameColumn = key === sort.key && resistance === sort.resistance
+    const descending = sameColumn ? sort.direction === 'asc' : resistance !== undefined
+    setSort({ key, resistance, direction: descending ? 'desc' : 'asc' })
+    setPage(0)
+  }
+  function resetSort() {
+    setSort(DEFAULT_SORT)
+    setPage(0)
+  }
   function toggleResistance(value: number) {
+    if (sort.resistance === value && selectedResistances.length > 1) resetSort()
     setSelectedResistances(previous => {
       if (!previous.includes(value)) return [...previous, value]
       return previous.length === 1 ? previous : previous.filter(resistance => resistance !== value)
@@ -94,7 +114,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
     {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
   </>}>
-    <PageOutputTabs {...tabs} tabs={MODES} onChange={setMode} label="比較方法" format={format} />
+    <PageOutputTabs {...tabs} tabs={MODES} onChange={next => {
+      if (next !== mode && sort.resistance !== undefined) resetSort()
+      setMode(next)
+    }} label="比較方法" format={format} />
     <AnalysisTabPanel {...tabs} tab={mode}>
       <div className="dc3-matrix-controls">
         <label className="dc3-matrix-search">スキル検索
@@ -138,9 +161,19 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                   <PageViewSwitch views={STATISTIC_VIEWS} selected={statisticView} onChange={setStatisticView} label="統計の表示" />
                 </> : <>
                   <span className="dc3-matrix-option-label">属性の並べ方</span>
-                  <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={setLayout} label="属性の並べ方" />
+                  <PageViewSwitch views={ATTRIBUTE_LAYOUTS} selected={layout} onChange={next => {
+                    if (next === 'rows' && sort.resistance !== undefined) resetSort()
+                    setLayout(next)
+                  }} label="属性の並べ方" />
                 </>}
               </div>
+              {canShowDifference && <label className="dc3-matrix-difference-toggle">
+                <input type="checkbox" checked={showDifference} onChange={event => {
+                  if (!event.target.checked && sort.key === 'difference') resetSort()
+                  setShowDifference(event.target.checked)
+                }} />
+                ダメージ差を表示
+              </label>}
               {statsActive && <div className="dc3-matrix-option-group">
                 <span className="dc3-matrix-option-label">表示形式</span>
                 <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />
@@ -153,17 +186,20 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
               <div className="dc3-matrix-table-heading">
                 <h2>{mode === 'virtual' ? '出現順位別の主攻撃ダメージ' : '出現順位別の直接ダメージ内訳'}</h2>
                 <nav aria-label="スキル一覧のページ切り替え">
-                  <span aria-live="polite">{start + 1}–{start + pageEntries.length} / {filtered.length}件</span>
+                  <span aria-live="polite">{sortedEntries
+                    ? `${start + 1}–${start + pageEntries.length} / ${filtered.length}件` : '並べ替え中…'}</span>
                   {pages > 1 && <>
-                    <button type="button" className="button secondary" disabled={activePage === 0}
+                    <button type="button" className="button secondary" disabled={!sortedEntries || activePage === 0}
                       onClick={() => setPage(activePage - 1)}>前へ</button>
-                    <button type="button" className="button secondary" disabled={activePage + 1 >= pages}
+                    <button type="button" className="button secondary" disabled={!sortedEntries || activePage + 1 >= pages}
                       onClick={() => setPage(activePage + 1)}>次へ</button>
                   </>}
                 </nav>
               </div>
               <SkillDamageTable entries={pageEntries} pairs={distribution.resistanceThresholds} mode={mode}
+                sort={sort} onSort={changeSort}
                 selectedResistances={selectedResistances} stacked={layout === 'rows'}
+                showDifference={canShowDifference && showDifference}
                 showLevel={commonLevel === null} showUnit={commonUnit === null} />
             </>}
           </>}
@@ -172,7 +208,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   </PageLayout>
 }
 
-function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, selectedResistances }: {
+function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, selectedResistances, showDifference, sort, onSort }: {
   entries: readonly DamageThreeAttributeEntry[]
   pairs: readonly EnemyResistanceThreshold[]
   mode: DamageThreeSkillRankMode
@@ -180,6 +216,9 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
   showUnit: boolean
   stacked: boolean
   selectedResistances: readonly number[]
+  showDifference: boolean
+  sort: MatrixSort
+  onSort: (key: MatrixSortKey, resistance?: number) => void
 }) {
   const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, pairs, mode) })),
     [entries, pairs, mode])
@@ -190,20 +229,27 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
     .filter(({ pair }) => selectedResistances.includes(pair.resistance))
   const headerRows = stacked ? 2 : 3
   const rowsPerSkill = stacked ? 2 : 1
-  const columnsPerPair = stacked ? 1 : 2
+  const columnsPerPair = stacked ? 1 : 2 + Number(showDifference)
+  const artsEndClass = showDifference ? '' : 'dc3-matrix-pair-end'
   const physicalLabel = mode === 'virtual' ? '物理化' : '物理'
   const artsLabel = mode === 'virtual' ? '術化' : '術'
   const label = mode === 'virtual' ? '主攻撃を物理・術に変更したダメージ' : '直接ダメージの物理・術内訳'
+  function sortHeader(key: MatrixSortKey, title: string, className?: string, resistance?: number) {
+    const prefix = resistance === undefined ? '' : `術耐性 ${resistance}・`
+    return <TableSortHeader label={title} ariaLabel={`${prefix}${title}で並べ替え`} className={className}
+      rowSpan={resistance === undefined ? headerRows : undefined} sortKey={key}
+      sort={sort.resistance === resistance ? sort : null} onSort={() => onSort(key, resistance)} />
+  }
   return <div className="damage-two-table-wrap dc3-matrix-scroll" tabIndex={0} role="region" aria-label={label}>
     <table className={`damage-two-table dc3-matrix-table${stacked ? ' dc3-matrix-stacked' : ''}`} aria-label={label}>
       <colgroup span={5 + Number(showLevel) + Number(showUnit) + Number(showStatus) + Number(stacked)} />
       {columns.map(({ pair }) => <colgroup key={pair.resistance} span={columnsPerPair} />)}
       <thead>
         <tr>
-          <th scope="col" rowSpan={headerRows} className="dc3-matrix-operator">オペレーター</th>
-          <th scope="col" rowSpan={headerRows} className="dc3-matrix-number">S番号</th>
-          <th scope="col" rowSpan={headerRows} className="dc3-matrix-stage">段階</th>
-          <th scope="col" rowSpan={headerRows} className="dc3-matrix-name">スキル名</th>
+          {sortHeader('operator', 'オペレーター', 'dc3-matrix-operator')}
+          {sortHeader('skillIndex', 'S番号', 'dc3-matrix-number')}
+          {sortHeader('stage', '段階', 'dc3-matrix-stage')}
+          {sortHeader('skillName', 'スキル名', 'dc3-matrix-name')}
           {showLevel && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">スキルLv</th>}
           {showUnit && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">単位</th>}
           <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">算出方法</th>
@@ -222,8 +268,9 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
           </th>)}
         </tr>
         {!stacked && <tr>{columns.map(({ pair }) => <Fragment key={pair.resistance}>
-          <th scope="col">{physicalLabel}</th>
-          <th scope="col" className="dc3-matrix-pair-end">{artsLabel}</th>
+          {sortHeader('physical', physicalLabel, undefined, pair.resistance)}
+          {sortHeader('arts', artsLabel, artsEndClass, pair.resistance)}
+          {showDifference && sortHeader('difference', '物理化 − 術化', 'dc3-matrix-pair-end', pair.resistance)}
         </Fragment>)}</tr>}
       </thead>
       {results.map(({ entry, cells, errors, isExpectedValue, hasUnsupportedTalentDamage }) => {
@@ -245,7 +292,8 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
             {stacked && <th scope="row" className="dc3-matrix-attribute">{physicalLabel}</th>}
             {columns.map(({ pair, index }) => <Fragment key={pair.resistance}>
               <td className="dc3-matrix-damage">{formatValue(cells[index].physical)}</td>
-              {!stacked && <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(cells[index].arts)}</td>}
+              {!stacked && <td className={`dc3-matrix-damage ${artsEndClass}`}>{formatValue(cells[index].arts)}</td>}
+              {showDifference && <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(getDamageDifference(cells[index]), SIGNED_DIFFERENCE)}</td>}
             </Fragment>)}
           </tr>
           {stacked && <tr>
