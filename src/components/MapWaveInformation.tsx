@@ -40,6 +40,13 @@ export function MapWaveInformation({
   if (map.status === 'missing') return <p className="map-empty" role="status">このマップのウェーブ情報は未取得です。</p>
   if (error) return <div className="map-load-state" role="alert"><span>{error}</span><button className="button secondary" type="button" onClick={() => setRevision((value) => value + 1)}>再読み込み</button></div>
   if (!detail) return <p className="map-empty" role="status">ウェーブ情報を読み込んでいます…</p>
+  return <MapWaveDetail detail={detail} map={map} index={index} configuredOnly={configuredOnly}
+    conditionContext={conditionContext} showHelp={showHelp} />
+}
+
+export function MapWaveDetail({ detail, map, index, configuredOnly = false, conditionContext, showHelp = true }: {
+  detail: MapDetail
+} & Omit<MapWaveInformationProps, 'detailLoader'>) {
   if (detail.waves == null) return <p className="map-empty" role="status">ウェーブ情報を確認できませんでした。</p>
   if (!detail.waves.length) return <p className="map-empty" role="status">ウェーブの設定はありません。</p>
   return <MapWaveSchedule key={`${map.stageId}:${map.levelId}`} detail={detail} map={map} index={index}

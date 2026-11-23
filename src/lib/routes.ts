@@ -58,6 +58,7 @@ export type AppRoute =
   | { view: 'main-enemy-trends' }
   | { view: 'main-enemy-spawns' }
   | { view: 'maps' }
+  | { view: 'td-maps'; stageCode?: string }
   | { view: 'roguelike' }
   | { view: 'sources' }
   | { view: 'slide-maker' }
@@ -296,6 +297,11 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/enemies/main-trends') return { view: 'main-enemy-trends' }
   if (hash === '#/analysis/enemies/main-spawns') return { view: 'main-enemy-spawns' }
   if (hash === '#/maps') return { view: 'maps' }
+  if (hash === '#/maps/td') return { view: 'td-maps' }
+  if (hash.startsWith('#/maps/td?')) {
+    const stageCode = new URLSearchParams(hash.slice('#/maps/td?'.length)).get('stage')
+    return stageCode ? { view: 'td-maps', stageCode } : { view: 'td-maps' }
+  }
   if (hash === '#/roguelike') return { view: 'roguelike' }
   if (hash === '#/sources') return { view: 'sources' }
   if (hash === '#/slide-maker') return { view: 'slide-maker' }
