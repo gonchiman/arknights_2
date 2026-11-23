@@ -1,4 +1,4 @@
-import { APP_NAV_ITEMS, DAMAGE_THREE_POWER_BY_YEAR_ITEM, SKILL_LEARNING_ITEMS, STANDARD_PAGE_TITLES } from '../lib/navigation'
+import { APP_NAV_ITEMS, DAMAGE_THREE_POWER_BY_YEAR_ITEM, SKILL_DPS_ANALYSIS_ITEM, SKILL_LEARNING_ITEMS, STANDARD_PAGE_TITLES } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
@@ -10,7 +10,7 @@ const HOME_PANELS = [
   {
     id: 'operators',
     title: 'オペレーター',
-    links: [{ label: 'オペレーターデータベース', href: '#/operators' }, DAMAGE_THREE_POWER_BY_YEAR_ITEM],
+    links: [{ label: 'オペレーターデータベース', href: '#/operators' }, DAMAGE_THREE_POWER_BY_YEAR_ITEM, SKILL_DPS_ANALYSIS_ITEM],
   },
   {
     id: 'enemies',

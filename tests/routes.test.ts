@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SKILL_LEARNING_ITEMS, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
+import { APP_NAV_ITEMS, DAMAGE_VERIFICATION_ITEM, GOLDENGLOW_ANALYSIS_ITEMS, SKILL_LEARNING_ITEMS, SKILL_DPS_ANALYSIS_ITEM, getStandardPageTitle, SURTR_ANALYSIS_ITEMS, SURTR_HOME_ITEMS, SURTR_HOME_LINK } from '../src/lib/navigation.ts'
 import {
   createDamageCalculatorThreeHash,
   createDamageCalculatorThreeAttributeHash,
@@ -14,6 +14,15 @@ import {
   parseHashRoute,
   type SkillEffectsRouteSelection,
 } from '../src/lib/routes.ts'
+
+test('スキルDPS分析を独立ページとして開き、共通ページ名とメニューの導線を揃える', () => {
+  assert.deepEqual(parseHashRoute(SKILL_DPS_ANALYSIS_ITEM.href), { view: 'skill-dps-analysis' })
+  assert.equal(SKILL_DPS_ANALYSIS_ITEM.label, getStandardPageTitle('skill-dps-analysis'))
+  assert.equal(APP_NAV_ITEMS.filter(item => item.id === 'skill-dps-analysis').length, 1)
+  for (const suffix of ['/', '/extra', '?skill=1', '-extra']) {
+    assert.deepEqual(parseHashRoute(`${SKILL_DPS_ANALYSIS_ITEM.href}${suffix}`), { view: 'operators' })
+  }
+})
 
 test('メイン敵ステータス推移は敵分析用の独立ページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/analysis/enemies/main-trends'), { view: 'main-enemy-trends' })
@@ -132,6 +141,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['skill-kmeans', 'skill-kmeans'],
       ['skill-hdbscan', 'skill-hdbscan'],
       ['skill-hierarchical', 'skill-hierarchical'],
+      ['skill-dps-analysis', 'skill-dps-analysis'],
       ['code-analysis', 'code-analysis'],
       ['damage', 'damage'],
       ['damage-two', 'damage-two'],

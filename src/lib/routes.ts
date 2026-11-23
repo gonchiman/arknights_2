@@ -4,6 +4,7 @@ export type AppRoute =
   | { view: 'home' }
   | { view: 'skills' }
   | { view: 'skill-classification' }
+  | { view: 'skill-dps-analysis' }
   | { view: 'skill-kmeans' }
   | { view: 'skill-hdbscan' }
   | { view: 'skill-hierarchical' }
@@ -267,6 +268,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/operators/pca-2') return { view: 'operator-pca-two' }
   if (hash === '#/analysis/operators/wiki-views') return { view: 'operator-wiki-views' }
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
+  if (hash === '#/analysis/skills/dps-relationships') return { view: 'skill-dps-analysis' }
   if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
   if (hash === '#/analysis/skills/hierarchical') return { view: 'skill-hierarchical' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }
