@@ -70,13 +70,16 @@ const snapshot = {
   fit: { slope: -18.05, intercept: 1651 }, correlation: -0.2227, rSquared: 0.04958,
 }
 
-test('each saved analysis includes its applied conditions, statistics and the shared image frame', () => {
-  for (const [axis, label] of [['duration', '持続時間（秒）'], ['spCost', '必要SP'], ['spGap', '必要SP−初期SP']]) {
+test('each numeric saved analysis includes its applied conditions, statistics and the shared image frame', () => {
+  for (const [axis, label] of [['duration', '持続時間（秒）'], ['spCost', '必要SP'], ['spGap', '必要SP−初期SP'],
+    ['deploymentCost', '配置コスト'], ['initialRatio', '初期SP率（%）'], ['uptime', '理論稼働率（%）'],
+    ['attack', '軽減前攻撃力'], ['interval', '攻撃間隔（秒）']]) {
     const frame = getFrame({ ...snapshot, axis, metric: 'combined' })
     const markup = renderToStaticMarkup(createElement(Frame, frame))
     assert.match(markup, /chart-image-frame-heading/)
     assert.match(markup, /chart-image-frame-legend-item/)
-    assert.match(markup, /自然回復・スキル最高Lv・防御0／術耐性0・敵1体・n=2/)
+    assert.match(markup, /自然回復・スキル最高Lv・防御0／術耐性0・敵1体/)
+    assert.match(markup, /n=2/)
     assert.match(markup, /Pearson r = -0.2227/)
     assert.match(markup, /R² = 0.04958/)
     assert.ok(markup.includes(`合計DPS = -18.05 × ${label} + 1,651`))
@@ -85,6 +88,20 @@ test('each saved analysis includes its applied conditions, statistics and the sh
     assert.match(markup, /class="skill-dps-chart-fit"/)
     assert.doesNotMatch(markup, /<button\b|<input\b|<select\b|skill-dps-chart-legend|NaN|Infinity/)
   }
+})
+
+test('maximum target image exports the grouped boxes, quartiles and unlimited label without OLS statistics', () => {
+  const frame = getFrame({ ...snapshot, axis: 'maxTargets', points: [
+    { id: 'single-low', x: 1, y: 0 }, { id: 'single-high', x: 1, y: 1000 },
+    { id: 'unlimited', x: 'UNLIMITED', y: 1500 },
+  ], fit: null, correlation: null, rSquared: null })
+  const markup = renderToStaticMarkup(createElement(Frame, frame))
+  assert.match(markup, /最大対象数と直接DPS/)
+  assert.match(markup, /上限なし/)
+  assert.match(markup, /中央値/)
+  assert.match(markup, /Q1/)
+  assert.match(markup, /Q3/)
+  assert.doesNotMatch(markup, /Pearson|R²|単回帰|UNLIMITED|NaN|Infinity|<button\b/)
 })
 
 test('saving without regression never adds a line or a misleading legend', () => {

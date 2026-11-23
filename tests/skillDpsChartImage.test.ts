@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { CHART_IMAGE_FILENAME_BYTE_LIMIT } from '../src/lib/chartImageFilename.ts'
-import { DEFAULT_SKILL_DPS_ANALYSIS_CONFIG } from '../src/lib/skillDpsAnalysis.ts'
+import { DEFAULT_SKILL_DPS_ANALYSIS_CONFIG, SKILL_DPS_ANALYSIS_AXES } from '../src/lib/skillDpsAnalysis.ts'
 import {
   getSkillDpsChartImageTitle, getSkillDpsChartImageConditions, getSkillDpsChartImageFilename,
   type SkillDpsChartImageSnapshot,
@@ -15,7 +15,7 @@ function snapshot(overrides: Partial<SkillDpsChartImageSnapshot> = {}): SkillDps
   }
 }
 
-test('all three hypotheses and both DPS metrics have readable distinct titles and names', () => {
+test('all nine indicators and both DPS metrics have readable distinct titles and names', () => {
   const names: string[] = []
   for (const [axis, label] of [['duration', '持続時間'], ['spCost', '必要SP'], ['spGap', '必要SP−初期SP']] as const) {
     for (const [metric, dps] of [['direct', '直接DPS'], ['combined', '合計DPS']] as const) {
@@ -28,6 +28,21 @@ test('all three hypotheses and both DPS metrics have readable distinct titles an
     }
   }
   assert.equal(new Set(names).size, 6)
+  const all = SKILL_DPS_ANALYSIS_AXES.flatMap(([axis, label]) => (['direct', 'combined'] as const).map(metric => {
+    const source = snapshot({ axis, metric })
+    assert.ok(getSkillDpsChartImageTitle(source).startsWith(label))
+    return getSkillDpsChartImageFilename(source)
+  }))
+  assert.equal(new Set(all).size, 18)
+})
+
+test('target group export names its boxplot without claiming a regression and uptime retains its assumptions', () => {
+  const category = snapshot({ axis: 'maxTargets', points: [{ id: 'unlimited', x: 'UNLIMITED', y: 1500 }] })
+  assert.match(getSkillDpsChartImageFilename(category), /対象数別箱ひげ図/)
+  assert.doesNotMatch(getSkillDpsChartImageFilename(category), /回帰線|UNLIMITED|Infinity/)
+  const uptime = snapshot({ axis: 'uptime' })
+  assert.match(getSkillDpsChartImageConditions(uptime), /SP回復1\/秒・反復固定周期・回復支援なし/)
+  assert.match(getSkillDpsChartImageFilename(uptime), /SP回復1毎秒固定/)
 })
 
 test('header conditions use the applied cohort and short main conditions rather than all fixed settings', () => {

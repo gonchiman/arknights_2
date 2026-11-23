@@ -5,21 +5,20 @@ import { formatSkillStructureSpRecovery } from './skillStructure.ts'
 import type {
   SkillDpsAnalysisAxis, SkillDpsAnalysisConfig, SkillDpsAnalysisMetric,
 } from './skillDpsAnalysis.ts'
+import { SKILL_DPS_ANALYSIS_AXES } from './skillDpsAnalysis.ts'
 
 export interface SkillDpsChartImageSnapshot {
   config: SkillDpsAnalysisConfig
   axis: SkillDpsAnalysisAxis
   metric: SkillDpsAnalysisMetric
   showFit: boolean
-  points: readonly { id: string; x: number; y: number }[]
+  points: readonly { id: string; x: number | 'UNLIMITED'; y: number }[]
   fit: { slope: number; intercept: number } | null
   correlation: number | null
   rSquared: number | null
 }
 
-const AXIS_LABELS: Record<SkillDpsAnalysisAxis, string> = {
-  duration: '持続時間', spCost: '必要SP', spGap: '必要SP−初期SP',
-}
+const axisLabel = (axis: SkillDpsAnalysisAxis) => SKILL_DPS_ANALYSIS_AXES.find(([key]) => key === axis)![1]
 const METRIC_LABELS: Record<SkillDpsAnalysisMetric, string> = { direct: '直接DPS', combined: '合計DPS' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumSignificantDigits: 12 })
 
@@ -41,7 +40,7 @@ function getSkillLevelLabel(config: SkillDpsAnalysisConfig): string {
 }
 
 export function getSkillDpsChartImageTitle(snapshot: SkillDpsChartImageSnapshot): string {
-  return `${AXIS_LABELS[snapshot.axis]}と${METRIC_LABELS[snapshot.metric]}`
+  return `${axisLabel(snapshot.axis)}と${METRIC_LABELS[snapshot.metric]}`
 }
 
 /** Keep the header to the applied cohort, skill level, common enemy and sample size.
@@ -55,6 +54,7 @@ export function getSkillDpsChartImageConditions(snapshot: SkillDpsChartImageSnap
     getSkillLevelLabel(config),
     `防御${NUMBER.format(config.defense)}／術耐性${NUMBER.format(config.resistance)}`,
     '敵1体',
+    ...(snapshot.axis === 'uptime' ? ['SP回復1/秒・反復固定周期・回復支援なし'] : []),
     `n=${NUMBER.format(snapshot.points.length)}`,
   ].join('・')
 }
@@ -67,9 +67,11 @@ export function getSkillDpsChartImageFilename(snapshot: SkillDpsChartImageSnapsh
     ...getCohortLabels(config),
     `主攻撃${getDamageTypeLabel(config)}`,
     getSkillLevelLabel(config),
+    ...(snapshot.axis === 'uptime' ? ['SP回復1毎秒固定', '反復固定周期'] : []),
     `防御${config.defense}`,
     `術耐性${config.resistance}`,
-    snapshot.showFit && snapshot.fit !== null ? '回帰線あり' : '回帰線なし',
+    snapshot.axis === 'maxTargets' ? '対象数別箱ひげ図'
+      : snapshot.showFit && snapshot.fit !== null ? '回帰線あり' : '回帰線なし',
     '育成最大-信頼100-潜在1',
     '未装備',
     '敵1体',
