@@ -25,6 +25,19 @@
 
 .page-output-heading { min-width: 0; }
 
+.page-output-header-with-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.page-output-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
 .page-output-header > .element-location-copy-button {
   grid-column: 2;
   align-self: center;

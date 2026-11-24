@@ -1,0 +1,5 @@
+.td-map-image { display: grid; gap: 10px; padding: 14px; }
+.td-map-image .map-board-figure { border: 0; padding: 0; background: var(--surface); }
+.td-map-image :is(.map-board, .map-board-layers) { max-width: none; }
+.td-map-image .td-route-events { text-align: center; }
+.td-map-image-preview { display: block; width: 100%; max-height: 55dvh; object-fit: contain; }
