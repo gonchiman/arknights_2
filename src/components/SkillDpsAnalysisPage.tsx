@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useId, useMemo, useRef, useState, useTransition, type FormEvent } from 'react'
 import type { SkillRecord } from '../types/skill'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { formatSkillStructureSpRecovery } from '../lib/skillStructure'
@@ -8,13 +8,14 @@ import {
   type SkillDpsAnalysisAxis, type SkillDpsAnalysisConfig, type SkillDpsAnalysisMetric,
   type SkillDpsDamageType, type SkillDpsObservation, type SkillDpsSpRecovery,
 } from '../lib/skillDpsAnalysis'
-import type { SkillDpsChartImageSnapshot } from '../lib/skillDpsChartImage'
+import { getSkillDpsAnalysisConditionLabels, type SkillDpsChartImageSnapshot } from '../lib/skillDpsChartImage'
 import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel, type TableChartView } from './PageViewSwitch'
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
 import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
+import { SkillDpsAnalysisOverview } from './SkillDpsAnalysisOverview'
 import { SkillDpsTargetBoxplot } from './SkillDpsTargetBoxplot'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsAnalysisPage.css'
@@ -25,7 +26,7 @@ interface Props {
   error?: string | null
 }
 
-const TABS = SKILL_DPS_ANALYSIS_AXES
+const TABS = [['overview', '分析一覧'], ['detail', '指標別分析']] as const
 const VIEWS = [['chart', 'グラフ'], ['table', '表']] as const
 const X_LABELS = SKILL_DPS_ANALYSIS_X_LABELS
 const METRIC_LABELS: Record<SkillDpsAnalysisMetric, string> = { direct: '直接DPS', combined: '合計DPS' }
@@ -68,7 +69,10 @@ function sameConfig(left: SkillDpsAnalysisConfig, right: SkillDpsAnalysisConfig)
 
 export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const id = useId()
+  const [tab, setTab] = useState<typeof TABS[number][0]>('overview')
   const [axis, setAxis] = useState<SkillDpsAnalysisAxis>('duration')
+  const axisSelect = useRef<HTMLSelectElement>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [view, setView] = useState<TableChartView>('chart')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
   const [showFit, setShowFit] = useState(true)
@@ -90,8 +94,8 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
       return { dataset: null, error: caught instanceof Error ? caught.message : 'DPSを計算できませんでした。' }
     }
   }, [rows, applied, loading, error])
-  const analysis = useMemo(() => calculation.dataset ? analyzeSkillDps(calculation.dataset, axis, metric) : null,
-    [calculation.dataset, axis, metric])
+  const analysis = useMemo(() => calculation.dataset && tab === 'detail' ? analyzeSkillDps(calculation.dataset, axis, metric) : null,
+    [calculation.dataset, tab, axis, metric])
   const categorical = axis === 'maxTargets'
   const numericPoints = useMemo(() => analysis?.observations.flatMap(({ id, x, y }) =>
     typeof x === 'number' ? [{ id, x, y }] : []) ?? [], [analysis])
@@ -121,37 +125,56 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
     startTransition(() => setApplied(next.config!))
   }
 
-  const settings = <form className="skill-dps-settings" onSubmit={applyConfig} noValidate>
-    <section className="skill-dps-settings-section" aria-labelledby={`${id}-target`}>
-      <PageOutputHeader segments={['分析対象']}><h2 id={`${id}-target`}>分析対象</h2></PageOutputHeader>
-      <div className="skill-dps-fields">
-        <label><span>職業</span><select value={draft.profession} disabled={loading || busy}
-          onChange={event => changeDraft('profession', event.target.value)}>
-          <option value="ALL">すべて</option>
-          {professions.map(profession => <option value={profession} key={profession}>{getProfessionLabel(profession)}</option>)}
-        </select></label>
-        <label><span>レアリティ</span><select value={draft.rarity} disabled={loading || busy}
-          onChange={event => changeDraft('rarity', event.target.value === 'ALL' ? 'ALL' : Number(event.target.value))}>
-          <option value="ALL">すべて</option>
-          {rarities.map(rarity => <option value={rarity} key={rarity}>★{rarity}</option>)}
-        </select></label>
-        <label><span>SP回復</span><select value={draft.spRecovery} disabled={loading || busy}
-          onChange={event => changeDraft('spRecovery', event.target.value as SkillDpsSpRecovery)}>
-          {SP_RECOVERY.map(recovery => <option value={recovery} key={recovery}>{formatSkillStructureSpRecovery(recovery)}</option>)}
-        </select></label>
-        <label><span>攻撃属性</span><select value={draft.damageType} disabled={loading || busy}
-          onChange={event => changeDraft('damageType', event.target.value as SkillDpsAnalysisConfig['damageType'])}>
-          <option value="ALL">すべて</option>
-          {DAMAGE_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
-        </select></label>
+  function openAxisDetail(selectedAxis: SkillDpsAnalysisAxis) {
+    setAxis(selectedAxis)
+    setTab('detail')
+    window.requestAnimationFrame(() => axisSelect.current?.focus())
+  }
+
+  const settings = <section className="skill-dps-settings" aria-label="分析条件">
+    <PageOutputHeader segments={['分析条件']}>
+      <div className="skill-dps-toolbar skill-dps-settings-toolbar">
+        <button className="button secondary" type="button" aria-expanded={settingsOpen} aria-controls={`${id}-conditions`}
+          onClick={() => setSettingsOpen(open => !open)}><span aria-hidden="true">{settingsOpen ? '▾' : '▸'}</span> 分析条件</button>
+        <label className="skill-dps-inline-label">DPS
+          <select value={metric} disabled={loading || Boolean(error)}
+            onChange={event => setMetric(event.target.value as SkillDpsAnalysisMetric)}>
+            {Object.entries(METRIC_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
       </div>
-    </section>
-    <section className="skill-dps-settings-section" aria-labelledby={`${id}-conditions`}>
-      <PageOutputHeader segments={['計算条件']}><h2 id={`${id}-conditions`}>計算条件</h2></PageOutputHeader>
-      <details className="skill-dps-conditions">
-        <summary>育成・敵条件<span className="skill-dps-condition-values">
-          {draft.skillLevel === 'MAX' ? 'スキル最高Lv' : 'スキルLv.7'}・昇進・Lv最大・信頼100・潜在1・未装備 ／ 防御{draft.defense || '—'}・術耐性{draft.resistance || '—'}・敵1体
-        </span></summary>
+    </PageOutputHeader>
+    <div className="skill-dps-applied-conditions">
+      <span>{getSkillDpsAnalysisConditionLabels(applied).join('・')}</span>
+      <span role="status" className={`skill-dps-status${pending ? ' pending' : ''}`}>{status}</span>
+    </div>
+    <form className="skill-dps-condition-form" id={`${id}-conditions`} hidden={!settingsOpen} onSubmit={applyConfig} noValidate>
+      <fieldset>
+        <legend>分析対象</legend>
+        <div className="skill-dps-fields">
+          <label><span>職業</span><select value={draft.profession} disabled={loading || busy}
+            onChange={event => changeDraft('profession', event.target.value)}>
+            <option value="ALL">すべて</option>
+            {professions.map(profession => <option value={profession} key={profession}>{getProfessionLabel(profession)}</option>)}
+          </select></label>
+          <label><span>レアリティ</span><select value={draft.rarity} disabled={loading || busy}
+            onChange={event => changeDraft('rarity', event.target.value === 'ALL' ? 'ALL' : Number(event.target.value))}>
+            <option value="ALL">すべて</option>
+            {rarities.map(rarity => <option value={rarity} key={rarity}>★{rarity}</option>)}
+          </select></label>
+          <label><span>SP回復</span><select value={draft.spRecovery} disabled={loading || busy}
+            onChange={event => changeDraft('spRecovery', event.target.value as SkillDpsSpRecovery)}>
+            {SP_RECOVERY.map(recovery => <option value={recovery} key={recovery}>{formatSkillStructureSpRecovery(recovery)}</option>)}
+          </select></label>
+          <label><span>攻撃属性</span><select value={draft.damageType} disabled={loading || busy}
+            onChange={event => changeDraft('damageType', event.target.value as SkillDpsAnalysisConfig['damageType'])}>
+            <option value="ALL">すべて</option>
+            {DAMAGE_TYPES.map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+          </select></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>育成・敵条件</legend>
         <div className="skill-dps-fields skill-dps-calculation-fields">
           <label><span>スキルレベル</span><select value={draft.skillLevel} disabled={loading || busy}
             onChange={event => changeDraft('skillLevel', event.target.value as SkillDpsAnalysisConfig['skillLevel'])}>
@@ -164,29 +187,36 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
             disabled={loading || busy} aria-invalid={inputError !== null && (!draft.resistance.trim() || !Number.isFinite(Number(draft.resistance)) || Number(draft.resistance) < 0 || Number(draft.resistance) > 100)}
             onChange={event => changeDraft('resistance', event.target.value)} /></label>
         </div>
-      </details>
+      </fieldset>
       <div className="skill-dps-actions">
         <button className="button" type="submit" disabled={loading || busy || Boolean(error)}>{busy ? '計算中…' : '分析する'}</button>
         <span className="skill-dps-fixed-condition">通常攻撃型・1スキル1件</span>
         <span className="skill-dps-fixed-condition">個別条件 DC3既定</span>
-        <span role="status" className={`skill-dps-status${pending ? ' pending' : ''}`}>{status}</span>
+        <span className="skill-dps-fixed-condition">昇進・Lv最大・信頼100・潜在1・未装備・敵1体</span>
       </div>
       {inputError && <p className="skill-dps-error" role="alert">{inputError}</p>}
-    </section>
-  </form>
+    </form>
+  </section>
 
   return <PageLayout page="skill-dps-analysis" settings={settings} className="skill-dps-page">
     {sourceError && <p className="skill-dps-error" role="alert">{sourceError}</p>}
-    {dataset && analysis && <>
-      <PageOutputTabs idPrefix={id} tabs={TABS} activeTab={axis} onChange={setAxis}
-        label="分析する関係" format={viewLabel(VIEWS, view)} />
-      <AnalysisTabPanel idPrefix={id} tab={axis} activeTab={axis}>
+    {dataset && <>
+      <PageOutputTabs idPrefix={id} tabs={TABS} activeTab={tab} onChange={setTab}
+        label="分析結果" format={tab === 'overview' ? '表' : [viewLabel(SKILL_DPS_ANALYSIS_AXES, axis), viewLabel(VIEWS, view)]} />
+      <AnalysisTabPanel idPrefix={id} tab="overview" activeTab={tab}>
         <div className="skill-dps-result" aria-busy={busy}>
+          <SkillDpsAnalysisOverview dataset={dataset} metric={metric} onSelectAxis={openAxisDetail} />
+        </div>
+      </AnalysisTabPanel>
+      <AnalysisTabPanel idPrefix={id} tab="detail" activeTab={tab}>
+        {analysis && <div className="skill-dps-result" aria-busy={busy}>
           <div className="skill-dps-toolbar">
+            <label className="skill-dps-inline-label">指標
+              <select ref={axisSelect} value={axis} onChange={event => setAxis(event.target.value as SkillDpsAnalysisAxis)}>
+                {SKILL_DPS_ANALYSIS_AXES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </select>
+            </label>
             <PageViewSwitch views={VIEWS} selected={view} onChange={setView} label="分析結果の表示形式" />
-            <label className="skill-dps-inline-label">DPS<select value={metric} onChange={event => setMetric(event.target.value as SkillDpsAnalysisMetric)}>
-              <option value="direct">直接DPS</option><option value="combined">合計DPS</option>
-            </select></label>
             {view === 'chart' && !categorical && <label className="skill-dps-inline-label"><input type="checkbox" checked={showFit}
               onChange={event => setShowFit(event.target.checked)} />回帰線</label>}
             <span className="skill-dps-count" role="status">使用 {COUNT.format(analysis.observations.length)}件 ／ 除外 {COUNT.format(excludedCount)}件</span>
@@ -219,7 +249,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
             {dataset.exclusions.filter(item => item.count > 0).map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
             {analysis.missingValueReasons.map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
           </dl>}
-        </div>
+        </div>}
       </AnalysisTabPanel>
     </>}
     {imageSnapshot && <SkillDpsAnalysisImageDialog snapshot={imageSnapshot} onClose={() => setImageSnapshot(null)} />}

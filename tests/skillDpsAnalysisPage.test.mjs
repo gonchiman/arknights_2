@@ -9,6 +9,15 @@ import react from '@vitejs/plugin-react'
 let server, Page, Table, rows
 const render = (Component, props) => renderToStaticMarkup(createElement(Component, props))
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+const INDICATORS = ['持続時間', '必要SP', '必要SP−初期SP', '配置コスト', '初期SP率', '理論稼働率', '最大対象数', '攻撃力', '攻撃間隔']
+
+function overviewRows(markup) {
+  const table = markup.match(/<table\b[^>]*class="[^"]*\bskill-dps-overview-table\b[^"]*"[^>]*>([\s\S]*?)<\/table>/)
+  assert.ok(table, 'the initial overview table is present')
+  const body = table[1].match(/<tbody>([\s\S]*?)<\/tbody>/)
+  assert.ok(body)
+  return [...body[1].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(match => match[1])
+}
 
 before(async () => {
   server = await createServer({
@@ -41,31 +50,72 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('initial analysis uses finite duration only and exposes the standard graph/table navigation', () => {
+test('initial overview exposes two result tabs and all nine indicators as detail actions', () => {
   const markup = render(Page, { rows, loading: false })
   assert.doesNotMatch(markup, /<h1\b/)
-  assert.match(markup, /aria-label="スキルDPS分析 \/ 分析対象の場所をコピー"/)
-  assert.match(markup, /aria-label="スキルDPS分析 \/ 計算条件の場所をコピー"/)
-  assert.match(markup, /aria-label="スキルDPS分析 \/ 持続時間 \/ グラフの場所をコピー"/)
-  assert.match(markup, /role="tab" aria-selected="true"[^>]*>持続時間/)
-  assert.equal((markup.match(/role="tab"/g) ?? []).length, 9)
-  for (const label of ['配置コスト', '初期SP率', '理論稼働率', '最大対象数', '攻撃力', '攻撃間隔']) {
-    assert.ok(markup.includes(`>${label}</button>`), label)
+  assert.match(markup, /aria-label="スキルDPS分析 \/ 分析一覧 \/ 表の場所をコピー"/)
+  const tabs = [...markup.matchAll(/<button\b([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/button>/g)]
+  assert.equal(tabs.length, 2)
+  assert.deepEqual(tabs.map(match => text(match[2])), ['分析一覧', '指標別分析'])
+  assert.match(tabs[0][1], /aria-selected="true"/)
+  assert.match(tabs[1][1], /aria-selected="false"/)
+  const detailId = tabs[1][1].match(/aria-controls="([^"]+)"/)?.[1]
+  const detailPanel = [...markup.matchAll(/<[a-z][\w-]*\b([^>]*)>/g)]
+    .find(match => match[1].includes(`id="${detailId}"`) && match[1].includes('role="tabpanel"'))
+  assert.ok(detailPanel, 'the detail tab controls its own panel')
+  assert.match(detailPanel[1], /(?:^|\s)hidden(?:\s|=|$)/)
+  const overview = overviewRows(markup)
+  assert.equal(overview.length, 9)
+  for (const label of INDICATORS) {
+    const row = overview.find(candidate => [...candidate.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)]
+      .some(button => text(button[1]) === label))
+    assert.ok(row, `${label} opens its detailed analysis`)
   }
-  assert.match(markup, /aria-pressed="true"[^>]*>グラフ/)
-  assert.match(markup, /aria-pressed="false"[^>]*>表/)
   assert.match(markup, /<option value="INCREASE_WITH_TIME" selected="">自然回復<\/option>/)
-  assert.match(text(markup), /使用 1件 ／ 除外 1件/)
-  assert.match(text(markup), /持続時間・DPS未確定1件/)
-  assert.match(text(markup), /通常攻撃型・1スキル1件/)
-  assert.match(text(markup), /個別条件 DC3既定/)
-  assert.match(markup, /<button class="button" type="button">画像を保存<\/button>/)
-  assert.doesNotMatch(markup, /NaN|Infinity|<table\b/)
+  // The permanent skill remains in SP analysis, but not in the finite-duration pair.
+  const duration = overview.find(row => text(row).startsWith('持続時間'))
+  const spCost = overview.find(row => text(row).startsWith('必要SP2'))
+  assert.match(duration, /<td>1<\/td>/)
+  assert.ok(spCost, 'both skills remain available for the SP-cost overview')
+  assert.doesNotMatch(markup, /NaN|Infinity|<svg\b[^>]*class="(?:skill-dps-chart-svg|skill-dps-target-svg)"|>画像を保存<\/button>|>回帰線<\/label>/)
 })
 
-test('empty analysis cannot save an image', () => {
+test('shared conditions start collapsed while the DPS selector remains outside the hidden form', () => {
+  const markup = render(Page, { rows, loading: false })
+  const disclosure = [...markup.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)]
+    .find(match => text(match[2]).endsWith('分析条件'))
+  assert.ok(disclosure)
+  assert.match(disclosure[1], /aria-expanded="false"/)
+  const controlledId = disclosure[1].match(/aria-controls="([^"]+)"/)?.[1]
+  assert.ok(controlledId)
+  const controlled = [...markup.matchAll(/<([a-z][\w-]*)\b([^>]*)>/g)]
+    .find(match => match[2].includes(`id="${controlledId}"`))
+  assert.ok(controlled)
+  assert.match(controlled[2], /(?:^|\s)hidden(?:\s|=|$)/)
+  const labels = [...markup.matchAll(/<label\b[^>]*>([\s\S]*?)<\/label>/g)]
+  const dps = labels.filter(match => text(match[1]).startsWith('DPS') && match[1].includes('<select'))
+  assert.equal(dps.length, 1)
+  assert.match(dps[0][1], /<option value="direct" selected="">直接DPS<\/option>/)
+  const formEnd = markup.indexOf('</form>', controlled.index)
+  assert.ok(dps[0].index < controlled.index || dps[0].index > formEnd, 'DPS remains visible when conditions are collapsed')
+})
+
+test('the target-group breakdown has its own initially closed native disclosure', () => {
+  const markup = render(Page, { rows, loading: false })
+  const details = [...markup.matchAll(/<details\b([^>]*)>\s*<summary\b[^>]*>([\s\S]*?)<\/summary>/g)]
+  const targetGroups = details.find(match => text(match[2]).includes('最大対象数別のDPS'))
+  assert.ok(targetGroups)
+  assert.doesNotMatch(targetGroups[1], /(?:^|\s)open(?:\s|=|$)/)
+  assert.doesNotMatch(targetGroups[1], /(?:^|\s)hidden(?:\s|=|$)/)
+  assert.match(markup, /aria-label="最大対象数別のDPSの表"/)
+})
+
+test('empty overview retains all indicators without mounting an unusable plot export', () => {
   const markup = render(Page, { rows: [], loading: false })
-  assert.match(markup, /<button class="button" type="button" disabled="">画像を保存<\/button>/)
+  const overview = overviewRows(markup)
+  assert.equal(overview.length, 9)
+  for (const row of overview) assert.match(row, /<td>0<\/td>/)
+  assert.doesNotMatch(markup, />画像を保存<\/button>|<svg\b[^>]*class="(?:skill-dps-chart-svg|skill-dps-target-svg)"|NaN|Infinity/)
 })
 
 test('new metric columns keep the original SP information and do not turn unlimited capacity into a number', () => {
