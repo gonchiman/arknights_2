@@ -1,4 +1,4 @@
-import { Fragment, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
@@ -56,7 +56,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [showDifference, setShowDifference] = useState(false)
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
-  const [selectedResistances, setSelectedResistances] = useState<number[]>([0, 50, 60])
+  const [selectedResistance, setSelectedResistance] = useState(0)
   const tabId = useId()
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const { data } = aggregation
@@ -65,6 +65,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const scoped = mainStory ?? data
   const distribution = useMemo(() => scoped && !unavailable
     ? buildEnemyDefenseResistanceBands(scoped.rows, scoped.counts) : null, [scoped, unavailable])
+  const selectedPair = distribution?.resistanceThresholds.find(pair => pair.resistance === selectedResistance)
   const entries = useMemo(() => getDamageThreeAttributeEntries(rows).sort((left, right) =>
     OPERATOR_ORDER.compare(left.skill.operatorName, right.skill.operatorName)
     || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
@@ -102,12 +103,12 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     setSort(DEFAULT_SORT)
     setPage(0)
   }
-  function toggleResistance(value: number) {
-    if (sort.resistance === value && selectedResistances.length > 1) resetSort()
-    setSelectedResistances(previous => {
-      if (!previous.includes(value)) return [...previous, value]
-      return previous.length === 1 ? previous : previous.filter(resistance => resistance !== value)
-    })
+  function changeResistance(value: number) {
+    setSelectedResistance(value)
+    if (sort.resistance !== undefined) {
+      setSort({ ...sort, resistance: value })
+      setPage(0)
+    }
   }
   return <PageLayout page="damage-three-skill-attribute-matrix" className="dc3-matrix" settings={<>
     <EnemyAggregationSelector state={aggregation} />
@@ -138,21 +139,16 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           : !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
             <div className="dc3-matrix-display-options">
-              {!statsActive && <fieldset className="dc3-matrix-option-group">
+              {!statsActive && <fieldset className="dc3-matrix-option-group enemy-chart-visibility">
                 <legend>表示する術耐性</legend>
-                <div className="dc3-matrix-option-buttons">
-                  {distribution.resistanceThresholds.map(({ resistance }) => {
-                    const selected = selectedResistances.includes(resistance)
-                    return <button key={resistance} type="button" className="button secondary"
-                      aria-label={`術耐性 ${resistance}`} aria-pressed={selected}
-                      disabled={selected && selectedResistances.length === 1}
-                      onClick={() => toggleResistance(resistance)}>{resistance}</button>
-                  })}
-                  <button type="button" className="button secondary"
-                    disabled={selectedResistances.length === distribution.resistanceThresholds.length}
-                    onClick={() => setSelectedResistances(distribution.resistanceThresholds.map(pair => pair.resistance))}>
-                    すべて表示
-                  </button>
+                <div>
+                  {distribution.resistanceThresholds.map(({ resistance }) => (
+                    <label key={resistance} className={selectedResistance === resistance ? 'active' : ''}>
+                      <input type="radio" name={`${tabId}-resistance`} value={resistance} checked={selectedResistance === resistance}
+                        aria-label={`術耐性 ${resistance}`} onChange={() => changeResistance(resistance)} />
+                      {resistance}
+                    </label>
+                  ))}
                 </div>
               </fieldset>}
               <div className="dc3-matrix-option-group">
@@ -196,11 +192,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                   </>}
                 </nav>
               </div>
-              <SkillDamageTable entries={pageEntries} pairs={distribution.resistanceThresholds} mode={mode}
-                sort={sort} onSort={changeSort}
-                selectedResistances={selectedResistances} stacked={layout === 'rows'}
+              {selectedPair && <SkillDamageTable entries={pageEntries} pair={selectedPair} mode={mode}
+                sort={sort} onSort={changeSort} stacked={layout === 'rows'}
                 showDifference={canShowDifference && showDifference}
-                showLevel={commonLevel === null} showUnit={commonUnit === null} />
+                showLevel={commonLevel === null} showUnit={commonUnit === null} />}
             </>}
           </>}
       </EnemyDataContent>
@@ -208,25 +203,22 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   </PageLayout>
 }
 
-function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, selectedResistances, showDifference, sort, onSort }: {
+function SkillDamageTable({ entries, pair, mode, showLevel, showUnit, stacked, showDifference, sort, onSort }: {
   entries: readonly DamageThreeAttributeEntry[]
-  pairs: readonly EnemyResistanceThreshold[]
+  pair: EnemyResistanceThreshold
   mode: DamageThreeSkillRankMode
   showLevel: boolean
   showUnit: boolean
   stacked: boolean
-  selectedResistances: readonly number[]
   showDifference: boolean
   sort: MatrixSort
   onSort: (key: MatrixSortKey, resistance?: number) => void
 }) {
-  const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, pairs, mode) })),
-    [entries, pairs, mode])
+  const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, [pair], mode) })),
+    [entries, pair, mode])
   const [errorKey, setErrorKey] = useState<string | null>(null)
   const errorRow = results.find(row => row.entry.key === errorKey && row.errors.length)
   const showStatus = results.some(row => row.hasUnsupportedTalentDamage || row.errors.length)
-  const columns = pairs.map((pair, index) => ({ pair, index }))
-    .filter(({ pair }) => selectedResistances.includes(pair.resistance))
   const headerRows = stacked ? 2 : 3
   const rowsPerSkill = stacked ? 2 : 1
   const columnsPerPair = stacked ? 1 : 2 + Number(showDifference)
@@ -243,7 +235,7 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
   return <div className="damage-two-table-wrap dc3-matrix-scroll" tabIndex={0} role="region" aria-label={label}>
     <table className={`damage-two-table dc3-matrix-table${stacked ? ' dc3-matrix-stacked' : ''}`} aria-label={label}>
       <colgroup span={5 + Number(showLevel) + Number(showUnit) + Number(showStatus) + Number(stacked)} />
-      {columns.map(({ pair }) => <colgroup key={pair.resistance} span={columnsPerPair} />)}
+      <colgroup span={columnsPerPair} />
       <thead>
         <tr>
           {sortHeader('operator', 'オペレーター', 'dc3-matrix-operator')}
@@ -255,25 +247,25 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
           <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">算出方法</th>
           {showStatus && <th scope="col" rowSpan={headerRows} className="dc3-matrix-metadata">計算状態</th>}
           {stacked && <th scope="row" className="dc3-matrix-attribute">術耐性</th>}
-          {columns.map(({ pair }) => <th key={pair.resistance} scope={stacked ? 'col' : 'colgroup'}
+          <th scope={stacked ? 'col' : 'colgroup'}
             colSpan={columnsPerPair} aria-label={`術耐性 ${pair.resistance}`}>
             {!stacked && '術耐性 '}{pair.resistance}
-          </th>)}
+          </th>
         </tr>
         <tr>
           {stacked && <th scope="row" className="dc3-matrix-attribute">対応防御力</th>}
-          {columns.map(({ pair }) => <th key={pair.resistance} scope={stacked ? 'col' : 'colgroup'}
+          <th scope={stacked ? 'col' : 'colgroup'}
             colSpan={columnsPerPair} aria-label={`対応防御力 ${formatValue(pair.defense)}`}>
             {!stacked && '対応防御力 '}{formatValue(pair.defense)}
-          </th>)}
+          </th>
         </tr>
-        {!stacked && <tr>{columns.map(({ pair }) => <Fragment key={pair.resistance}>
+        {!stacked && <tr>
           {sortHeader('physical', physicalLabel, undefined, pair.resistance)}
           {sortHeader('arts', artsLabel, artsEndClass, pair.resistance)}
           {showDifference && sortHeader('difference', '物理化 − 術化', 'dc3-matrix-pair-end', pair.resistance)}
-        </Fragment>)}</tr>}
+        </tr>}
       </thead>
-      {results.map(({ entry, cells, errors, isExpectedValue, hasUnsupportedTalentDamage }) => {
+      {results.map(({ entry, cells: [cell], errors, isExpectedValue, hasUnsupportedTalentDamage }) => {
         const stages = entry.structure.guardRecipe?.stages ?? entry.structure.effectStructure.stages
         return <tbody key={entry.key}>
           <tr>
@@ -286,19 +278,17 @@ function SkillDamageTable({ entries, pairs, mode, showLevel, showUnit, stacked, 
             <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{isExpectedValue ? '期待値' : '—'}</td>
             {showStatus && <td rowSpan={rowsPerSkill} className="dc3-matrix-metadata">{errors.length > 0
               ? <button type="button" className="text-button dc3-matrix-status-button" aria-haspopup="dialog" onClick={() => setErrorKey(entry.key)}>
-                  {cells.some(cell => cell.physical !== null || cell.arts !== null) ? '一部計算不可' : '計算不可'}
+                  {cell.physical !== null || cell.arts !== null ? '一部計算不可' : '計算不可'}
                 </button>
               : hasUnsupportedTalentDamage ? '一部未対応' : '—'}</td>}
             {stacked && <th scope="row" className="dc3-matrix-attribute">{physicalLabel}</th>}
-            {columns.map(({ pair, index }) => <Fragment key={pair.resistance}>
-              <td className="dc3-matrix-damage">{formatValue(cells[index].physical)}</td>
-              {!stacked && <td className={`dc3-matrix-damage ${artsEndClass}`}>{formatValue(cells[index].arts)}</td>}
-              {showDifference && <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(getDamageDifference(cells[index]), SIGNED_DIFFERENCE)}</td>}
-            </Fragment>)}
+            <td className="dc3-matrix-damage">{formatValue(cell.physical)}</td>
+            {!stacked && <td className={`dc3-matrix-damage ${artsEndClass}`}>{formatValue(cell.arts)}</td>}
+            {showDifference && <td className="dc3-matrix-damage dc3-matrix-pair-end">{formatValue(getDamageDifference(cell), SIGNED_DIFFERENCE)}</td>}
           </tr>
           {stacked && <tr>
             <th scope="row" className="dc3-matrix-attribute">{artsLabel}</th>
-            {columns.map(({ pair, index }) => <td key={pair.resistance} className="dc3-matrix-damage">{formatValue(cells[index].arts)}</td>)}
+            <td className="dc3-matrix-damage">{formatValue(cell.arts)}</td>
           </tr>}
         </tbody>
       })}

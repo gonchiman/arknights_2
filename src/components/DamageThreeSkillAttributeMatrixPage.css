@@ -39,7 +39,6 @@
 .dc3-matrix-option-group { min-width: 0; max-width: 100%; margin: 0; border: 0; padding: 0; }
 .dc3-matrix-option-group legend,
 .dc3-matrix-option-label { display: block; margin-bottom: 4px; padding: 0; color: var(--text-soft); font-size: 12px; }
-.dc3-matrix-option-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
 .dc3-matrix-difference-toggle {
   display: inline-flex;
   align-self: end;
@@ -51,10 +50,7 @@
 }
 .dc3-matrix-difference-toggle input { margin: 0; accent-color: var(--text); }
 .dc3-matrix-option-group .page-view-switch button,
-.dc3-matrix-option-buttons .button { padding: 3px 7px; min-height: 28px; font-size: 12px; }
-.dc3-matrix-option-buttons .button { min-width: 2rem; font-weight: 500; font-variant-numeric: tabular-nums; }
-.dc3-matrix-option-buttons .button[aria-pressed="true"],
-.dc3-matrix-option-buttons .button[aria-pressed="true"]:hover:not(:disabled) { border-color: var(--text); background: var(--text); color: var(--surface); }
+.dc3-matrix-option-group label { padding: 3px 7px; min-height: 28px; font-size: 12px; }
 
 .dc3-matrix-scroll { max-width: 100%; }
 .damage-two-table.dc3-matrix-table {
@@ -143,5 +139,5 @@
   .dc3-matrix-table .skill-sort-button { min-height: 44px; }
   .dc3-matrix-difference-toggle { min-height: 44px; }
   .dc3-matrix-option-group .page-view-switch button,
-  .dc3-matrix-option-buttons .button { min-width: 44px; min-height: 44px; }
+  .dc3-matrix-option-group label { min-width: 44px; min-height: 44px; }
 }
