@@ -5,6 +5,7 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { evaluateDamageThreeComparisonEntry, getDamageThreeComparisonEntries } from '../src/lib/damageCalculatorThreeComparison.ts'
 import { EXPANDED_OPERATOR_SOURCES } from '../src/lib/expandedCombatRegistry.ts'
 import { resolveSkillDpsUptime, type SkillDpsUptimeInput } from '../src/lib/skillDpsUptime.ts'
+import { buildSkillNumericDataset, DEFAULT_SKILL_NUMERIC_CONFIG, summarizeSkillNumericMetric } from '../src/lib/skillNumericStatistics.ts'
 import type { OperatorCombatProfile, RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 const guards = (JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8')) as {
@@ -72,15 +73,52 @@ test('Mudrock S3 includes its non-attacking startup in the full SP lock only', (
   assert.equal(resolveSkillDpsUptime({ ...input, durationSeconds: 30 }).percentage, null)
 })
 
+test('numeric analysis counts each reviewed skill once using the same full cycle as DPS analysis', () => {
+  const surtr = evaluated('char_350_surtr', 2)
+  const mudrock = evaluated('char_311_mudrok', 3)
+  const retreat = record('char_350_surtr', 3)
+  const dataset = buildSkillNumericDataset([surtr.skill, mudrock.skill, mudrock.skill, retreat], DEFAULT_SKILL_NUMERIC_CONFIG)
+  const summary = summarizeSkillNumericMetric(dataset, 'uptime')
+  assert.equal(summary.validCount, 2)
+  assert.equal(summary.excludedCount, 1)
+  for (const [input, expected] of [[surtr, 50], [mudrock, 20 / 55 * 100]] as const) {
+    const observation = dataset.observations.find(row => row.skill === input.skill)!
+    close(observation.uptime, expected)
+    assert.equal(observation.uptime, resolveSkillDpsUptime(input).percentage)
+  }
+  assert.equal(dataset.observations.find(row => row.skill === retreat)!.uptime, null)
+  assert.equal(dataset.observations.find(row => row.skill === mudrock.skill)!.durationSeconds, 30)
+})
+
+test('numeric uptime is tied to the selected level and verified skill source, independent of the combat profile', () => {
+  const surtr = record('char_350_surtr', 2)
+  const melantha = record('char_208_melan', 1)
+  surtr.operatorProfile = {} as OperatorCombatProfile
+  const rank7 = buildSkillNumericDataset([surtr, melantha], { ...DEFAULT_SKILL_NUMERIC_CONFIG, skillLevel: 'RANK_7' })
+  assert.equal(rank7.observations.find(row => row.skill === surtr)!.uptime, null)
+  close(rank7.observations.find(row => row.skill === melantha)!.uptime, 20 / 60 * 100)
+  assert.equal(buildSkillNumericDataset([surtr], DEFAULT_SKILL_NUMERIC_CONFIG).observations[0].uptime, 50)
+
+  const changed = structuredClone(surtr)
+  changed.skillLevels[9].description += '効果終了後に強制退場'
+  const observation = buildSkillNumericDataset([changed], DEFAULT_SKILL_NUMERIC_CONFIG).observations[0]
+  assert.equal(observation.uptime, null)
+  assert.equal(observation.durationSeconds, 18)
+})
+
 test('non-natural recovery, permanent, ammunition, forced retreat and self-SP sources never become zero uptime', () => {
   for (const [operatorId, skillIndex] of [
     ['char_140_whitew', 2], ['char_1032_excu2', 2], ['char_017_huang', 2], ['char_1032_excu2', 1],
     ['char_002_amiya', 3], ['char_350_surtr', 3], ['char_002_amiya', 1],
     ['char_134_ifrit', 1], ['char_213_mostma', 1],
   ] as const) {
-    const result = resolveSkillDpsUptime(evaluated(operatorId, skillIndex))
+    const input = evaluated(operatorId, skillIndex)
+    const result = resolveSkillDpsUptime(input)
     assert.equal(result.percentage, null, `${operatorId} S${skillIndex}`)
     assert.ok(result.reason, `${operatorId} S${skillIndex} exclusion reason`)
+    const dataset = buildSkillNumericDataset([input.skill], { ...DEFAULT_SKILL_NUMERIC_CONFIG,
+      spRecovery: input.entry.structure.activationSettings.spRecovery })
+    assert.equal(dataset.observations[0].uptime, null)
   }
   assert.equal(resolveSkillDpsUptime(evaluated('char_140_whitew', 2)).reason, '自然回復以外')
   assert.equal(resolveSkillDpsUptime(evaluated('char_1032_excu2', 2)).reason, '弾薬制の周期未確認')
@@ -135,5 +173,7 @@ test('reviewed coverage includes guard, ranged/caster, low-rarity and initial-on
     const result = resolveSkillDpsUptime(input)
     assert.equal(result.reason, null, `${operatorId} S${skillIndex}: ${result.reason}`)
     close(result.percentage, input.durationSeconds! / (input.entry.structure.source.duration + input.spCost!) * 100)
+    const dataset = buildSkillNumericDataset([input.skill], DEFAULT_SKILL_NUMERIC_CONFIG)
+    assert.equal(dataset.observations[0].uptime, result.percentage, `${operatorId} S${skillIndex}`)
   }
 })

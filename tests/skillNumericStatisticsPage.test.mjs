@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { after, before, test } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -61,7 +62,7 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('initial summary uses natural recovery and five independent numeric metrics with standard navigation', () => {
+test('initial summary uses natural recovery and six independent numeric metrics with standard navigation', () => {
   const markup = render(Page, { rows, loading: false })
   assert.doesNotMatch(markup, /<h1\b/)
   assert.match(markup, /aria-label="スキル数値分析 \/ 集計条件の場所をコピー"/)
@@ -75,29 +76,31 @@ test('initial summary uses natural recovery and five independent numeric metrics
   assert.match(markup, /role="region" tabindex="0" aria-label="各指標の統計量"/)
   assert.match(text(markup), /対象 5件/)
   const summaries = summaryRows(markup)
-  assert.equal(summaries.size, 5)
+  assert.equal(summaries.size, 6)
   assert.deepEqual(summaries.get('持続時間（秒）'), ['2', '3', '10', '15', '20', '20', '25', '30', '10'])
   assert.deepEqual(summaries.get('必要SP').slice(0, 2), ['4', '1'])
   assert.deepEqual(summaries.get('初期SP').slice(0, 2), ['5', '0'])
   assert.deepEqual(summaries.get('必要SP−初期SP').slice(0, 3), ['4', '1', '-5'])
   assert.deepEqual(summaries.get('初期SP率（%）').map(value => value.replace(/\s/g, '')),
     ['4', '1', '0%', '0%', '18.75%', '40.63%', '59.38%', '125%', '51.06pt'])
+  assert.deepEqual(summaries.get('理論稼働率（%）'), ['0', '5', '—', '—', '—', '—', '—', '—', '—'])
   assert.doesNotMatch(markup, /DC3未対応|DPS未計算|NaN|Infinity|role="img"/)
 })
 
 test('the skill table separates operator, skill number and name while retaining permanent and signed values', () => {
   const observations = buildDataset(rows, defaults).observations
   const markup = render(ObservationTable, { observations, onOpenSkill() {} })
-  assert.equal((markup.match(/scope="col"/g) ?? []).length, 8)
+  assert.equal((markup.match(/scope="col"/g) ?? []).length, 9)
   assert.match(markup, /role="region" tabindex="0" aria-label="スキルの数値"/)
   assert.match(markup, /aria-label="オペレーターで並べ替え"/)
   assert.match(markup, /aria-label="Sで並べ替え"/)
   assert.match(markup, /aria-label="初期SP率（%）で並べ替え"/)
+  assert.match(markup, /aria-label="理論稼働率（%）で並べ替え"/)
   assert.match(markup, /aria-label="未対応OP S1 未対応スキルのスキル効果を表示"/)
-  assert.match(markup, /未対応OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>未対応スキル<\/td><td>30<\/td><td>40<\/td><td>0<\/td><td>40<\/td><td>0<\/td><\/tr>/)
-  assert.match(markup, /永続OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>永続スキル<\/td><td>永続<\/td><td>20<\/td><td>25<\/td><td>-5<\/td><td>125<\/td><\/tr>/)
+  assert.match(markup, /未対応OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>未対応スキル<\/td><td>30<\/td><td>40<\/td><td>0<\/td><td>40<\/td><td>0<\/td><td>—<\/td><\/tr>/)
+  assert.match(markup, /永続OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>永続スキル<\/td><td>永続<\/td><td>20<\/td><td>25<\/td><td>-5<\/td><td>125<\/td><td>—<\/td><\/tr>/)
   assert.match(markup, /<td>弾薬制<\/td>/)
-  assert.match(markup, /<td>10<\/td><td>—<\/td><td>0<\/td><td>—<\/td><td>—<\/td><\/tr>/)
+  assert.match(markup, /<td>10<\/td><td>—<\/td><td>0<\/td><td>—<\/td><td>—<\/td><td>—<\/td><\/tr>/)
   assert.doesNotMatch(markup, /攻撃回復OP|NaN|Infinity|<a\b/)
 })
 
@@ -125,7 +128,7 @@ test('empty and unavailable metrics display zero counts and unknown statistics r
   assert.match(strip, /aria-label="必要SPの統計量"/)
   assert.equal((strip.match(/<td>—<\/td>/g) ?? []).length, 7)
   const emptyTable = render(ObservationTable, { observations: [], onOpenSkill() {} })
-  assert.match(emptyTable, /colspan="8"/i)
+  assert.match(emptyTable, /colspan="9"/i)
   assert.match(text(emptyTable), /対象のスキルは0件です。/)
   assert.doesNotMatch(markup + summaryMarkup + strip + emptyTable, /NaN|Infinity/)
 })
@@ -192,6 +195,31 @@ test('scatter displays the paired sample count rather than either univariate val
   assert.equal(rSquared(markup), '—')
   assert.equal(equation(markup), '')
   assert.doesNotMatch(markup, /Pearson r<\/dt><dd>0<\/dd>/)
+})
+
+test('reviewed uptime is available in the list, distribution statistics, and scatter against initial SP ratio', () => {
+  const { guards } = JSON.parse(readFileSync(new URL('./fixtures/sixStarGuardSources.json', import.meta.url), 'utf8'))
+  const reviewed = [['char_350_surtr', 2], ['char_264_f12yin', 3]].map(([operatorId, skillIndex]) => {
+    const guard = guards.find(item => item.id === operatorId)
+    const { skillId, raw: level } = guard.skills.find(item => item.skillIndex === skillIndex)
+    return record(guard.name, Array(10).fill(level), { operatorId, skillId, skillIndex, subProfessionId: guard.subProfessionId })
+  })
+  const dataset = buildDataset([...reviewed, record('未確認')], defaults)
+  const table = render(ObservationTable, { observations: dataset.observations, onOpenSkill() {} })
+  assert.match(table, /<td>66\.67<\/td><td>50<\/td><\/tr>/)
+  const { statistics } = summarize(dataset, 'uptime')
+  const { label, unit } = metrics.find(item => item.key === 'uptime')
+  const strip = render(Strip, { statistics, label, unit })
+  assert.match(strip, /aria-label="理論稼働率の統計量"/)
+  assert.match(strip, /<td>50%<\/td><td>3\.57\s*pt<\/td>/)
+  for (const [xMetric, yMetric] of [['initialRatio', 'uptime'], ['uptime', 'initialRatio']]) {
+    const markup = scatter(dataset, { xMetric, yMetric })
+    assert.match(markup, /<option value="uptime" selected="">理論稼働率<\/option>/)
+    assert.match(markup, /<option value="uptime" disabled="">理論稼働率<\/option>/)
+    assert.match(text(markup), /有効 2件 ／ 対象外 1件/)
+    assert.match(equation(markup), /初期SP率（%）/)
+    assert.match(equation(markup), /理論稼働率（%）/)
+  }
 })
 
 test('either scatter axis can use the initial SP ratio with its unit and only valid pairs', () => {

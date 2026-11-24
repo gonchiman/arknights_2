@@ -142,7 +142,7 @@ export function SkillNumericStatisticsPage({ rows, loading, error }: Props) {
       </div>
       <div className="skill-numeric-actions">
         <button type="submit" className="button" disabled={loading || busy || Boolean(error)}>{busy ? '集計中…' : '集計する'}</button>
-        <span className="skill-numeric-condition">1スキル1件・スキルデータ値</span>
+        <span className="skill-numeric-condition">1スキル1件</span>
         <span className={`skill-numeric-status${pending ? ' pending' : ''}`} role="status">{status}</span>
       </div>
     </section>
@@ -296,6 +296,7 @@ export function SkillNumericObservationTable({ observations, onOpenSkill }: {
   const columns: readonly (readonly [SortKey, string])[] = [
     ['operator', 'オペレーター'], ['skillIndex', 'S'], ['skillName', 'スキル名'], ['durationSeconds', '持続（秒）'],
     ['spCost', '必要SP'], ['initialSp', '初期SP'], ['spGap', '必要SP−初期SP'], ['initialRatio', metricLabel('initialRatio')],
+    ['uptime', metricLabel('uptime')],
   ]
   return <div className="skill-numeric-table-scroll" role="region" tabIndex={0} aria-label="スキルの数値">
     <table className="skill-numeric-table skill-numeric-observation-table">
@@ -311,6 +312,7 @@ export function SkillNumericObservationTable({ observations, onOpenSkill }: {
           <td>{observation.durationSeconds === null ? SKILL_NUMERIC_DURATION_LABELS[observation.durationState] : formatNumber(observation.durationSeconds)}</td>
           <td>{formatNumber(observation.spCost)}</td><td>{formatNumber(observation.initialSp)}</td><td>{formatNumber(observation.spGap)}</td>
           <td>{formatNumber(observation.initialRatio)}</td>
+          <td>{formatNumber(observation.uptime)}</td>
         </tr>)}
       </tbody>
     </table>

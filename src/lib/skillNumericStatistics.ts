@@ -5,10 +5,11 @@ import {
   type BoxPlotStatistics, type NumericStatistics,
 } from './enemyStatistics.ts'
 import { createSkillJsonSelectionKey, getSkillLevelLabel } from './skillJsonAnalysis.ts'
+import { resolveSkillNumericUptime } from './skillDpsUptime.ts'
 import { calculateInitialSpRatio } from './skillInitialSpRatio.ts'
 import type { SkillStructure } from './skillStructure.ts'
 
-export type SkillNumericMetric = 'duration' | 'spCost' | 'initialSp' | 'spGap' | 'initialRatio'
+export type SkillNumericMetric = 'duration' | 'spCost' | 'initialSp' | 'spGap' | 'initialRatio' | 'uptime'
 export type SkillNumericSpRecovery = SkillStructure['activationSettings']['spRecovery']
 
 export interface SkillNumericConfig {
@@ -34,6 +35,7 @@ export const SKILL_NUMERIC_METRICS: readonly {
   { key: 'initialSp', label: '初期SP', unit: 'SP' },
   { key: 'spGap', label: '必要SP−初期SP', unit: 'SP' },
   { key: 'initialRatio', label: '初期SP率', unit: '%' },
+  { key: 'uptime', label: '理論稼働率', unit: '%' },
 ]
 
 export const SKILL_NUMERIC_DURATION_LABELS: Readonly<Record<EffectWindowType, string>> = EFFECT_WINDOW_LABELS
@@ -50,6 +52,7 @@ export interface SkillNumericObservation {
   /** Signed source SP cost minus source initial SP; never a waiting time. */
   spGap: number | null
   initialRatio: number | null
+  uptime: number | null
 }
 
 export interface SkillNumericDataset {
@@ -94,8 +97,8 @@ function durationOf(raw: RawSkillLevel): Pick<SkillNumericObservation, 'duration
   return { durationSeconds: null, durationState: state === 'FIXED_DURATION' ? 'UNKNOWN' : state }
 }
 
-/** One unweighted observation per operator/skill, from the exact selected raw
- * level. Combat coverage, talents, modules, enemy stats and DPS are not inputs.
+/** One unweighted observation per operator/skill at the exact selected level.
+ * Theoretical uptime additionally requires a reviewed repeatable cycle.
  */
 export function buildSkillNumericDataset(
   rows: readonly SkillRecord[], config: SkillNumericConfig,
@@ -125,6 +128,7 @@ export function buildSkillNumericDataset(
       ...durationOf(raw), spCost, initialSp,
       spGap: spCost === null || initialSp === null ? null : finite(spCost - initialSp),
       initialRatio: calculateInitialSpRatio(initialSp, spCost),
+      uptime: resolveSkillNumericUptime(skill, skillLevelIndex),
     })
   }
   return { observations, unavailableLevelCount }
