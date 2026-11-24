@@ -118,6 +118,8 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   }, [active, duration, startTime])
 
   if (!timeline) return <p className="map-empty" role="status">このマップは敵の位置を推定できません。</p>
+  const { fragmentStarts } = timeline
+  const currentFragment = fragmentStarts.reduce((current, start, i) => start <= seconds ? i : current, -1)
   const rows = detail.grid.length
   const columns = detail.grid[0].length
   const { cells, moving, waiting, hidden } = groupPositions(getTdEnemyPositions(timeline, seconds), excluded, rows)
@@ -144,8 +146,11 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
     setSelectedCell(null)
   }
   return <div className="td-time-panel">
-    <div className="td-time-heading"><label htmlFor={sliderId}>マップ開始から</label>
-      <output htmlFor={sliderId} aria-live="off">{displayedSecond} 秒</output></div>
+    <div className="td-time-heading td-time-clock">
+      <div><label htmlFor={sliderId}>マップ開始から</label>{' '}
+        <output htmlFor={sliderId} aria-live="off">{displayedSecond} 秒</output></div>
+      {currentFragment >= 0 && <span>区間{currentFragment + 1}の開始から {Math.floor(seconds - fragmentStarts[currentFragment])} 秒</span>}
+    </div>
     <div className="td-time-transport">
       <button type="button" className="button secondary" disabled={duration === 0}
         onClick={togglePlayback}>{playing ? '一時停止' : '再生'}</button>
@@ -155,11 +160,20 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         <div className="td-time-range">
           <input id={sliderId} type="range" min={0} max={duration} step={1} value={displayedSecond}
             aria-valuetext={`${displayedSecond}秒`} onChange={event => seek(event.currentTarget.valueAsNumber)} />
+          <div className="td-time-fragment-ticks" aria-hidden="true">
+            {fragmentStarts.map((start, i) => <span key={i} style={{ left: `${duration ? 100 * start / duration : 0}%` }} />)}
+          </div>
           <div className="td-time-limits" aria-hidden="true"><span>0 秒</span><span>{duration} 秒</span></div>
         </div>
         <button type="button" className="button secondary" aria-label="1秒進める"
           disabled={displayedSecond === duration} onClick={() => seek(displayedSecond + 1)}>＋1秒</button>
       </div>
+    </div>
+    <div className="map-wave-fragments td-time-fragments" role="group" aria-label="区間の先頭に移動">
+      {fragmentStarts.map((start, i) => <button key={i} type="button" aria-pressed={currentFragment === i}
+        onClick={() => seek(start)}>
+        <span>区間{i + 1}</span><small>{start.toLocaleString('ja-JP')} 秒</small>
+      </button>)}
     </div>
     <div className="td-time-heading"><span>表示する敵</span>
       <button type="button" className="button secondary" disabled={excluded.size === 0}
