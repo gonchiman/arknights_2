@@ -117,23 +117,27 @@ test('各条件の共通有効段階から四分位数と丸め前の勝敗を�
     { resistance: 100, defense: null, percentage: 0, rankCutoff: 0 },
   ]
   const cell = (physical: number | null, arts: number | null) => ({ physical, arts })
+  const skill = { operatorId: 'operator-a', skillIndex: 1, skillId: 'shared' }
   const stages = [
-    [cell(6, 4), cell(10, 10 + 1e-10), cell(0, 0)],
-    [cell(2, 10), cell(2.24, 2.25), cell(0, 0)],
-    [cell(0, 0), cell(Infinity, 1), cell(null, null)],
-    [cell(4, 6), cell(30, NaN), cell(null, null)],
-    [cell(null, 100), cell(20, null), cell(null, null)],
+    { skill, cells: [cell(6, 4), cell(10, 10 + 1e-10), cell(0, 0)] },
+    { skill: { ...skill, operatorId: 'operator-b' }, cells: [cell(2, 10), cell(2.24, 2.25), cell(0, 0)] },
+    { skill: { ...skill, skillIndex: 2 }, cells: [cell(0, 0), cell(Infinity, 1), cell(null, null)] },
+    { skill: { ...skill }, cells: [cell(4, 6), cell(30, NaN), cell(null, null)] },
+    { skill: { ...skill, skillId: 'uncalculable' }, cells: [cell(null, 100), cell(20, null), cell(null, null)] },
   ]
   const [first, second, missing] = summarizeSkillRankStatistics(pairs, stages.values())
   assert.deepEqual(first, {
     resistance: 50, defense: 300, count: 4,
     physical: { q1: 1.5, median: 3, q3: 4.5 }, arts: { q1: 3, median: 5, q3: 7 },
     physicalWins: 1, ties: 1, artsWins: 2,
+    bySkill: { count: 3, physicalWins: 0.5, ties: 1, artsWins: 1.5 },
   })
   assert.equal(second.count, 2)
   assert.deepEqual([second.physicalWins, second.ties, second.artsWins], [0, 1, 1])
+  assert.deepEqual(second.bySkill, { count: 2, physicalWins: 0, ties: 1, artsWins: 1 })
   assert.deepEqual(missing, {
     resistance: 100, defense: null, count: 0, physical: null, arts: null, physicalWins: 0, ties: 0, artsWins: 0,
+    bySkill: { count: 0, physicalWins: 0, ties: 0, artsWins: 0 },
   })
 })
 
