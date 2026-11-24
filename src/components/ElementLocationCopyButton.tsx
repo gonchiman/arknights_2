@@ -39,11 +39,11 @@ export function ElementLocationCopyButton({ segments, className, disabled = fals
   }
 
   return <>
-    <button type="button" className={`element-location-copy-button${className ? ` ${className}` : ''}`}
+    <button type="button" className={`output-icon-button element-location-copy-button${className ? ` ${className}` : ''}`}
       disabled={disabled || !text} aria-disabled={disabled || copying || !text} aria-busy={copying}
       data-copy-state={visualState}
       aria-label={text ? `${text}の場所をコピー` : '場所をコピー'} onClick={() => void copyLocation()}>
-      <span className="element-location-copy-face" aria-hidden="true">
+      <span className="output-icon-face" aria-hidden="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false">
           {visualState === 'copied' ? <path d="m5 12 4 4L19 6" />

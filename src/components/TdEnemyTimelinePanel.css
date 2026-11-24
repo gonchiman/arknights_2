@@ -81,6 +81,9 @@
 .td-time-footer { flex-wrap: wrap; }
 .td-time-footer strong { font-weight: 600; }
 .td-time-detail { margin: 0; }
+.td-time-image-details { display: grid; gap: 4px; text-align: center; font-variant-numeric: tabular-nums; }
+.td-time-image-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 14px; }
+.td-time-image-legend > span { display: inline-flex; align-items: center; gap: 5px; }
 
 @media (max-width: 560px) {
   .td-time-transport { flex-wrap: wrap; }

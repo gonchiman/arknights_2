@@ -3,9 +3,16 @@ import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdE
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
 import { MapBoard } from './MapInformation'
 import { PageOutputHeader } from './PageLayout'
+import { TdMapImage } from './TdMapImage'
 import './TdMapTerrain.css'
 
 type Geometry = ReturnType<typeof describeTdRoute>
+
+export function TdTerrainBoard({ map, detail }: { map: MapSummary; detail: MapDetail }) {
+  return <TdMapImage map={map} filenameParts={['地形']} caption="地形">
+    <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+  </TdMapImage>
+}
 
 function tileCenter({ row, col }: MapPosition, rows: number) {
   return { x: (col + 0.5) * 32, y: (rows - row - 0.5) * 32 }
@@ -79,10 +86,13 @@ export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: 
       <button className="button secondary" type="button" onClick={onClear}>経路を消す</button>
     </PageOutputHeader>
     {selection
-      ? <RouteBoard detail={detail} name={`${map.code} ${enemyName} 経路${position + 1}`} selection={selection} />
+      ? <TdMapImage map={map} filenameParts={['経路', enemyName, `経路${position + 1}`]}
+          caption={`${enemyName}　経路${position + 1}${selection.entrance ? `　出現口${selection.entrance}` : ''}`}>
+          <RouteBoard detail={detail} name={`${map.code} ${enemyName} 経路${position + 1}`} selection={selection} />
+        </TdMapImage>
       : <>
         <p className="map-empty" role="status">この敵の経路データはありません。</p>
-        <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+        <TdTerrainBoard map={map} detail={detail} />
       </>}
   </div>
 }

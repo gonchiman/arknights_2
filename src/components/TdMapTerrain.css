@@ -1,5 +1,7 @@
-.td-map-route-panel {
+.td-route-overlay, .map-board-legend .td-route-legend-line {
   --td-route-color: #944a24;
+}
+.td-map-route-panel {
   display: grid;
   gap: 8px;
   min-width: 0;

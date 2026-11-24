@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { loadTdMapDatabase, loadTdMapDetail } from '../lib/tdMaps'
 import type { MapIndex, MapSummary } from '../types/map'
 import { AnalysisTabPanel } from './AnalysisTabs'
-import { MapBattleFacts, MapBoard, MapEnemyTable } from './MapInformation'
+import { MapBattleFacts, MapEnemyTable } from './MapInformation'
 import { MapWaveDetail } from './MapWaveInformation'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel } from './PageViewSwitch'
 import { TdEnemyTimelinePanel } from './TdEnemyTimelinePanel'
-import { TdEnemyRoutePanel } from './TdMapTerrain'
+import { TdMapSaveButtonTarget } from './TdMapImage'
+import { TdEnemyRoutePanel, TdTerrainBoard } from './TdMapTerrain'
 import './MapDatabase.css'
 import './TdMapPage.css'
 
@@ -93,6 +94,7 @@ function StageOutput({ map, index, tab, setTab }: {
   const detail = resource.data
   const [routeEnemyId, setRouteEnemyId] = useState<string | null>(null)
   const [terrainView, setTerrainView] = useState<TerrainView>('route')
+  const [saveButtonTarget, setSaveButtonTarget] = useState<HTMLSpanElement | null>(null)
   const hasTimeline = map.code === 'TD-8'
   const showTimeline = hasTimeline && terrainView === 'timeline'
   const tabProps = { activeTab: tab, idPrefix: 'td-map' }
@@ -110,19 +112,24 @@ function StageOutput({ map, index, tab, setTab }: {
     {detail ? <>
       <MapBattleFacts map={map} detail={detail} />
       <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab}
+        actions={tab === 'terrain' && <span ref={setSaveButtonTarget} />}
         format={tab === 'terrain' && showTimeline ? viewLabel(TERRAIN_VIEWS, terrainView) : undefined} />
       <AnalysisTabPanel {...tabProps} tab="terrain">
         {hasTimeline && <PageViewSwitch views={TERRAIN_VIEWS} selected={terrainView}
           onChange={setTerrainView} label="地形の表示形式" />}
         <div hidden={showTimeline}>
-          {routeEnemyId === null
-            ? <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
-            : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
-              enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
-              onClear={() => showTerrain(null)} />}
+          <TdMapSaveButtonTarget.Provider value={showTimeline ? null : saveButtonTarget}>
+            {routeEnemyId === null
+              ? <TdTerrainBoard map={map} detail={detail} />
+              : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
+                enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
+                onClear={() => showTerrain(null)} />}
+          </TdMapSaveButtonTarget.Provider>
         </div>
         {hasTimeline && <div hidden={!showTimeline}>
-          <TdEnemyTimelinePanel map={map} detail={detail} index={index} active={tab === 'terrain' && showTimeline} />
+          <TdMapSaveButtonTarget.Provider value={showTimeline ? saveButtonTarget : null}>
+            <TdEnemyTimelinePanel map={map} detail={detail} index={index} active={tab === 'terrain' && showTimeline} />
+          </TdMapSaveButtonTarget.Provider>
         </div>}
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="enemies">

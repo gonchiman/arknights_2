@@ -1,4 +1,4 @@
-.element-location-copy-button {
+.output-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -16,7 +16,7 @@
   cursor: pointer;
 }
 
-.element-location-copy-button .element-location-copy-face {
+.output-icon-button .output-icon-face {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -27,24 +27,24 @@
   color: inherit;
 }
 
-.element-location-copy-face svg { display: block; flex: 0 0 16px; }
+.output-icon-face svg { display: block; flex: 0 0 16px; }
 
-.element-location-copy-button:hover:not(:disabled):not([aria-disabled="true"]) .element-location-copy-face {
+.output-icon-button:hover:not(:disabled):not([aria-disabled="true"]) .output-icon-face {
   background: var(--surface-hover);
   color: var(--text);
 }
 
-.element-location-copy-button:focus-visible {
+.output-icon-button:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
 }
 
-.element-location-copy-button:disabled { cursor: default; }
-.element-location-copy-button:disabled .element-location-copy-face,
-.element-location-copy-button[data-copy-state="copying"] .element-location-copy-face { opacity: .45; }
+.output-icon-button:disabled { cursor: default; }
+.output-icon-button:disabled .output-icon-face,
+.element-location-copy-button[data-copy-state="copying"] .output-icon-face { opacity: .45; }
 
 @media (max-width: 760px), (pointer: coarse) {
-  .element-location-copy-button {
+  .output-icon-button {
     width: 44px;
     min-width: 44px;
     height: 44px;
