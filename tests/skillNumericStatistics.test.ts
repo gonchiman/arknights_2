@@ -49,11 +49,13 @@ test('highest and rank 7 choose exact raw levels and filter on that level recove
   assert.equal(maximum.skillLevelIndex, 9)
   assert.equal(maximum.skillLevelLabel, '特化3')
   assert.deepEqual([maximum.durationSeconds, maximum.spGap], [25, 10])
+  assert.equal(maximum.initialRatio, 50)
   assert.equal(buildSkillNumericDataset([skill], config({ skillLevel: 'RANK_7' })).observations.length, 0)
   const rank7 = buildSkillNumericDataset([skill], config({ skillLevel: 'RANK_7', spRecovery: 'INCREASE_WHEN_ATTACK' })).observations[0]
   assert.equal(rank7.skillLevelIndex, 6)
   assert.equal(rank7.skillLevelLabel, 'Lv.7')
   assert.deepEqual([rank7.durationSeconds, rank7.spCost, rank7.initialSp, rank7.spGap], [18, 15, 20, -5])
+  close(rank7.initialRatio, 400 / 3)
 })
 
 test('missing exact levels never fall back to row.raw or another level and are counted before SP filtering', () => {
@@ -109,7 +111,7 @@ test('NO_SP source zero values are not zero-SP observations; finite duration sta
   const dataset = buildSkillNumericDataset([record('no-sp', [raw({ spData: { spType: 'NO_SP', spCost: 0, initSp: 0 } })])], config({ spRecovery: 'NO_SP' }))
   const observation = dataset.observations[0]
   assert.equal(observation.durationSeconds, 30)
-  for (const metric of ['spCost', 'initialSp', 'spGap'] as const) {
+  for (const metric of ['spCost', 'initialSp', 'spGap', 'initialRatio'] as const) {
     assert.equal(getSkillNumericValue(observation, metric), null)
     const summary = summarizeSkillNumericMetric(dataset, metric)
     assert.equal(summary.validCount, 0)
@@ -130,7 +132,7 @@ test('runtime numeric 8 selects actual non-SP skills without treating source zer
   const noSp = buildSkillNumericDataset(rows, config({ spRecovery: 'NO_SP' }))
   assert.deepEqual(noSp.observations.map(row => row.skill.operatorId), ['runtime-passive'])
   assert.deepEqual([noSp.observations[0].spCost, noSp.observations[0].initialSp, noSp.observations[0].spGap], [null, null, null])
-  for (const metric of ['spCost', 'initialSp', 'spGap'] as const) {
+  for (const metric of ['spCost', 'initialSp', 'spGap', 'initialRatio'] as const) {
     const summary = summarizeSkillNumericMetric(noSp, metric)
     assert.equal(summary.statistics.totalCount, 1)
     assert.equal(summary.validCount, 0)
@@ -162,10 +164,21 @@ test('missing, negative and nonfinite values are rejected per metric while measu
   assert.deepEqual(dataset.observations.map(row => row.spGap), [0, -5, null, null, null])
   assert.deepEqual(dataset.observations.map(row => row.initialSp), [0, 10, 3, null, null])
   assert.deepEqual(dataset.observations.map(row => row.spCost), [0, 5, null, 20, null])
+  assert.deepEqual(dataset.observations.map(row => row.initialRatio), [null, 200, null, null, null])
   assert.equal(summarizeSkillNumericMetric(dataset, 'duration').validCount, 5)
   assert.equal(summarizeSkillNumericMetric(dataset, 'spCost').validCount, 3)
   assert.equal(summarizeSkillNumericMetric(dataset, 'initialSp').validCount, 3)
   assert.equal(summarizeSkillNumericMetric(dataset, 'spGap').validCount, 2)
+})
+
+test('initial SP ratios retain full precision and each valid skill has equal weight', () => {
+  const rows = [[0, 10], [1, 3], [10, 10], [35, 10], [5, 0]].map(([initSp, spCost], index) =>
+    record(`ratio-${index}`, [raw({ spData: { spType: 'INCREASE_WITH_TIME', initSp, spCost } })]))
+  const summary = summarizeSkillNumericMetric(buildSkillNumericDataset(rows, config()), 'initialRatio')
+  assert.equal(summary.validCount, 4)
+  assert.equal(summary.excludedCount, 1)
+  assert.deepEqual(summary.values, [0, 1 / 3 * 100, 100, 350])
+  close(summary.statistics.mean, (100 / 3 + 100 + 350) / 4)
 })
 
 test('shared statistics preserve unweighted quartiles, population deviation, histogram counts and signed endpoints', () => {

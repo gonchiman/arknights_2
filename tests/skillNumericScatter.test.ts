@@ -9,7 +9,7 @@ import type { RawSkillLevel, SkillRecord } from '../src/types/skill.ts'
 
 function observation(id: string, changes: Partial<SkillNumericObservation> = {}): SkillNumericObservation {
   return { id, skill: {} as SkillRecord, skillLevelIndex: 9, skillLevelLabel: '特化3', durationSeconds: 30,
-    durationState: 'FIXED_DURATION', spCost: 40, initialSp: 0, spGap: 40, ...changes }
+    durationState: 'FIXED_DURATION', spCost: 40, initialSp: 0, spGap: 40, initialRatio: 0, ...changes }
 }
 const dataset = (observations: SkillNumericObservation[]): SkillNumericDataset => ({ observations, unavailableLevelCount: 0 })
 const close = (actual: number | null, expected: number) => assert.ok(actual !== null && Math.abs(actual - expected) < 1e-12, `${actual} ≈ ${expected}`)

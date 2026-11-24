@@ -61,7 +61,7 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('initial summary uses natural recovery and four independent numeric metrics with standard navigation', () => {
+test('initial summary uses natural recovery and five independent numeric metrics with standard navigation', () => {
   const markup = render(Page, { rows, loading: false })
   assert.doesNotMatch(markup, /<h1\b/)
   assert.match(markup, /aria-label="スキル数値分析 \/ 集計条件の場所をコピー"/)
@@ -75,26 +75,29 @@ test('initial summary uses natural recovery and four independent numeric metrics
   assert.match(markup, /role="region" tabindex="0" aria-label="各指標の統計量"/)
   assert.match(text(markup), /対象 5件/)
   const summaries = summaryRows(markup)
-  assert.equal(summaries.size, 4)
+  assert.equal(summaries.size, 5)
   assert.deepEqual(summaries.get('持続時間（秒）'), ['2', '3', '10', '15', '20', '20', '25', '30', '10'])
   assert.deepEqual(summaries.get('必要SP').slice(0, 2), ['4', '1'])
   assert.deepEqual(summaries.get('初期SP').slice(0, 2), ['5', '0'])
   assert.deepEqual(summaries.get('必要SP−初期SP').slice(0, 3), ['4', '1', '-5'])
+  assert.deepEqual(summaries.get('初期SP率（%）').map(value => value.replace(/\s/g, '')),
+    ['4', '1', '0%', '0%', '18.75%', '40.63%', '59.38%', '125%', '51.06pt'])
   assert.doesNotMatch(markup, /DC3未対応|DPS未計算|NaN|Infinity|role="img"/)
 })
 
 test('the skill table separates operator, skill number and name while retaining permanent and signed values', () => {
   const observations = buildDataset(rows, defaults).observations
   const markup = render(ObservationTable, { observations, onOpenSkill() {} })
-  assert.equal((markup.match(/scope="col"/g) ?? []).length, 7)
+  assert.equal((markup.match(/scope="col"/g) ?? []).length, 8)
   assert.match(markup, /role="region" tabindex="0" aria-label="スキルの数値"/)
   assert.match(markup, /aria-label="オペレーターで並べ替え"/)
   assert.match(markup, /aria-label="Sで並べ替え"/)
+  assert.match(markup, /aria-label="初期SP率（%）で並べ替え"/)
   assert.match(markup, /aria-label="未対応OP S1 未対応スキルのスキル効果を表示"/)
-  assert.match(markup, /未対応OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>未対応スキル<\/td><td>30<\/td><td>40<\/td><td>0<\/td><td>40<\/td>/)
-  assert.match(markup, /永続OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>永続スキル<\/td><td>永続<\/td><td>20<\/td><td>25<\/td><td>-5<\/td>/)
+  assert.match(markup, /未対応OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>未対応スキル<\/td><td>30<\/td><td>40<\/td><td>0<\/td><td>40<\/td><td>0<\/td><\/tr>/)
+  assert.match(markup, /永続OP<\/button><\/th><td[^>]*>S1<\/td><td[^>]*>永続スキル<\/td><td>永続<\/td><td>20<\/td><td>25<\/td><td>-5<\/td><td>125<\/td><\/tr>/)
   assert.match(markup, /<td>弾薬制<\/td>/)
-  assert.match(markup, /<td>10<\/td><td>—<\/td><td>0<\/td><td>—<\/td>/)
+  assert.match(markup, /<td>10<\/td><td>—<\/td><td>0<\/td><td>—<\/td><td>—<\/td><\/tr>/)
   assert.doesNotMatch(markup, /攻撃回復OP|NaN|Infinity|<a\b/)
 })
 
@@ -117,13 +120,22 @@ test('empty and unavailable metrics display zero counts and unknown statistics r
   const summaries = metrics.map(definition => summarize(dataset, definition.key))
   const summaryMarkup = render(SummaryTable, { summaries })
   assert.deepEqual(summaryRows(summaryMarkup).get('必要SP'), ['0', '1', '—', '—', '—', '—', '—', '—', '—'])
+  assert.deepEqual(summaryRows(summaryMarkup).get('初期SP率（%）'), ['0', '1', '—', '—', '—', '—', '—', '—', '—'])
   const strip = render(Strip, { statistics: summaries[1].statistics, label: '必要SP' })
   assert.match(strip, /aria-label="必要SPの統計量"/)
   assert.equal((strip.match(/<td>—<\/td>/g) ?? []).length, 7)
   const emptyTable = render(ObservationTable, { observations: [], onOpenSkill() {} })
-  assert.match(emptyTable, /colSpan="7"|colspan="7"/)
+  assert.match(emptyTable, /colspan="8"/i)
   assert.match(text(emptyTable), /対象のスキルは0件です。/)
   assert.doesNotMatch(markup + summaryMarkup + strip + emptyTable, /NaN|Infinity/)
+})
+
+test('the distribution strip expresses ratios as percentages and their deviation in percentage points', () => {
+  const { statistics } = summarize(buildDataset(rows, defaults), 'initialRatio')
+  const markup = render(Strip, { statistics, label: '初期SP率', unit: '%' })
+  assert.match(markup, /aria-label="初期SP率の統計量"/)
+  const cells = [...markup.matchAll(/<td>(.*?)<\/td>/g)].map(([, value]) => value.replace(/\s/g, ''))
+  assert.deepEqual(cells, ['0%', '0%', '18.75%', '40.63%', '59.38%', '125%', '51.06pt'])
 })
 
 test('loading and data-source errors never expose a calculated result', () => {
@@ -180,6 +192,22 @@ test('scatter displays the paired sample count rather than either univariate val
   assert.equal(rSquared(markup), '—')
   assert.equal(equation(markup), '')
   assert.doesNotMatch(markup, /Pearson r<\/dt><dd>0<\/dd>/)
+})
+
+test('either scatter axis can use the initial SP ratio with its unit and only valid pairs', () => {
+  const dataset = weightedScatterDataset()
+  for (const [xMetric, yMetric, xLabel, yLabel] of [
+    ['initialRatio', 'duration', '初期SP率（%）', '持続時間（秒）'],
+    ['duration', 'initialRatio', '持続時間（秒）', '初期SP率（%）'],
+  ]) {
+    const markup = scatter(dataset, { xMetric, yMetric })
+    assert.match(markup, /<option value="initialRatio" selected="">初期SP率<\/option>/)
+    assert.match(markup, /<option value="initialRatio" disabled="">初期SP率<\/option>/)
+    assert.ok(markup.includes(`>${xLabel}と${yLabel}</title>`))
+    assert.match(text(markup), /有効 2件 ／ 対象外 4件/)
+    assert.ok(equation(markup).startsWith(`${yLabel} = `))
+    assert.ok(equation(markup).includes(` × ${xLabel} `))
+  }
 })
 
 test('signed and zero-valued pairs remain valid and point display mode does not change statistical weighting', () => {
