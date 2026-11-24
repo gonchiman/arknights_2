@@ -10,6 +10,8 @@
   font-variant-numeric: tabular-nums;
 }
 .td-time-heading output { font-size: 16px; font-weight: 600; }
+.td-time-clock { flex-wrap: wrap; }
+.td-time-clock > span { font-size: 12px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
 .td-time-heading button, .td-time-transport button { min-height: 32px; }
 .td-time-transport > button { min-width: 6em; }
 .td-time-seek {
@@ -21,6 +23,14 @@
 }
 .td-time-seek button { min-width: 44px; white-space: nowrap; }
 .td-time-range { min-width: 0; }
+.td-time-fragment-ticks { position: relative; height: 5px; margin-inline: 8px; }
+.td-time-fragment-ticks span { position: absolute; height: 100%; border-left: 1px solid var(--text-soft); }
+.map-wave-fragments.td-time-fragments {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 62px), 1fr));
+  gap: 4px;
+  margin-bottom: 0;
+}
+.td-time-fragments.map-wave-fragments button { flex-direction: column; gap: 0; padding: 4px; }
 .td-time-seek input { display: block; width: 100%; margin: 0; accent-color: var(--accent); }
 .td-time-limits, .td-time-footer span, .td-time-detail { color: var(--text-soft); font-size: 12px; }
 .td-time-filters { flex-wrap: wrap; gap: 4px 6px; }

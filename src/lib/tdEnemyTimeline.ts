@@ -23,6 +23,7 @@ interface Journey {
 
 export interface TdEnemyTimeline {
   duration: number
+  fragmentStarts: number[]
   spawns: { enemyId: string; start: number; journey: Journey }[]
 }
 
@@ -124,11 +125,13 @@ export function buildTdEnemyTimeline(detail: MapDetail, index: MapIndex): TdEnem
   if (wave.advancedWaveTag || !validSeconds(wave.preDelay)) return null
   const journeys = new Map<string, Journey>()
   const spawns: TdEnemyTimeline['spawns'] = []
+  const fragmentStarts: number[] = []
   let duration = 0
   let fragmentEnd = wave.preDelay
   for (const fragment of wave.fragments) {
     if (!validSeconds(fragment.preDelay)) return null
     const fragmentStart = fragmentEnd + fragment.preDelay
+    fragmentStarts.push(fragmentStart)
     fragmentEnd = fragmentStart
     for (const action of fragment.actions) {
       if (action.actionType !== 'SPAWN' || action.blockFragment !== false || action.spawnKind !== 'fixed') return null
@@ -159,7 +162,8 @@ export function buildTdEnemyTimeline(detail: MapDetail, index: MapIndex): TdEnem
       }
     }
   }
-  return spawns.length && Number.isSafeInteger(Math.ceil(duration)) ? { spawns, duration: Math.ceil(duration) } : null
+  const end = Math.ceil(Math.max(duration, fragmentEnd))
+  return spawns.length && Number.isSafeInteger(end) ? { spawns, fragmentStarts, duration: end } : null
 }
 
 /** Positions use the source coordinate system: row zero is the bottom of the map. */

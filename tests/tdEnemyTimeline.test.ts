@@ -16,6 +16,8 @@ test('TD-8 places all 59 spawns on one clock and seeks across fragment boundarie
   const timeline = buildTdEnemyTimeline(detail, index)
   assert.ok(timeline)
   assert.equal(timeline.spawns.length, 59)
+  assert.deepEqual(timeline.fragmentStarts, [0, 18, 79, 141])
+  assert.equal(timeline.duration, 261)
   const opening = getTdEnemyPositions(timeline, 0)
   assert.deepEqual(opening.map(p => p.enemyId).sort(), [dog, dog, dog, lizard, lizard, lizard, lizard])
   assert.ok(opening.every(p => p.state === 'waiting'))
@@ -30,8 +32,27 @@ test('TD-8 places all 59 spawns on one clock and seeks across fragment boundarie
   assert.equal(later.length, 12)
   assert.equal(later.filter(p => p.state === 'moving').length, 4)
   assert.deepEqual(later.find(p => p.enemyId === boss), { enemyId: boss, row: 6, col: 2, state: 'waiting' })
+  const thirdStart = timeline.fragmentStarts[2]
+  const before = getTdEnemyPositions(timeline, thirdStart - 1)
+  const after = getTdEnemyPositions(timeline, thirdStart)
+  assert.deepEqual(before.map(p => p.enemyId), [dog, dog])
+  assert.deepEqual(after.map(p => p.enemyId), [dog, dog, dog])
+  assert.ok(after[0].col > before[0].col && after[1].col > before[1].col)
+  assert.equal(after[2].col, 0)
   assert.deepEqual(getTdEnemyPositions(timeline, timeline.duration), [])
   assert.deepEqual(getTdEnemyPositions(timeline, 0), opening)
+})
+
+test('fragment starts preserve wave delays and simultaneous empty fragments after the last enemy leaves', () => {
+  const wave = detail.waves![0]
+  const first = wave.fragments[0]
+  const empty = { ...first, actions: [] }
+  const fragments = [first, { ...empty, preDelay: 400.25 }, { ...empty, preDelay: 0 }]
+  const timeline = buildTdEnemyTimeline({ ...detail, waves: [{ ...wave, preDelay: 3.5, fragments }] }, index)
+  assert.ok(timeline)
+  assert.deepEqual(timeline.fragmentStarts, [3.5, 403.75, 403.75])
+  assert.equal(timeline.duration, 404)
+  assert.deepEqual(getTdEnemyPositions(timeline, 403.75), [])
 })
 
 test('co-located species keep individual positions and movement states', () => {
