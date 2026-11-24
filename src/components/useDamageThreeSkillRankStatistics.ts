@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import type { DamageCell } from '../lib/damageThreeSkillRankMatrix'
 import {
-  evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type SkillRankStatistics,
+  evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type SkillRankStageSample, type SkillRankStatistics,
 } from '../lib/damageThreeSkillRankStatistics'
 import type { EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 
@@ -22,7 +22,7 @@ export function useDamageThreeSkillRankStatistics(
   useEffect(() => {
     if (!active || !entries.length || !pairs.length || current) return
     let index = 0
-    const stages: DamageCell[][] = []
+    const stages: SkillRankStageSample[] = []
     // Yield between small groups so typing or changing tabs can cancel an in-flight calculation.
     function calculateBatch() {
       const deadline = performance.now() + 10
@@ -33,7 +33,7 @@ export function useDamageThreeSkillRankStatistics(
           cells = evaluateSkillRankStatisticsStage(entry, pairs, disablePenetration)
           cache.set(entry, cells)
         }
-        if (cells) stages.push(cells)
+        if (cells) stages.push({ skill: entry.skill, cells })
       } while (index < entries.length && performance.now() < deadline)
       if (index < entries.length) {
         timer = window.setTimeout(calculateBatch, 0)

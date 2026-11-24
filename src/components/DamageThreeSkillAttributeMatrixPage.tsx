@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
+import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues } from '../lib/damageThreeSkillFilters'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
@@ -27,6 +28,7 @@ import './DamageThreeSkillAttributeMatrixPage.css'
 const MODES = [['virtual', '主攻撃の属性変更'], ['actual', '実際のダメージ内訳'], ['statistics', '術耐性別の統計']] as const
 type Mode = typeof MODES[number][0]
 const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
+const ADVANTAGE_UNITS = [['skill', 'スキル単位'], ['stage', '段階単位']] as const
 type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
 const PAGE_SIZE = 15
 const DEFAULT_FILTERS: DamageThreeSkillFilterValues = { kind: 'ALL', query: '', profession: 'ALL', rarity: 'ALL', damageType: 'ALL' }
@@ -57,6 +59,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [showDifference, setShowDifference] = useState(false)
   const [applyPenetration, setApplyPenetration] = useState(true)
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
+  const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [selectedResistance, setSelectedResistance] = useState(0)
   const tabId = useId()
@@ -182,13 +185,17 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 }} />
                 ダメージ差を表示
               </label>}
+              {statsActive && statisticView === 'advantage' && <div className="dc3-matrix-option-group">
+                <span className="dc3-matrix-option-label">集計単位</span>
+                <PageViewSwitch views={ADVANTAGE_UNITS} selected={advantageUnit} onChange={setAdvantageUnit} label="集計単位" />
+              </div>}
               {statsActive && <div className="dc3-matrix-option-group">
                 <span className="dc3-matrix-option-label">表示形式</span>
                 <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />
               </div>}
             </div>
             {statsActive ? (
-              statistics ? <StatisticsOutput rows={statistics} view={statisticView} />
+              statistics ? <StatisticsOutput rows={statistics} view={statisticView} advantageUnit={advantageUnit} />
                 : <p role="status">主攻撃のダメージを集計中…</p>
             ) : <>
               <div className="dc3-matrix-table-heading">
