@@ -12,11 +12,23 @@
 
 | 出力の形 | 使う部品 |
 | --- | --- |
-| 結果が1つ | `PageOutputHeader` と結果を並べる。操作があれば見出し行の左、アドレスコピーは右に置く。ページ名だけで対象が分かる場合は `<PageOutputHeader />` で足りる。 |
+| 結果が1つ | `PageOutputHeader` と結果を並べる。見出しや表示切替は左、画像保存・アドレスコピーは右に置く。ページ名だけで対象が分かり、保存操作もなければ `<PageOutputHeader />` で足りる。 |
 | 結果が複数 | `PageOutputTabs` にタブの定義と選択状態を渡す。下線付きタブと右端のコピーが一緒に表示される。各結果は同じ `idPrefix` と `activeTab` の [AnalysisTabPanel](../../src/components/AnalysisTabs.tsx) に置く。 |
 | 同じ結果を表・グラフなどに切り替える | [PageViewSwitch](../../src/components/PageViewSwitch.tsx) を結果の上に置く。選択中の表示名を `PageOutputTabs` の `format` に渡す。単一出力では `PageOutputHeader` の `segments` に渡す。 |
 
 本文幅・中央寄せ・設定行の折り返しとコピー位置は [PageLayout.css](../../src/components/PageLayout.css) が定義する。本文の上限は960px。狭い画面では共通のページ余白の内側に収まり、ヘッドバーは画面幅を使う。アドレスの書式や既存要素への適用範囲は[アドレスコピーの仕様](../element-location-copy/README.md)に従う。
+
+## 画像保存ボタン
+
+マップ・表・グラフなどの結果に画像保存ボタンを追加するとき、またはその見た目や配置を見直すときは、「TDマップ詳細」の地形タブを基準にする。
+
+- 結果が1つなら見出し行、タブで切り替える場合はタブ行の右端に、左から「画像を保存」「アドレスコピー」の順に並べる。[PageOutputHeader・PageOutputTabs](../../src/components/PageLayout.tsx) の `actions` に保存ボタンを渡す。タブや表示形式によって保存対象が変わる場合は表示中の結果に結び付け、保存できる表示でだけボタンを出す。
+- 通常時は、受け皿に向かう下矢印だけを表示する。[共通のアイコンボタンスタイル](../../src/components/ElementLocationCopyButton.css) の `output-icon-button` と `output-icon-face` を使い、コピーと大きさ・色・ホバー・フォーカス表示をそろえる。狭い画面やタッチ操作では共通スタイルが押せる範囲を広げる。
+- ボタンの読み上げ名は「画像を保存」とし、保存ダイアログを開く場合は `aria-haspopup="dialog"` を付ける。[TDマップの保存ボタン](../../src/components/TdMapImage.tsx) と[タブへの配置](../../src/components/TdMapPage.tsx)を実装例とする。
+
+![TDマップの地形タブ行。右端に画像保存とアドレスコピーが並ぶ](examples/td-map-output-actions.png)
+
+見本を更新するときは、`#/maps/td?stage=TD-8` で「地形」の「経路」を選び、ライト表示・表示領域1210×740 CSS px・倍率100%でタブ行を撮影する。
 
 ## 最小の使用例
 
