@@ -6,6 +6,7 @@ export type AppRoute =
   | { view: 'skill-classification' }
   | { view: 'skill-dps-analysis' }
   | { view: 'skill-numeric-statistics' }
+  | { view: 'attribute-effects' }
   | { view: 'skill-kmeans' }
   | { view: 'skill-hdbscan' }
   | { view: 'skill-hierarchical' }
@@ -273,6 +274,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/skills/kmeans') return { view: 'skill-kmeans' }
   if (hash === '#/analysis/skills/dps-relationships') return { view: 'skill-dps-analysis' }
   if (hash === '#/analysis/skills/statistics') return { view: 'skill-numeric-statistics' }
+  if (hash === '#/analysis/skills/attribute-effects') return { view: 'attribute-effects' }
   if (hash === '#/analysis/skills/hdbscan') return { view: 'skill-hdbscan' }
   if (hash === '#/analysis/skills/hierarchical') return { view: 'skill-hierarchical' }
   if (hash === '#/analysis/goldenglow') return { view: 'goldenglow-home' }

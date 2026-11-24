@@ -1,0 +1,30 @@
+.attribute-catalog h2 { margin: 0; font-size: 14px; }
+
+.attribute-catalog .skill-directory-filter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 2fr);
+}
+.attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: auto; }
+
+.attribute-catalog-results { display: grid; gap: 6px; min-width: 0; }
+.attribute-catalog-summary { display: flex; align-items: baseline; gap: 8px; }
+.attribute-catalog-summary span, .attribute-catalog-baseline {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.damage-two-table.attribute-catalog-table { min-width: 680px; table-layout: auto; }
+.attribute-catalog-table :is(th, td) { padding: 5px 7px; text-align: left; }
+.attribute-catalog-table thead th { white-space: nowrap; }
+.attribute-catalog-table th:first-child { width: auto; }
+.attribute-catalog-table tbody th { color: var(--text); font-size: inherit; }
+.attribute-catalog-table :is(th, td):nth-child(2),
+.attribute-catalog-table :is(th, td):nth-child(4) { text-align: center; white-space: nowrap; }
+.attribute-catalog-table th:nth-child(6),
+.attribute-catalog-table .attribute-catalog-amount { text-align: right; white-space: nowrap; }
+.attribute-catalog-table td:last-child { max-width: 21rem; overflow-wrap: anywhere; }
+
+@media (max-width: 560px) {
+  .attribute-catalog .skill-directory-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: 1 / -1; }
+}
