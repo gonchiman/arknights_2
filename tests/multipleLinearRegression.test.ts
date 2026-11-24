@@ -80,6 +80,44 @@ test('単回帰の標準化回帰係数は符号を含めてPearson相関係数�
 
   assert.ok(correlation < 0)
   close(result.standardizedCoefficients[0], correlation)
+  assert.deepEqual(result.varianceInflationFactors, [1])
+})
+
+test('互いに直交する説明変数のVIFは1になる', () => {
+  const predictors = [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+  const responses = predictors.map(([first, second]) => 1 + 2 * first - 3 * second)
+  const result = fitMultipleLinearRegression(predictors, responses)
+
+  assert.equal(result.varianceInflationFactors.length, 2)
+  result.varianceInflationFactors.forEach(factor => close(factor, 1))
+})
+
+test('相関する説明変数のVIFを元の列順で返す', () => {
+  const original = Array.from({ length: 8 }, (_, index) => {
+    const first = index < 4 ? -1 : 1
+    const second = index % 4 < 2 ? -1 : 1
+    const third = index % 2 < 1 ? -1 : 1
+    return [first, 2 * first + second, third]
+  })
+  const responses = original.map(([first, second, third]) => 3 + first + second - third)
+  const expected = [5, 5, 1]
+  for (const order of [[0, 1, 2], [1, 2, 0], [2, 0, 1]]) {
+    const predictors = original.map(row => order.map(column => row[column]))
+    const result = fitMultipleLinearRegression(predictors, responses)
+    assert.equal(result.varianceInflationFactors.length, 3)
+    result.varianceInflationFactors.forEach((factor, column) => close(factor, expected[order[column]]))
+  }
+})
+
+test('強く相関しても線形独立なら大きなVIFを有限値で返す', () => {
+  const epsilon = 1e-9
+  const orthogonal = [[-1, -1], [-1, 1], [1, -1], [1, 1]]
+  const predictors = orthogonal.map(([first, second]) => [first, first + epsilon * second])
+  const responses = orthogonal.map(([first, second]) => first + second)
+  const result = fitMultipleLinearRegression(predictors, responses)
+  const expected = 1 + 1 / epsilon ** 2
+
+  result.varianceInflationFactors.forEach(factor => close(factor / expected, 1, 1e-6))
 })
 
 test('相関する説明変数の標準化回帰係数を±1に制限しない', () => {
