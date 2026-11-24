@@ -118,7 +118,8 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   }, [active, duration, startTime])
 
   if (!timeline) return <p className="map-empty" role="status">このマップは敵の位置を推定できません。</p>
-  const { fragmentStarts } = timeline
+  const { fragmentStarts, spawns } = timeline
+  const spawnedCount = spawns.filter(spawn => spawn.start <= seconds).length
   const currentFragment = fragmentStarts.reduce((current, start, i) => start <= seconds ? i : current, -1)
   const rows = detail.grid.length
   const columns = detail.grid[0].length
@@ -174,6 +175,14 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         onClick={() => seek(start)}>
         <span>区間{i + 1}</span><small>{start.toLocaleString('ja-JP')} 秒</small>
       </button>)}
+    </div>
+    <div className="td-time-progress">
+      <div className="td-time-heading">
+        <span>出現済み <strong>{spawnedCount} / {spawns.length}体</strong></span>
+        <span>未出現 <strong>{spawns.length - spawnedCount}体</strong></span>
+      </div>
+      <progress aria-label="敵の出現進捗" value={spawnedCount} max={spawns.length}
+        aria-valuetext={`全${spawns.length}体のうち${spawnedCount}体が出現済み`} />
     </div>
     <div className="td-time-heading"><span>表示する敵</span>
       <button type="button" className="button secondary" disabled={excluded.size === 0}

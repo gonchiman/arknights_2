@@ -33,6 +33,9 @@
 .td-time-fragments.map-wave-fragments button { flex-direction: column; gap: 0; padding: 4px; }
 .td-time-seek input { display: block; width: 100%; margin: 0; accent-color: var(--accent); }
 .td-time-limits, .td-time-footer span, .td-time-detail { color: var(--text-soft); font-size: 12px; }
+.td-time-progress { display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.td-time-progress .td-time-heading { flex-wrap: wrap; }
+.td-time-progress progress { width: 100%; height: 9px; accent-color: var(--accent); }
 .td-time-filters { flex-wrap: wrap; gap: 4px 6px; }
 .td-time-filters label {
   min-height: 30px;
