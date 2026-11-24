@@ -1,6 +1,7 @@
-import type { SkillRecord } from '../types/skill.ts'
+import type { OperatorTalentRecord, SkillRecord } from '../types/skill.ts'
 import { buildAttributeEffectTalents } from './attributeEffectTalents.ts'
 import { buildAttributeEffectSkills } from './attributeEffectSkills.ts'
+import { buildAttributeEffectSummons } from './attributeEffectSummons.ts'
 
 export type AttributeEffectRow = {
   id: string
@@ -12,8 +13,7 @@ export type AttributeEffectRow = {
   effect: string
   amount: string
   condition: string
-  href: string
-}
+} & ({ href: string; description?: never } | { href: null; description: string })
 
 export type AttributeEffectCatalogFilters = {
   attribute: 'all' | AttributeEffectRow['attribute']
@@ -46,8 +46,8 @@ export function summarizeAttributeEffects(rows: readonly AttributeEffectRow[]): 
   })
 }
 
-export function buildAttributeEffectCatalog(rows: readonly SkillRecord[]): AttributeEffectRow[] {
-  return [...buildAttributeEffectTalents(rows), ...buildAttributeEffectSkills(rows)].sort((a, b) =>
+export function buildAttributeEffectCatalog(rows: readonly SkillRecord[], operators?: readonly OperatorTalentRecord[]): AttributeEffectRow[] {
+  return [...buildAttributeEffectTalents(rows, operators), ...buildAttributeEffectSkills(rows), ...buildAttributeEffectSummons(rows)].sort((a, b) =>
     japaneseOrder.compare(a.operatorName, b.operatorName)
     || (a.source === b.source ? 0 : a.source === 'talent' ? -1 : 1)
     || japaneseOrder.compare(a.sourceLabel, b.sourceLabel)

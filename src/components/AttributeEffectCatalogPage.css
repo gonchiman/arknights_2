@@ -41,6 +41,16 @@
 .attribute-catalog-table thead th { white-space: nowrap; }
 .attribute-catalog-table th:first-child { width: auto; }
 .attribute-catalog-table tbody th { color: var(--text); font-size: inherit; }
+.attribute-catalog-source {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .attribute-catalog-table :is(th, td):nth-child(2),
 .attribute-catalog-table :is(th, td):nth-child(4) { text-align: center; white-space: nowrap; }
 .attribute-catalog-table th:nth-child(6),

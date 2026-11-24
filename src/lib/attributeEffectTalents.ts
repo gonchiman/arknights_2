@@ -1,6 +1,7 @@
-import type { SkillRecord } from '../types/skill.ts'
+import type { OperatorTalentRecord, SkillRecord } from '../types/skill.ts'
 import type { AttributeEffectRow } from './attributeEffectCatalog.ts'
 import { formatCombatNumber, resolveCombatNumericValue } from './combatEffectStructure.ts'
+import { getOperatorPassives } from './operatorProfile.ts'
 import { createTalentStructureHash } from './routes.ts'
 import { expandSkillDescription } from './skillJsonAnalysis.ts'
 import { buildTalentStructures, type TalentStructure, type TalentStructureEffect } from './talentStructure.ts'
@@ -112,7 +113,51 @@ function talentRows(talent: TalentStructure): AttributeEffectRow[] {
   })
 }
 
-export function buildAttributeEffectTalents(rows: readonly SkillRecord[]): AttributeEffectRow[] {
+// These base talents have no corresponding DC3 talent structure. Read the
+// reviewed clause from the same potential-one candidate as the source text.
+const sourceTalents: Readonly<Record<string, {
+  talentIndex: number
+  kind: EffectKind
+  clause: string
+  valueKey: 'damage_scale' | 'magic_resistance'
+  condition: string
+}>> = {
+  char_1051_headb2: { talentIndex: 0, kind: ['physical', '与ダメージ増加'], clause: '特性による範囲物理攻撃の与ダメージ',
+    valueKey: 'damage_scale', condition: '特性による範囲物理攻撃時' },
+  char_4136_phonor: { talentIndex: 0, kind: ['arts', '被ダメージ増加'], clause: '対術脆弱',
+    valueKey: 'damage_scale', condition: '配置後{duration}秒間、攻撃範囲内の敵全員' },
+  char_4227_gallus: { talentIndex: 0, kind: ['arts', '術耐性低下'], clause: '対象の術耐性',
+    valueKey: 'magic_resistance', condition: '配置後{duration}秒間、攻撃した敵に{buff_duration}秒間' },
+}
+
+function sourceTalentRows({ operatorId, operatorName, operatorProfile }: OperatorTalentRecord): AttributeEffectRow[] {
+  const entry = sourceTalents[operatorId]
+  if (!entry) return []
+  const phaseIndex = operatorProfile.phases.length - 1
+  const level = operatorProfile.phases[phaseIndex]?.maxLevel
+  if (!level) return []
+  const { sources } = getOperatorPassives({ ...operatorProfile, favorKeyFrames: [] }, phaseIndex, level, 1)
+  const source = sources.find(candidate => candidate.talentIndex === entry.talentIndex)
+  if (!source || !source.description.includes(entry.clause)) return []
+  const value = source.blackboard.find(item => item.key === entry.valueKey)?.value
+  if (typeof value !== 'number' || !Number.isFinite(value)) return []
+  const isIncrease = entry.valueKey === 'damage_scale'
+  if (isIncrease ? value <= 1 : value >= 0) return []
+  const amount = isIncrease ? `+${formatCombatNumber((value - 1) * 100)}%` : `−${formatCombatNumber(-value * 100)}%`
+  const condition = expandSkillDescription(entry.condition, source.blackboard)
+  if (condition.includes('{')) return []
+  return [{
+    id: `talent:${operatorId}:${entry.talentIndex}:${entry.valueKey}`, operatorName, source: 'talent',
+    sourceLabel: `素質${entry.talentIndex + 1}`, name: source.sourceName, attribute: entry.kind[0], effect: entry.kind[1],
+    amount, condition, href: null, description: expandSkillDescription(source.description, source.blackboard),
+  }]
+}
+
+export function buildAttributeEffectTalents(rows: readonly SkillRecord[], operators: readonly OperatorTalentRecord[] = []): AttributeEffectRow[] {
   const candidates = rows.filter(row => registeredOperators.has(row.operatorId))
-  return buildTalentStructures(candidates).flatMap(talentRows)
+  const byOperator = new Map<string, OperatorTalentRecord>()
+  for (const operator of [...rows, ...operators]) {
+    if (sourceTalents[operator.operatorId]) byOperator.set(operator.operatorId, operator)
+  }
+  return [...buildTalentStructures(candidates).flatMap(talentRows), ...[...byOperator.values()].flatMap(sourceTalentRows)]
 }
