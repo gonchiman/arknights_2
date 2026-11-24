@@ -18,6 +18,16 @@ export interface SkillDpsUptimeResult {
   reason: string | null
 }
 
+interface SkillDpsFixedCycleTiming {
+  fullLockSeconds: number
+  rechargeSeconds: number
+  attackSeconds: number
+}
+
+type SkillDpsFixedCycleResult =
+  | { timing: SkillDpsFixedCycleTiming; reason: null }
+  | { timing: null; reason: string }
+
 interface ReviewedFixedCycle {
   operatorId: string
   skillIndex: number
@@ -110,7 +120,7 @@ const REVIEWED_FIXED_CYCLES: readonly ReviewedFixedCycle[] = [
   fixed('char_377_gdglow', 3, 'skchr_gdglow_3', 30, 35),
 ]
 
-const unavailable = (reason: string): SkillDpsUptimeResult => ({ percentage: null, reason })
+const unavailable = (reason: string): SkillDpsFixedCycleResult => ({ timing: null, reason })
 const equal = (left: number | null | undefined, right: number) => typeof left === 'number'
   && Number.isFinite(left) && Math.abs(left - right) <= 1e-9 * Math.max(1, Math.abs(right))
 
@@ -128,10 +138,10 @@ export function resolveSkillNumericUptime(skill: SkillRecord, levelIndex: number
   const structure = findSkillStructure({ operatorId: skill.operatorId, skillId: skill.skillId, skillIndex: skill.skillIndex, levelIndex })
   if (!structure) return null
   const [cycle] = cycles
-  return resolveStageUptime(skill, structure, cycle.stageId, cycle).percentage
+  return cycleUptime(resolveStageFixedCycle(skill, structure, cycle.stageId, cycle)).percentage
 }
 
-export function resolveSkillDpsUptime(input: SkillDpsUptimeInput): SkillDpsUptimeResult {
+export function resolveSkillDpsFixedCycle(input: SkillDpsUptimeInput): SkillDpsFixedCycleResult {
   const { entry, output, skill } = input
   const info = entry.structure.basicInfo
   const outputInfo = output.structure?.basicInfo
@@ -141,14 +151,14 @@ export function resolveSkillDpsUptime(input: SkillDpsUptimeInput): SkillDpsUptim
     || outputInfo?.operatorId !== info.operatorId || outputInfo.skillId !== info.skillId
     || outputInfo.skillIndex !== info.skillIndex || outputInfo.levelIndex !== info.levelIndex) return unavailable('確認済みソース不一致')
   const cycle = reviewedCycles(skill, entry.levelIndex).find(item => item.stageId === entry.stageId)
-  return resolveStageUptime(skill, entry.structure, entry.stageId, cycle, input)
+  return resolveStageFixedCycle(skill, entry.structure, entry.stageId, cycle, input)
 }
 
 /** A full-duration, immediate-recast cycle at 1 SP/second. Initial SP affects
  * only the first cast. The full skill lock includes non-attacking startup.
  */
-function resolveStageUptime(skill: SkillRecord, structure: SkillStructure, stageId: string,
-  capability: ReviewedFixedCycle | undefined, calculation?: SkillDpsUptimeInput): SkillDpsUptimeResult {
+function resolveStageFixedCycle(skill: SkillRecord, structure: SkillStructure, stageId: string,
+  capability: ReviewedFixedCycle | undefined, calculation?: SkillDpsUptimeInput): SkillDpsFixedCycleResult {
   const info = structure.basicInfo
   const raw = skill.skillLevels[info.levelIndex]
   if (!raw || !sameReviewedDescription(raw.description ?? '', structure.source.rawDescription)
@@ -198,6 +208,15 @@ function resolveStageUptime(skill: SkillRecord, structure: SkillStructure, stage
       return unavailable('スキル拘束時間未確認')
     }
   }
-  const percentage = attackSeconds / (capability.fullLockSeconds + spCost) * 100
-  return Number.isFinite(percentage) ? { percentage, reason: null } : unavailable('反復周期の確認なし')
+  return { timing: { fullLockSeconds: capability.fullLockSeconds, rechargeSeconds: spCost, attackSeconds }, reason: null }
+}
+
+function cycleUptime({ timing, reason }: SkillDpsFixedCycleResult): SkillDpsUptimeResult {
+  if (!timing) return { percentage: null, reason }
+  const percentage = timing.attackSeconds / (timing.fullLockSeconds + timing.rechargeSeconds) * 100
+  return Number.isFinite(percentage) ? { percentage, reason: null } : { percentage: null, reason: '反復周期の確認なし' }
+}
+
+export function resolveSkillDpsUptime(input: SkillDpsUptimeInput): SkillDpsUptimeResult {
+  return cycleUptime(resolveSkillDpsFixedCycle(input))
 }

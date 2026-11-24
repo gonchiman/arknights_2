@@ -11,6 +11,7 @@ import { guardConditionMatches } from './guardCombatValues.ts'
 import type { ProbabilisticDamageBranch } from './probabilisticDamage.ts'
 import type { SkillStructure } from './skillStructure.ts'
 import { calculateDamageThreePeriodTotal, type DamageThreePeriodTotal } from './damageCalculatorThreePeriodTotal.ts'
+import { calculateDamageThreeCycleAverageDps } from './damageThreeCycleAverageDps.ts'
 
 export const DAMAGE_THREE_OUTPUT_KIND_LABELS: Record<DamageCalculatorThreeOutput['attackKind'], string> = {
   NORMAL: '通常攻撃型', NEXT_ATTACK: '次の通常攻撃型', COUNTER: '反撃型', SKILL_ACTION: 'スキル動作型',
@@ -31,6 +32,7 @@ export type DamageThreeComparisonOverrides = Record<string, number | string | bo
 /** Optional per-evaluation settings; normal comparison callers keep their existing defaults. */
 export interface DamageThreeComparisonEvaluationOptions {
   normalAttack?: boolean
+  includeCycleAverageDps?: boolean
   operatorLevel?: number
   trust?: number
   virtualMainAttackType?: 'PHYSICAL' | 'ARTS'
@@ -79,6 +81,8 @@ export interface DamageThreeComparisonResult extends DamageThreePeriodTotal {
   allTargetsDamageOverTimeDps: number | null
   combinedDps: number | null
   allTargetsCombinedDps: number | null
+  cycleAverageDps: number | null
+  allTargetsCycleAverageDps: number | null
   elementalBuildups: readonly ElementalBuildupResult[]
 }
 
@@ -191,7 +195,7 @@ export function evaluateDamageThreeComparisonEntry(
     hasUnsupportedTalentDamage: output?.hasUnsupportedTalentDamage,
     hasCalculationErrors: errors.length > 0 || !row,
   })
-  return {
+  const result: DamageThreeComparisonResult = {
     ...periodTotal,
     entry: resultEntry, output, errors: [...new Set(errors)], fields,
     notes: [...new Set([...(output?.scopeNotes ?? []), ...(output?.talentEffects.filter(effect => effect.status === 'UNSUPPORTED').map(effect => effect.reason) ?? [])])],
@@ -207,7 +211,16 @@ export function evaluateDamageThreeComparisonEntry(
     damageOverTimeDps: periodic,
     allTargetsDamageOverTimeDps: periodic !== null && output ? periodic * output.actualTargetCount : null,
     combinedDps, allTargetsCombinedDps: row?.allTargetsCombinedDps ?? null,
+    cycleAverageDps: null,
+    allTargetsCycleAverageDps: null,
     elementalBuildups: row?.elementalBuildups ?? [],
+  }
+  if (!options.includeCycleAverageDps || options.normalAttack) return result
+  return {
+    ...result,
+    ...calculateDamageThreeCycleAverageDps(result, () => evaluateDamageThreeComparisonEntry(
+      entry, common, overrides, { ...options, normalAttack: true, includeCycleAverageDps: false },
+    )),
   }
 }
 

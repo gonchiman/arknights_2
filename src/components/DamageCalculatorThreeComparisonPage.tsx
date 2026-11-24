@@ -25,7 +25,7 @@ import { OperatorDetailLink } from './OperatorDetailLink'
 import { PageLayout, PageOutputHeader } from './PageLayout'
 import { SkillEffectModal } from './SkillEffectModal'
 import { SkillInformationTable } from './SkillInformationTable'
-import { TableSortHeader } from './TableSortHeader'
+import { TableSortHeader, type TableSort } from './TableSortHeader'
 import { ElementalBuildupTable } from './ElementalBuildupTable'
 import { StructureTable } from './StructureTable'
 import './SkillDirectory.css'
@@ -41,13 +41,14 @@ interface Props {
 
 type OutputKind = DamageThreeComparisonEntry['kind']
 type AttackDetailMetric = 'finalAttack' | 'perHit'
-type Metric = AttackDetailMetric | 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'durationSeconds' | 'totalDamage'
+type Metric = AttackDetailMetric | 'actualTargetCount' | 'perAttack' | 'dps' | 'damageOverTimeDps' | 'combinedDps' | 'cycleAverageDps' | 'durationSeconds' | 'totalDamage'
 type SortKey = Metric | DamageCalculatorThreeSkillInformationKey
 type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
 type ComparisonFilters = DamageThreeSkillFilterValues & { kind: OutputKind }
 const DEFAULT_FILTERS: ComparisonFilters = { kind: 'NORMAL', query: '', profession: 'ALL', rarity: 'ALL', damageType: 'ALL' }
+const DEFAULT_SORT: TableSort<SortKey> = { key: 'combinedDps', direction: 'desc' }
 const COMMON_CONDITIONS_TITLE = '共通条件'
 const RESULT_TITLE = '計算結果'
 const ATTACK_LABELS: Record<OutputKind, string> = {
@@ -57,6 +58,7 @@ const METRIC_LABELS = {
   finalAttack: '最終攻撃力',
   perHit: '最大1ヒットダメージ',
   actualTargetCount: '攻撃対象数', dps: '直接DPS', damageOverTimeDps: '継続DPS', combinedDps: '合計DPS',
+  cycleAverageDps: '周期平均DPS',
   durationSeconds: '段階時間（秒）', totalDamage: '総ダメージ（概算）',
 }
 const SKILL_INFORMATION_COLUMNS: { key: DamageCalculatorThreeSkillInformationKey; label: string; numeric: boolean }[] = [
@@ -69,7 +71,7 @@ const SKILL_INFORMATION_COLUMNS: { key: DamageCalculatorThreeSkillInformationKey
 function isSkillInformationKey(key: SortKey): key is DamageCalculatorThreeSkillInformationKey {
   return SKILL_INFORMATION_COLUMNS.some(column => column.key === key)
 }
-const NORMAL_METRICS: Metric[] = ['combinedDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'perHit', 'finalAttack', 'actualTargetCount']
+const NORMAL_METRICS: Metric[] = ['combinedDps', 'cycleAverageDps', 'durationSeconds', 'totalDamage', 'dps', 'damageOverTimeDps', 'perAttack', 'perHit', 'finalAttack', 'actualTargetCount']
 const NORMAL_RESULT_METRICS: Metric[] = ['dps', 'damageOverTimeDps', 'combinedDps', 'durationSeconds', 'totalDamage']
 const ACTION_METRICS: Metric[] = ['perAttack', 'perHit', 'finalAttack', 'actualTargetCount']
 function metricLabel(metric: Metric, kind: OutputKind): string {
@@ -85,6 +87,7 @@ function metricValue(result: DamageThreeComparisonResult, metric: Metric, target
     case 'dps': return result.allTargetsDps
     case 'damageOverTimeDps': return result.allTargetsDamageOverTimeDps
     case 'combinedDps': return result.allTargetsCombinedDps
+    case 'cycleAverageDps': return result.allTargetsCycleAverageDps
     case 'totalDamage': return result.allTargetsTotalDamage
   }
 }
@@ -134,10 +137,11 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const tableRef = useRef<HTMLTableElement>(null)
   const tableRegionRef = useRef<HTMLDivElement>(null)
   const [overrides, setOverrides] = useState<Record<string, DamageThreeComparisonOverrides>>({})
-  const [sort, setSort] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({ key: 'combinedDps', direction: 'desc' })
+  const [sort, setSort] = useState(DEFAULT_SORT)
   const [detail, setDetail] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement; focusMetric?: AttackDetailMetric } | null>(null)
   const [description, setDescription] = useState<{ entry: DamageThreeComparisonEntry; trigger: HTMLButtonElement } | null>(null)
   const metrics = kind === 'NORMAL' ? NORMAL_METRICS : ACTION_METRICS
+  const includeCycleAverageDps = kind === 'NORMAL' && displayMetric === 'cycleAverageDps'
   useEffect(() => {
     const container = resultsRef.current
     if (!container) return
@@ -160,25 +164,14 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   const professionOptions = useMemo(() => getDamageThreeProfessionOptions(entries), [entries])
   const visibleEntries = useMemo(() => filterDamageThreeSkillEntries(entries, { kind, query, profession, rarity }),
     [entries, kind, query, profession, rarity])
-  const evaluatedResults = useMemo(() => visibleEntries.map((entry) => evaluateDamageThreeComparisonEntry(entry, common, overrides[entry.key])),
-    [visibleEntries, common, overrides])
+  const evaluatedResults = useMemo(() => visibleEntries.map((entry) => evaluateDamageThreeComparisonEntry(
+    entry, common, overrides[entry.key], includeCycleAverageDps ? { includeCycleAverageDps: true } : undefined,
+  )), [visibleEntries, common, overrides, includeCycleAverageDps])
   const results = useMemo(() => damageType === 'ALL'
     ? evaluatedResults : evaluatedResults.filter(result => result.damageType === damageType),
   [evaluatedResults, damageType])
   const skillInformation = useMemo(() => new Map(results.map(result => [result.entry.key,
     getDamageCalculatorThreeSkillInformationValues(result.entry.structure, result.entry.skill, result.output)])), [results])
-  const sortedResults = useMemo(() => [...results].sort((left, right) => {
-    if (isSkillInformationKey(sort.key)) return compareDamageCalculatorThreeSkillInformation(
-      skillInformation.get(left.entry.key)!, skillInformation.get(right.entry.key)!, sort.key, sort.direction,
-    )
-    const a = metricValue(left, sort.key, target)
-    const b = metricValue(right, sort.key, target)
-    const aValid = a !== null && Number.isFinite(a)
-    const bValid = b !== null && Number.isFinite(b)
-    if (!aValid) return bValid ? 1 : 0
-    if (!bValid) return -1
-    return (a - b) * (sort.direction === 'asc' ? 1 : -1)
-  }), [results, skillInformation, sort, target])
   const detailResult = useMemo(() => detail ? evaluateDamageThreeComparisonEntry(detail.entry, common, overrides[detail.entry.key]) : null,
     [detail, common, overrides])
   const descriptionOutput = description ? evaluatedResults.find(result => result.entry.key === description.entry.key)?.output : null
@@ -188,6 +181,19 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     && measuredFullWidth.target === target && measuredFullWidth.showSkillInformation === showSkillInformation
   const fullWidth = Math.max((kind === 'NORMAL' ? 1400 : 1100) + (showSkillInformation ? 480 : 0), widthMatchesContent ? measuredFullWidth.width : 0)
   const compact = tableDisplay === 'compact' || (tableDisplay === 'auto' && resultsWidth < fullWidth)
+  const tableSort = !compact && sort.key === 'cycleAverageDps' ? DEFAULT_SORT : sort
+  const sortedResults = useMemo(() => [...results].sort((left, right) => {
+    if (isSkillInformationKey(tableSort.key)) return compareDamageCalculatorThreeSkillInformation(
+      skillInformation.get(left.entry.key)!, skillInformation.get(right.entry.key)!, tableSort.key, tableSort.direction,
+    )
+    const a = metricValue(left, tableSort.key, target)
+    const b = metricValue(right, tableSort.key, target)
+    const aValid = a !== null && Number.isFinite(a)
+    const bValid = b !== null && Number.isFinite(b)
+    if (!aValid) return bValid ? 1 : 0
+    if (!bValid) return -1
+    return (a - b) * (tableSort.direction === 'asc' ? 1 : -1)
+  }), [results, skillInformation, tableSort, target])
   useLayoutEffect(() => {
     // Long names and formatted numbers can require more than the stylesheet's minimum width.
     // Remember that width while compact, so resizing does not alternate between both layouts.
@@ -249,11 +255,11 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
   }
   const sortableHeading = (key: SortKey, label: string, numeric = true) => <TableSortHeader key={key}
     className={`${numeric ? 'dc3-comparison-numeric-heading' : 'dc3-comparison-text-heading'}${isSkillInformationKey(key) ? ' dc3-comparison-skill-info-heading' : ''}${key === 'skillDuration' ? ' dc3-comparison-skill-duration-heading' : ''}`}
-    label={label} sortKey={key} sort={sort}
+    label={label} sortKey={key} sort={tableSort}
     onSort={(key) => {
       if (!isSkillInformationKey(key)) setDisplayMetric(key)
-      setSort((current) => ({ key, direction: current.key === key
-        ? (current.direction === 'desc' ? 'asc' : 'desc') : (numeric ? 'desc' : 'asc') }))
+      setSort({ key, direction: tableSort.key === key
+        ? (tableSort.direction === 'desc' ? 'asc' : 'desc') : (numeric ? 'desc' : 'asc') })
     }} />
 
   const renderMetricCell = (result: DamageThreeComparisonResult, metric: Metric) => {
