@@ -6,8 +6,9 @@ import {
   type AttributeEffectCatalogFilters,
   type AttributeEffectRow,
 } from '../lib/attributeEffectCatalog'
-import type { SkillRecord } from '../types/skill'
+import type { OperatorTalentRecord, SkillRecord } from '../types/skill'
 import { AnalysisTabPanel } from './AnalysisTabs'
+import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import './SkillDirectory.css'
 import './DamageThreeSkillFilters.css'
@@ -22,12 +23,13 @@ const ATTRIBUTES = ['physical', 'arts'] as const
 type Tab = typeof TABS[number][0]
 type Selection = Pick<AttributeEffectRow, 'effect' | 'attribute'>
 
-export function AttributeEffectCatalogPage({ rows, loading }: { rows: SkillRecord[]; loading: boolean }) {
+export function AttributeEffectCatalogPage({ rows, operators, loading }: { rows: SkillRecord[]; operators: OperatorTalentRecord[]; loading: boolean }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [tab, setTab] = useState<Tab>('summary')
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [sourceDetail, setSourceDetail] = useState<AttributeEffectRow | null>(null)
   const tabs = { idPrefix: useId(), activeTab: tab }
-  const catalog = useMemo(() => buildAttributeEffectCatalog(rows), [rows])
+  const catalog = useMemo(() => buildAttributeEffectCatalog(rows, operators), [rows, operators])
   const effects = useMemo(() => filterAttributeEffectCatalog(catalog, filters), [catalog, filters])
   const summary = useMemo(() => summarizeAttributeEffects(effects), [effects])
   const details = selection
@@ -123,7 +125,9 @@ export function AttributeEffectCatalogPage({ rows, loading }: { rows: SkillRecor
               {!loading && details.map(row => <tr key={row.id}>
                 <th scope="row">{row.operatorName}</th>
                 <td>{row.sourceLabel}</td>
-                <td><a href={row.href}>{row.name}</a></td>
+                <td>{row.href === null
+                  ? <button type="button" className="attribute-catalog-source" aria-haspopup="dialog" onClick={() => setSourceDetail(row)}>{row.name}</button>
+                  : <a href={row.href}>{row.name}</a>}</td>
                 <td>{ATTRIBUTE_LABELS[row.attribute]}</td>
                 <td>{row.effect}</td>
                 <td className="attribute-catalog-amount">{row.amount}</td>
@@ -136,5 +140,9 @@ export function AttributeEffectCatalogPage({ rows, loading }: { rows: SkillRecor
       </div>
     </AnalysisTabPanel>
     <p className="attribute-catalog-baseline">最大昇進・潜在1・モジュールなし・スキル最大ランク</p>
+    {sourceDetail && <GoldenglowDetailModal title={`${sourceDetail.operatorName} · ${sourceDetail.name}`}
+      closeLabel="効果の原文を閉じる" onClose={() => setSourceDetail(null)}>
+      {sourceDetail.description}
+    </GoldenglowDetailModal>}
   </PageLayout>
 }

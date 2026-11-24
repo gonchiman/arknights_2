@@ -146,9 +146,14 @@ test('operator loading uses the pinned local module and affiliation data and sur
     server: { middlewareMode: true, watch: null, preTransformRequests: false, hmr: false },
   })
   t.after(() => server.close())
-  const { loadSkillRecords } = await server.ssrLoadModule('/src/lib/arknightsData.ts')
+  const { loadOperatorAndSkillRecords, loadSkillRecords } = await server.ssrLoadModule('/src/lib/arknightsData.ts')
+  const passive = { candidates: [{ name: '支援', description: '対象の術耐性を下げる' }] }
   const documents: Partial<Record<LocalGameDataTable, unknown>> = {
-    character: { char_test: { name: 'テストOP', displayNumber: 'TEST', skills: [{ skillId: 'test_s1' }], teamId: 'test_team' } },
+    character: {
+      char_test: { name: 'テストOP', displayNumber: 'TEST', skills: [{ skillId: 'test_s1' }], teamId: 'test_team' },
+      char_passive: { name: '支援OP', displayNumber: 'ROBOT', skills: {}, talents: [passive] },
+      token: { name: '召喚物', talents: [passive] },
+    },
     skill: { test_s1: { levels: [{ name: 'S1', description: '攻撃力+10%' }] } },
     uniequip: { equipDict: { equip_test: { charId: 'char_test', uniEquipName: 'テストMOD', uniEquipId: 'equip_test', type: 'ADVANCED' } } },
     battleEquip: { equip_test: { phases: [{ equipLevel: 1 }] } },
@@ -161,7 +166,9 @@ test('operator loading uses the pinned local module and affiliation data and sur
     assert.ok(key, `unexpected upstream URL: ${url}`)
     return key === missing ? new Response('missing', { status: 404 }) : json(documents[key])
   } })
-  const rows = await loadSkillRecords(source())
+  const { rows, operators } = await loadOperatorAndSkillRecords(source())
+  assert.deepEqual(operators.map((op: { operatorId: string }) => op.operatorId), ['char_test', 'char_passive'])
+  assert.deepEqual(operators[1].operatorProfile.talents, [passive])
   assert.equal(rows.length, 1)
   assert.equal(rows[0].operatorProfile.affiliation, 'テスト所属')
   assert.equal(rows[0].operatorProfile.modules[0].phases[0].equipLevel, 1)

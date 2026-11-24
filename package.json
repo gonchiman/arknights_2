@@ -12,6 +12,7 @@
     "generate:enemy-stages": "node --use-system-ca scripts/generateEnemyStageAppearances.mjs",
     "archive:enemy-aggregation": "node --experimental-strip-types scripts/enemyAggregationArchive.mjs",
     "archive:dc3-coverage": "node --experimental-strip-types scripts/archiveDc3Coverage.mjs",
+    "audit:attribute-effects": "node --experimental-strip-types scripts/auditAttributeEffects.mjs",
     "generate:maps": "node scripts/generateMapDatabase.mjs",
     "generate:td-maps": "node --experimental-strip-types scripts/generateTdMaps.mjs",
     "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",

@@ -15,9 +15,11 @@ const effects = {
 // Templates use the same blackboard syntax as the in-game skill descriptions.
 // Some summon effects have an explicit number only in the description text.
 type SkillEffect = readonly [kind: keyof typeof effects, amount: string | RegExp, condition: string]
+const waterDefenseDown: SkillEffect = ['defenseDown', '{attack@def}', '攻撃時に生成する水域内の敵（水域は{attack@projectile_life_time}秒間、重複不可）']
 const skillEffects: Readonly<Record<string, readonly SkillEffect[]>> = {
   skchr_dusk_2: [['artsDealt', '{damage_scale:0.00}倍', '対象のHPが{hp_ratio:0%}以下']],
   skchr_radian_3: [['artsTaken', '{damage_scale:0.00}倍', '発動中、自身・召喚物がダメージを与えた敵に{weak[magic][limit]}秒間']],
+  skchr_demkni_3: [['artsTaken', '+{fake.b:0%}', 'スキル中、自身の周囲の敵']],
   skchr_sbell2_3: [['resistanceIgnore', '{magic_resist_penetrate_fixed}', 'スキル中の攻撃']],
   skchr_tiger_1: [['defenseIgnore', '{def_penetrate:0%}', '次の通常攻撃']],
   skchr_tachak_1: [['defenseIgnore', '{def_penetrate_fixed}', '自身の燃焼エリア内の敵を攻撃時']],
@@ -32,6 +34,11 @@ const skillEffects: Readonly<Record<string, readonly SkillEffect[]>> = {
     ['resistanceDown', '{magic_resistance:0%}', 'スキル中、攻撃範囲内の敵'],
   ],
   skchr_vodfox_2: [['defenseDown', '{def:0%}', '呪いの人形の周囲の敵']],
+  skchr_elysm_2: [['defenseDown', '{def:0%}', 'スキル中、マークした周囲の敵最大{max_target}体']],
+  skchr_toddi_1: [['defenseDown', '{def:0%}', 'マークした敵1体（最も重いサルカズを優先）']],
+  skchr_chen2_2: [waterDefenseDown],
+  skchr_chen2_3: [waterDefenseDown],
+  skchr_surfer_2: [['defenseDown', '−{def_steal}/回', '攻撃した敵から最大{def_steal_max}まで奪取。スキル終了または自身の退場まで']],
   skchr_amgoat_2: [['resistanceDown', '{magic_resistance:0%}', '次の通常攻撃で{duration}秒間']],
   skchr_ifrit_2: [['defenseDown', '{def}', '次の通常攻撃で3秒間']],
   skchr_ifrit_3: [['resistanceDown', '{magic_resistance}', 'スキル中、攻撃範囲内の地上の敵']],

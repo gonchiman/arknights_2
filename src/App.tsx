@@ -48,7 +48,7 @@ import StructureCoveragePage from './components/StructureCoveragePage'
 import { SkillJsonPage } from './components/SkillJsonPage'
 import { SkillJsonOverviewPage } from './components/SkillJsonOverviewPage'
 import { SlideMakerPage } from './components/SlideMakerPage'
-import { loadSkillRecords } from './lib/arknightsData'
+import { loadOperatorAndSkillRecords, type OperatorAndSkillRecords } from './lib/arknightsData'
 import { applyManualClassification } from './lib/classifier'
 import { ARKNIGHTS_GAMEDATA_REPOSITORY } from './lib/dataSources'
 import { buildOperatorDatabaseRecords } from './lib/operatorDatabase'
@@ -66,7 +66,6 @@ import {
   type EffectWindowType,
   type SkillClassificationOverride,
   type SkillConditionType,
-  type SkillRecord,
 } from './types/skill'
 import './index.css'
 import './navigation.css'
@@ -105,7 +104,7 @@ interface OperatorDirectoryPosition {
 }
 
 export default function App() {
-  const [rows, setRows] = useState<SkillRecord[]>([])
+  const [{ rows, operators: talentOperators }, setOperatorData] = useState<OperatorAndSkillRecords>({ rows: [], operators: [] })
   const [route, setRoute] = useState<AppRoute>(() => parseHashRoute(window.location.hash))
   const [operatorDirectoryVisited, setOperatorDirectoryVisited] = useState(route.view === 'operators')
   const [damageThreeRoute, setDamageThreeRoute] = useState<Extract<AppRoute, { view: 'damage-three' }> | null>(
@@ -128,7 +127,7 @@ export default function App() {
     setLoading(true)
     setError(null)
     try {
-      setRows(await loadSkillRecords())
+      setOperatorData(await loadOperatorAndSkillRecords())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '不明なエラーが発生しました。')
     } finally {
@@ -422,7 +421,7 @@ export default function App() {
           <DamageThreeSkillAttributeMatrixPage rows={classifiedRows} loading={loading} />
         ) : displayedRoute.view === 'attribute-effects' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">属性限定効果一覧を読み込み中…</p>}>
-            <AttributeEffectCatalogPage rows={classifiedRows} loading={loading} />
+            <AttributeEffectCatalogPage rows={classifiedRows} operators={talentOperators} loading={loading} />
           </Suspense>
         ) : displayedRoute.view === 'physical-arts-comparison' ? (
           <PhysicalArtsComparisonPage />

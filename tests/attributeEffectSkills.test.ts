@@ -40,3 +40,25 @@ test('keeps conditional multipliers and reads a deployable debuff from its descr
   assert.deepEqual([debuff.attribute, debuff.effect, debuff.amount], ['physical', '防御力低下', '-160'])
   assert.deepEqual(buildAttributeEffectSkills([{ ...dusk, skillLevels: [{ blackboard: [] }] }]), [])
 })
+
+test('lists reviewed debuffs from support skills, marks, water and defense steal at maximum rank', () => {
+  const rows = buildAttributeEffectSkills([
+    skillRecord('dc3NonDamage', 'skchr_demkni_3'),
+    skillRecord('dc3NonDamage', 'skchr_elysm_2'),
+    skillRecord('expandedRanged', 'skchr_toddi_1'),
+    skillRecord('expandedRanged', 'skchr_chen2_2'),
+    skillRecord('expandedRanged', 'skchr_chen2_3'),
+    skillRecord('expandedMelee', 'skchr_surfer_2'),
+  ])
+  assert.deepEqual(rows.map(r => [r.sourceLabel, r.attribute, r.effect, r.amount]), [
+    ['S3', 'arts', '被ダメージ増加', '+55%'],
+    ['S2', 'physical', '防御力低下', '-35%'],
+    ['S1', 'physical', '防御力低下', '-30%'],
+    ['S2', 'physical', '防御力低下', '-170'],
+    ['S3', 'physical', '防御力低下', '-220'],
+    ['S2', 'physical', '防御力低下', '−55/回'],
+  ])
+  assert.match(rows[1].condition, /最大4体/)
+  assert.match(rows[3].condition, /5秒間/)
+  assert.match(rows[5].condition, /最大275/)
+})

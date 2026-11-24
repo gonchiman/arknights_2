@@ -277,6 +277,12 @@ export interface SkillClassificationOverride {
   conditions?: SkillConditionType[]
 }
 
+export interface OperatorTalentRecord {
+  operatorId: string
+  operatorName: string
+  operatorProfile: Pick<OperatorCombatProfile, 'phases' | 'talents'>
+}
+
 export interface SkillRecord {
   overrideTokenKey?: string | null
   id: string

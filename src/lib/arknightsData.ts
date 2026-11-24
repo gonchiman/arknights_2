@@ -1,4 +1,5 @@
 import type {
+  OperatorTalentRecord,
   RawAttributeKeyFrame,
   RawCharacterPhase,
   RawCharacterTalent,
@@ -9,11 +10,11 @@ import type {
   SkillRecord,
   SummonCombatSource,
 } from '../types/skill'
-import { classifySkill } from './classifier'
+import { classifySkill } from './classifier.ts'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { gameDataClient, type GameDataClient } from './gameDataClient.ts'
 import { getOperatorAffiliation, getOperatorAffiliationIds, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
-import { getOperatorInitial, getProfessionLabel } from './operatorFilters'
+import { getOperatorInitial, getProfessionLabel } from './operatorFilters.ts'
 
 export const DATA_URLS = {
   character: DATA_SOURCE_URLS.character,
@@ -56,7 +57,12 @@ interface UniequipTable {
 
 type BattleEquipTable = Record<string, Pick<RawOperatorModule, 'phases'>>
 
-export async function loadSkillRecords(client: GameDataClient = gameDataClient): Promise<SkillRecord[]> {
+export interface OperatorAndSkillRecords {
+  operators: OperatorTalentRecord[]
+  rows: SkillRecord[]
+}
+
+export async function loadOperatorAndSkillRecords(client: GameDataClient = gameDataClient): Promise<OperatorAndSkillRecords> {
   const [characters, skills, uniequip, optionalBattleEquips, optionalAffiliations] = await Promise.all([
     client.readTable<CharacterTable>('character'),
     client.readTable<SkillTable>('skill'),
@@ -69,19 +75,25 @@ export async function loadSkillRecords(client: GameDataClient = gameDataClient):
   const subProfessions = uniequip.subProfDict ?? {}
   const modulesByOperator = buildModulesByOperator(uniequip.equipDict ?? {}, battleEquips)
   const rows: SkillRecord[] = []
+  const operators: OperatorTalentRecord[] = []
 
   for (const [operatorId, operator] of Object.entries(characters)) {
     // 召喚物やステージギミックも character_table に含まれる。
     // displayNumber を持つプレイアブルなオペレーターだけを対象にする。
-    if (!operator.name || !operator.displayNumber || !operator.skills?.length) continue
+    if (!operator.name || !operator.displayNumber) continue
+    const passives = {
+      phases: Array.isArray(operator.phases) ? operator.phases : [],
+      talents: Array.isArray(operator.talents) ? operator.talents : [],
+    }
+    operators.push({ operatorId, operatorName: operator.name, operatorProfile: passives })
+    if (!operator.skills?.length) continue
 
     const operatorProfile = {
       affiliation: getOperatorAffiliation(operator, affiliations),
       affiliationIds: getOperatorAffiliationIds(operator),
-      phases: Array.isArray(operator.phases) ? operator.phases : [],
+      ...passives,
       favorKeyFrames: Array.isArray(operator.favorKeyFrames) ? operator.favorKeyFrames : [],
       trait: operator.trait ?? null,
-      talents: Array.isArray(operator.talents) ? operator.talents : [],
       potentialRanks: Array.isArray(operator.potentialRanks) ? operator.potentialRanks : [],
       modules: modulesByOperator.get(operatorId) ?? [],
       traitDescription: operator.description ?? '',
@@ -127,7 +139,12 @@ export async function loadSkillRecords(client: GameDataClient = gameDataClient):
     })
   }
 
-  return rows.sort((a, b) => b.rarity - a.rarity || a.operatorName.localeCompare(b.operatorName, 'ja') || a.skillIndex - b.skillIndex)
+  rows.sort((a, b) => b.rarity - a.rarity || a.operatorName.localeCompare(b.operatorName, 'ja') || a.skillIndex - b.skillIndex)
+  return { operators, rows }
+}
+
+export async function loadSkillRecords(client: GameDataClient = gameDataClient): Promise<SkillRecord[]> {
+  return (await loadOperatorAndSkillRecords(client)).rows
 }
 
 /** Keep live summon sources beside their owner, including skill overrides and hidden talents. */
