@@ -5,9 +5,10 @@ import {
   type BoxPlotStatistics, type NumericStatistics,
 } from './enemyStatistics.ts'
 import { createSkillJsonSelectionKey, getSkillLevelLabel } from './skillJsonAnalysis.ts'
+import { calculateInitialSpRatio } from './skillInitialSpRatio.ts'
 import type { SkillStructure } from './skillStructure.ts'
 
-export type SkillNumericMetric = 'duration' | 'spCost' | 'initialSp' | 'spGap'
+export type SkillNumericMetric = 'duration' | 'spCost' | 'initialSp' | 'spGap' | 'initialRatio'
 export type SkillNumericSpRecovery = SkillStructure['activationSettings']['spRecovery']
 
 export interface SkillNumericConfig {
@@ -26,12 +27,13 @@ export const SKILL_NUMERIC_SP_RECOVERIES: readonly SkillNumericSpRecovery[] = [
 ]
 
 export const SKILL_NUMERIC_METRICS: readonly {
-  key: SkillNumericMetric; label: string; unit: '秒' | 'SP'
+  key: SkillNumericMetric; label: string; unit: '秒' | 'SP' | '%'
 }[] = [
   { key: 'duration', label: '持続時間', unit: '秒' },
   { key: 'spCost', label: '必要SP', unit: 'SP' },
   { key: 'initialSp', label: '初期SP', unit: 'SP' },
   { key: 'spGap', label: '必要SP−初期SP', unit: 'SP' },
+  { key: 'initialRatio', label: '初期SP率', unit: '%' },
 ]
 
 export const SKILL_NUMERIC_DURATION_LABELS: Readonly<Record<EffectWindowType, string>> = EFFECT_WINDOW_LABELS
@@ -47,6 +49,7 @@ export interface SkillNumericObservation {
   initialSp: number | null
   /** Signed source SP cost minus source initial SP; never a waiting time. */
   spGap: number | null
+  initialRatio: number | null
 }
 
 export interface SkillNumericDataset {
@@ -121,6 +124,7 @@ export function buildSkillNumericDataset(
       id, skill, skillLevelIndex, skillLevelLabel: getSkillLevelLabel(skillLevelIndex, skill.skillLevels.length),
       ...durationOf(raw), spCost, initialSp,
       spGap: spCost === null || initialSp === null ? null : finite(spCost - initialSp),
+      initialRatio: calculateInitialSpRatio(initialSp, spCost),
     })
   }
   return { observations, unavailableLevelCount }

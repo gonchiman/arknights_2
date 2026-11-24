@@ -38,10 +38,20 @@ type Tab = typeof TABS[number][0]
 type DistributionView = typeof VIEWS[number][0]
 type ScatterPointMode = typeof POINT_MODES[number][0]
 type Summary = ReturnType<typeof summarizeSkillNumericMetric>
-type SortKey = 'operator' | 'skillIndex' | 'skillName' | 'durationSeconds' | 'spCost' | 'initialSp' | 'spGap'
+type SortKey = 'operator' | 'skillIndex' | 'skillName' | 'durationSeconds' | Exclude<SkillNumericMetric, 'duration'>
 
-function formatNumber(value: number | null | undefined) {
-  return value !== null && value !== undefined && Number.isFinite(value) ? NUMBER.format(value) : '—'
+function formatNumber(value: number | null | undefined, suffix = '') {
+  return value !== null && value !== undefined && Number.isFinite(value) ? NUMBER.format(value) + suffix : '—'
+}
+
+function formatStatistic(statistics: NumericStatistics, key: typeof STAT_COLUMNS[number][0], unit?: string) {
+  const suffix = unit === '%' ? (key === 'standardDeviation' ? ' pt' : '%') : ''
+  return formatNumber(statistics[key], suffix)
+}
+
+function metricLabel(metric: SkillNumericMetric) {
+  const { label, unit } = SKILL_NUMERIC_METRICS.find(item => item.key === metric)!
+  return unit === 'SP' ? label : `${label}（${unit}）`
 }
 
 function sameConfig(left: SkillNumericConfig, right: SkillNumericConfig) {
@@ -158,9 +168,9 @@ export function SkillNumericStatisticsPage({ rows, loading, error }: Props) {
               <PageViewSwitch views={VIEWS} selected={view} onChange={setView} label="分布の表示形式" />
               <span className="skill-numeric-count">有効 {COUNT.format(activeSummary.validCount)}件 ／ 対象外 {COUNT.format(activeSummary.excludedCount)}件</span>
             </div>
-            <SkillNumericStatisticStrip statistics={activeSummary.statistics} label={activeMetric.label} />
+            <SkillNumericStatisticStrip statistics={activeSummary.statistics} label={activeMetric.label} unit={activeMetric.unit} />
             <NumericDistributionChart statistics={activeSummary.statistics} boxPlot={activeSummary.boxPlot} values={activeSummary.values}
-              metricLabel={activeMetric.label} unit={view === 'qq' || activeMetric.unit === '秒' ? activeMetric.unit : undefined} view={view} />
+              metricLabel={activeMetric.label} unit={view === 'qq' || activeMetric.unit !== 'SP' ? activeMetric.unit : undefined} view={view} />
             {metric === 'duration' && durationCounts.length > 0 && <dl className="skill-numeric-exclusions" aria-label="持続時間の対象外">
               {durationCounts.map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
             </dl>}
@@ -199,10 +209,8 @@ export function SkillNumericScatterPanel({ dataset, xMetric, yMetric, pointMode,
   onPointModeChange: (mode: ScatterPointMode) => void
 }) {
   const analysis = useMemo(() => buildSkillNumericScatter(dataset, xMetric, yMetric), [dataset, xMetric, yMetric])
-  const label = (metric: SkillNumericMetric) => {
-    const definition = SKILL_NUMERIC_METRICS.find(item => item.key === metric)!
-    return `${definition.label}${definition.unit === '秒' ? '（秒）' : ''}`
-  }
+  const xLabel = metricLabel(xMetric)
+  const yLabel = metricLabel(yMetric)
   return <div className="skill-numeric-scatter">
     <div className="skill-numeric-scatter-controls">
       <label className="skill-numeric-x-field"><span>横軸</span><select value={xMetric}
@@ -231,10 +239,10 @@ export function SkillNumericScatterPanel({ dataset, xMetric, yMetric, pointMode,
       </dd></div></dl>
       <span className="skill-numeric-count" role="status">有効 {COUNT.format(analysis.validCount)}件 ／ 対象外 {COUNT.format(analysis.excludedCount)}件</span>
     </div>
-    <NumericScatterChart points={analysis.points} xLabel={label(xMetric)} yLabel={label(yMetric)} pointMode={pointMode}
+    <NumericScatterChart points={analysis.points} xLabel={xLabel} yLabel={yLabel} pointMode={pointMode}
       fit={analysis.fit} showFit={showFit} />
     {showFit && analysis.fit && <p className="skill-numeric-equation" aria-label="回帰式">
-      {label(yMetric)} = {ESTIMATE.format(analysis.fit.slope)} × {label(xMetric)} {analysis.fit.intercept < 0 ? '−' : '+'} {ESTIMATE.format(Math.abs(analysis.fit.intercept))}
+      {yLabel} = {ESTIMATE.format(analysis.fit.slope)} × {xLabel} {analysis.fit.intercept < 0 ? '−' : '+'} {ESTIMATE.format(Math.abs(analysis.fit.intercept))}
     </p>}
   </div>
 }
@@ -248,20 +256,20 @@ export function SkillNumericSummaryTable({ summaries }: { summaries: readonly Su
       <tbody>{summaries.map(summary => {
         const definition = SKILL_NUMERIC_METRICS.find(item => item.key === summary.metric)!
         return <tr key={summary.metric}>
-          <th scope="row">{definition.label}{definition.unit === '秒' ? `（${definition.unit}）` : ''}</th>
+          <th scope="row">{metricLabel(summary.metric)}</th>
           <td>{COUNT.format(summary.validCount)}</td><td>{COUNT.format(summary.excludedCount)}</td>
-          {STAT_COLUMNS.map(([key]) => <td key={key}>{formatNumber(summary.statistics[key])}</td>)}
+          {STAT_COLUMNS.map(([key]) => <td key={key}>{formatStatistic(summary.statistics, key, definition.unit)}</td>)}
         </tr>
       })}</tbody>
     </table>
   </div>
 }
 
-export function SkillNumericStatisticStrip({ statistics, label }: { statistics: NumericStatistics; label: string }) {
+export function SkillNumericStatisticStrip({ statistics, label, unit }: { statistics: NumericStatistics; label: string; unit?: string }) {
   return <div className="skill-numeric-table-scroll" role="region" tabIndex={0} aria-label={`${label}の統計量`}>
     <table className="skill-numeric-table skill-numeric-statistic-strip">
       <thead><tr>{STAT_COLUMNS.map(([key, name]) => <th scope="col" key={key}>{name}</th>)}</tr></thead>
-      <tbody><tr>{STAT_COLUMNS.map(([key]) => <td key={key}>{formatNumber(statistics[key])}</td>)}</tr></tbody>
+      <tbody><tr>{STAT_COLUMNS.map(([key]) => <td key={key}>{formatStatistic(statistics, key, unit)}</td>)}</tr></tbody>
     </table>
   </div>
 }
@@ -287,7 +295,7 @@ export function SkillNumericObservationTable({ observations, onOpenSkill }: {
   const onSort = (key: SortKey) => setSort(current => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }))
   const columns: readonly (readonly [SortKey, string])[] = [
     ['operator', 'オペレーター'], ['skillIndex', 'S'], ['skillName', 'スキル名'], ['durationSeconds', '持続（秒）'],
-    ['spCost', '必要SP'], ['initialSp', '初期SP'], ['spGap', '必要SP−初期SP'],
+    ['spCost', '必要SP'], ['initialSp', '初期SP'], ['spGap', '必要SP−初期SP'], ['initialRatio', metricLabel('initialRatio')],
   ]
   return <div className="skill-numeric-table-scroll" role="region" tabIndex={0} aria-label="スキルの数値">
     <table className="skill-numeric-table skill-numeric-observation-table">
@@ -302,6 +310,7 @@ export function SkillNumericObservationTable({ observations, onOpenSkill }: {
           <td className="skill-numeric-name">{getSkillName(observation)}</td>
           <td>{observation.durationSeconds === null ? SKILL_NUMERIC_DURATION_LABELS[observation.durationState] : formatNumber(observation.durationSeconds)}</td>
           <td>{formatNumber(observation.spCost)}</td><td>{formatNumber(observation.initialSp)}</td><td>{formatNumber(observation.spGap)}</td>
+          <td>{formatNumber(observation.initialRatio)}</td>
         </tr>)}
       </tbody>
     </table>

@@ -8,6 +8,7 @@ import { resolveDamageThreeStageDuration } from './damageCalculatorThreePeriodTo
 import { getDamageCalculatorThreeSkillInformationValues } from './damageCalculatorThreeSkillInformation.ts'
 import { fitMultipleLinearRegression, type MultipleLinearRegressionResult } from './multipleLinearRegression.ts'
 import { buildOperatorDatabaseRecords } from './operatorDatabase.ts'
+import { calculateInitialSpRatio } from './skillInitialSpRatio.ts'
 import type { SkillStructure } from './skillStructure.ts'
 import { resolveSkillDpsUptime } from './skillDpsUptime.ts'
 
@@ -97,11 +98,7 @@ function positiveFinite(value: number | null | undefined): number | null {
   return result !== null && result > 0 ? result : null
 }
 
-/** Initial charge is a proportion of SP, never an elapsed time or cycle cost. */
-export function calculateSkillDpsInitialSpRatio(initialSp: number | null, spCost: number | null): number | null {
-  const initial = finite(initialSp), cost = positiveFinite(spCost)
-  return initial === null || initial < 0 || cost === null ? null : finite(initial / cost * 100)
-}
+export { calculateInitialSpRatio as calculateSkillDpsInitialSpRatio }
 
 /** Only a successful reviewed DC3 output can certify an unlimited target cap. */
 function getMaximumTargets(value: number | null | undefined): SkillDpsObservation['maxTargets'] {
@@ -207,7 +204,7 @@ export function buildSkillDpsAnalysisDataset(
     observations.push({ id, skill, stageLabel: entry.stageLabel, durationSeconds, spCost, initialSp,
       spGap: spCost === null || initialSp === null ? null : finite(spCost - initialSp),
       deploymentCost: deploymentCost !== null && deploymentCost >= 0 ? deploymentCost : null,
-      initialRatio: calculateSkillDpsInitialSpRatio(initialSp, spCost),
+      initialRatio: calculateInitialSpRatio(initialSp, spCost),
       uptime: finite(uptime.percentage), uptimeUnavailableReason: uptime.reason,
       maxTargets: getMaximumTargets(result.output.maxTargetCount),
       attack: finite(result.finalAttack), attackInterval: positiveFinite(result.output.attackInterval),
