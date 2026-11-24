@@ -90,3 +90,36 @@ test('empty data uses a concise state and box legend labels stay outside the plo
   assert.match(valid, /ひげ 1.5IQR/)
   assert.match(valid, /ひげ外/)
 })
+
+const renderQq = (values, extra = {}) => render(values, { view: 'qq', values, unit: 'SP', ...extra }, Chart)
+
+test('normal Q–Q preserves one point per observation and places tied values at different normal ranks', () => {
+  const markup = renderQq([12, 0, -8, 0, 6])
+  assert.match(markup, /role="img"[^>]*aria-labelledby="[^"]+"[^>]*aria-describedby="[^"]+"/)
+  assert.match(markup, />必要SP−初期SPの正規Q–Qプロット<\/title>/)
+  assert.match(markup, />標準正規分布の理論分位<\/text>/)
+  assert.match(markup, />必要SP−初期SP（SP）<\/text>/)
+  assert.match(markup, /<line class="numeric-distribution-qq-reference"/)
+  assert.match(markup, /基準線（第1・第3四分位）/)
+  const xs = attributes(markup, 'cx'), ys = attributes(markup, 'cy')
+  assert.equal(xs.length, 5)
+  assert.ok(xs.every((x, index) => index === 0 || x > xs[index - 1]))
+  assert.ok(ys[0] > ys[1] && ys[2] > ys[3] && ys[3] > ys[4])
+  assert.equal(ys[1], ys[2])
+  assert.doesNotMatch(markup, /data-tooltip|onclick|onmouseover|NaN|Infinity/)
+})
+
+test('normal Q–Q handles empty, single and zero-IQR samples without inventing a reference line', () => {
+  const empty = renderQq([])
+  assert.match(empty, /role="status">有効な値は0件です/)
+  assert.doesNotMatch(empty, /<svg\b|aria-label="凡例"/)
+
+  for (const values of [[0], [20, 20, 20], [20, 20, 20, 20, 60]]) {
+    const markup = renderQq(values, { metricLabel: '持続時間', unit: '秒' })
+    assert.match(markup, />持続時間（秒）<\/text>/)
+    assert.match(markup, /基準線なし/)
+    assert.equal(attributes(markup, 'cx').length, values.length)
+    assert.equal(new Set(attributes(markup, 'cy')).size, new Set(values).size)
+    assert.doesNotMatch(markup, /<line class="numeric-distribution-qq-reference"|NaN|Infinity/)
+  }
+})

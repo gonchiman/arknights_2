@@ -21,3 +21,7 @@
 .numeric-distribution-median-key { width: 2px; height: 12px; background: var(--link); }
 .numeric-distribution-whisker-key { width: 18px; height: 1.5px; background: var(--link); }
 .numeric-distribution-outlier-key { width: 7px; height: 7px; border: 1.5px solid var(--link); border-radius: 50%; }
+.numeric-distribution-qq-point { fill: var(--link); fill-opacity: .75; }
+.numeric-distribution-qq-reference { stroke: var(--text-soft); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.numeric-distribution-qq-point-key { width: 7px; height: 7px; border-radius: 50%; background: var(--link); opacity: .75; }
+.numeric-distribution-qq-reference-key { width: 20px; border-top: 2px dashed var(--text-soft); }
