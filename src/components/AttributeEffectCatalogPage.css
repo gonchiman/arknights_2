@@ -6,11 +6,34 @@
 .attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: auto; }
 
 .attribute-catalog-results { display: grid; gap: 6px; min-width: 0; }
-.attribute-catalog-summary { display: flex; align-items: baseline; gap: 8px; }
-.attribute-catalog-summary span, .attribute-catalog-baseline {
+.attribute-catalog-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.attribute-catalog-summary, .attribute-catalog-baseline {
   margin: 0;
   color: var(--text-soft);
   font-size: 12px;
+}
+
+.damage-two-table.attribute-catalog-counts { min-width: 0; }
+.attribute-catalog-counts :is(th, td) { padding: 5px 7px; }
+.attribute-catalog-counts th:first-child { width: 50%; }
+.attribute-catalog-counts td[colspan] { text-align: left; }
+.attribute-catalog-counts td:has(.attribute-catalog-count) { padding: 0; }
+.attribute-catalog-count {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-align: right;
+  padding: 5px 7px;
+  cursor: pointer;
+}
+.attribute-catalog-count:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+@media (pointer: coarse) {
+  .attribute-catalog-count { min-height: 44px; }
 }
 
 .damage-two-table.attribute-catalog-table { min-width: 680px; table-layout: auto; }

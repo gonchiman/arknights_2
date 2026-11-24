@@ -22,6 +22,29 @@ export type AttributeEffectCatalogFilters = {
 }
 
 const japaneseOrder = new Intl.Collator('ja', { numeric: true })
+const effectDisplayOrder = new Map([
+  '防御力無視', '術耐性無視', '防御力低下', '術耐性低下',
+  '与ダメージ増加', '被ダメージ増加', '被ダメージ加算（軽減前）',
+].map((effect, index) => [effect, index]))
+
+export type AttributeEffectSummary = { effect: string; physical: number; arts: number }
+
+export function summarizeAttributeEffects(rows: readonly AttributeEffectRow[]): AttributeEffectSummary[] {
+  const groups = new Map<string, AttributeEffectSummary>()
+  for (const { effect, attribute } of rows) {
+    let group = groups.get(effect)
+    if (!group) {
+      group = { effect, physical: 0, arts: 0 }
+      groups.set(effect, group)
+    }
+    group[attribute] += 1
+  }
+  return [...groups.values()].sort((a, b) => {
+    const aOrder = effectDisplayOrder.get(a.effect) ?? effectDisplayOrder.size
+    const bOrder = effectDisplayOrder.get(b.effect) ?? effectDisplayOrder.size
+    return aOrder - bOrder || japaneseOrder.compare(a.effect, b.effect)
+  })
+}
 
 export function buildAttributeEffectCatalog(rows: readonly SkillRecord[]): AttributeEffectRow[] {
   return [...buildAttributeEffectTalents(rows), ...buildAttributeEffectSkills(rows)].sort((a, b) =>
