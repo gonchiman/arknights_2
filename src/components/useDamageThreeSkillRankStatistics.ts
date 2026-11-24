@@ -10,13 +10,14 @@ const EMPTY_THRESHOLDS: readonly EnemyResistanceThreshold[] = []
 
 export function useDamageThreeSkillRankStatistics(
   active: boolean, entries: readonly DamageThreeAttributeEntry[], pairs: readonly EnemyResistanceThreshold[] = EMPTY_THRESHOLDS,
+  disablePenetration: boolean,
 ) {
-  // A different enemy population can match the same resistance to a different defense.
-  const cache = useMemo(() => new WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>(), [pairs])
+  // Cache identity ties both intermediate cells and the summary to the current combat conditions.
+  const cache = useMemo(() => new WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>(), [pairs, disablePenetration])
   const [result, setResult] = useState<{
-    entries: readonly DamageThreeAttributeEntry[]; pairs: readonly EnemyResistanceThreshold[]; rows: SkillRankStatistics[]
+    entries: readonly DamageThreeAttributeEntry[]; cache: typeof cache; rows: SkillRankStatistics[]
   } | null>(null)
-  const current = result?.entries === entries && result.pairs === pairs ? result.rows : null
+  const current = result?.entries === entries && result.cache === cache ? result.rows : null
 
   useEffect(() => {
     if (!active || !entries.length || !pairs.length || current) return
@@ -29,7 +30,7 @@ export function useDamageThreeSkillRankStatistics(
         const entry = entries[index++]
         let cells = cache.get(entry)
         if (cells === undefined) {
-          cells = evaluateSkillRankStatisticsStage(entry, pairs)
+          cells = evaluateSkillRankStatisticsStage(entry, pairs, disablePenetration)
           cache.set(entry, cells)
         }
         if (cells) stages.push(cells)
@@ -37,11 +38,11 @@ export function useDamageThreeSkillRankStatistics(
       if (index < entries.length) {
         timer = window.setTimeout(calculateBatch, 0)
       } else {
-        setResult({ entries, pairs, rows: summarizeSkillRankStatistics(pairs, stages) })
+        setResult({ entries, cache, rows: summarizeSkillRankStatistics(pairs, stages) })
       }
     }
     let timer = window.setTimeout(calculateBatch, 0)
     return () => window.clearTimeout(timer)
-  }, [active, entries, pairs, cache, current])
+  }, [active, entries, pairs, cache, current, disablePenetration])
   return current
 }

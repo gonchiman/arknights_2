@@ -93,6 +93,23 @@ test('術耐性別の要約には1攻撃単位の段階を使い、主攻撃を�
   assert.equal(evaluateSkillRankStatisticsStage(input('char_010_chen', 2).entry, pairs), null)
 })
 
+test('スルトS2の術耐性20無視の切り替えが属性変更・実際の内訳・術耐性別の統計に反映される', () => {
+  const entry = input('char_350_surtr', 2).entry
+  const pairs = [{ resistance: 60, defense: 1200, percentage: 4, rankCutoff: 1 }]
+  for (const mode of ['virtual', 'actual'] as const) {
+    const on = evaluateDamageThreeSkillRankRow(entry, pairs, mode)
+    const off = evaluateDamageThreeSkillRankRow(entry, pairs, mode, true)
+    assert.deepEqual([...on.errors, ...off.errors], [])
+    assert.ok(on.cells[0].arts! > 0)
+    close(off.cells[0].arts, on.cells[0].arts! * (0.4 / 0.6))
+    assert.equal(off.cells[0].physical, on.cells[0].physical)
+    if (mode === 'virtual') {
+      assert.deepEqual(evaluateSkillRankStatisticsStage(entry, pairs), on.cells)
+      assert.deepEqual(evaluateSkillRankStatisticsStage(entry, pairs, true), off.cells)
+    }
+  }
+})
+
 test('各条件の共通有効段階から四分位数と丸め前の勝敗を求め、対応値のない列は空にする', () => {
   const pairs = [
     { resistance: 50, defense: 300, percentage: 16, rankCutoff: 10 },

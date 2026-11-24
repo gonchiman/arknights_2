@@ -55,6 +55,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [sort, setSort] = useState<MatrixSort>(DEFAULT_SORT)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
   const [showDifference, setShowDifference] = useState(false)
+  const [applyPenetration, setApplyPenetration] = useState(true)
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [selectedResistance, setSelectedResistance] = useState(0)
@@ -82,9 +83,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     || filters.rarity !== 'ALL' || filters.damageType !== 'ALL'
   const canShowDifference = mode === 'virtual' && layout === 'columns'
   const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
-  const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds)
+  const disablePenetration = !applyPenetration
+  const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, disablePenetration)
   const sortedEntries = useSkillDamageMatrixSort(filtered, mode === 'actual' ? 'actual' : 'virtual',
-    distribution?.resistanceThresholds, statsActive ? DEFAULT_SORT : sort)
+    distribution?.resistanceThresholds, statsActive ? DEFAULT_SORT : sort, disablePenetration)
   const format = statsActive
     ? [viewLabel(STATISTIC_VIEWS, statisticView), viewLabel(TABLE_CHART_VIEWS, statisticFormat)]
     : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
@@ -132,6 +134,13 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
         <span>敵1体</span><span>最大Lv</span><span>信頼100</span><span>潜在1</span><span>MODなし</span>
         {commonLevel && <span>{commonLevel}</span>}
         {commonUnit && <span>{commonUnit}あたり</span>}
+        <label className="dc3-matrix-toggle">
+          <input type="checkbox" checked={applyPenetration} onChange={event => {
+            setApplyPenetration(event.target.checked)
+            if (sort.resistance !== undefined) setPage(0)
+          }} />
+          防御力・術耐性無視を適用
+        </label>
       </div>
       <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
         {unavailable ? <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>
@@ -166,7 +175,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                   }} label="属性の並べ方" />
                 </>}
               </div>
-              {canShowDifference && <label className="dc3-matrix-difference-toggle">
+              {canShowDifference && <label className="dc3-matrix-toggle">
                 <input type="checkbox" checked={showDifference} onChange={event => {
                   if (!event.target.checked && sort.key === 'difference') resetSort()
                   setShowDifference(event.target.checked)
@@ -196,6 +205,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 </nav>
               </div>
               {selectedPair && <SkillDamageTable entries={pageEntries} pair={selectedPair} mode={mode}
+                disablePenetration={disablePenetration}
                 sort={sort} onSort={changeSort} stacked={layout === 'rows'}
                 showDifference={canShowDifference && showDifference}
                 showLevel={commonLevel === null} showUnit={commonUnit === null} />}
@@ -206,10 +216,11 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   </PageLayout>
 }
 
-function SkillDamageTable({ entries, pair, mode, showLevel, showUnit, stacked, showDifference, sort, onSort }: {
+function SkillDamageTable({ entries, pair, mode, disablePenetration, showLevel, showUnit, stacked, showDifference, sort, onSort }: {
   entries: readonly DamageThreeAttributeEntry[]
   pair: EnemyResistanceThreshold
   mode: DamageThreeSkillRankMode
+  disablePenetration: boolean
   showLevel: boolean
   showUnit: boolean
   stacked: boolean
@@ -217,8 +228,8 @@ function SkillDamageTable({ entries, pair, mode, showLevel, showUnit, stacked, s
   sort: MatrixSort
   onSort: (key: MatrixSortKey, resistance?: number) => void
 }) {
-  const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, [pair], mode) })),
-    [entries, pair, mode])
+  const results = useMemo(() => entries.map(entry => ({ entry, ...evaluateDamageThreeSkillRankRow(entry, [pair], mode, disablePenetration) })),
+    [entries, pair, mode, disablePenetration])
   const [errorKey, setErrorKey] = useState<string | null>(null)
   const errorRow = results.find(row => row.entry.key === errorKey && row.errors.length)
   const showStatus = results.some(row => row.hasUnsupportedTalentDamage || row.errors.length)
