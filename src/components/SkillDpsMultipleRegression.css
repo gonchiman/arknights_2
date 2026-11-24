@@ -1,0 +1,7 @@
+.skill-dps-multiple-regression,
+.skill-dps-regression-result { display: grid; min-width: 0; gap: 12px; }
+.skill-dps-page .skill-dps-table.skill-dps-regression-table { min-width: 320px; table-layout: fixed; }
+.skill-dps-page .skill-dps-regression-table thead th { padding: 7px 8px; white-space: normal; }
+.skill-dps-page .skill-dps-regression-table th:first-child { width: 34%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.skill-dps-page .skill-dps-regression-table th:last-child { width: 19%; }
+.skill-dps-page .skill-dps-table.skill-dps-regression-table td:last-child { white-space: normal; overflow-wrap: anywhere; }

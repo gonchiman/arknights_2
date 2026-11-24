@@ -4,6 +4,8 @@ export interface MultipleLinearRegressionResult {
   coefficients: readonly number[]
   /** b * sd(X) / sd(Y), using the same observations and predictor column order. */
   standardizedCoefficients: readonly number[]
+  /** Variance inflation factors for the same observations and predictor column order. */
+  varianceInflationFactors: number[]
   fittedValues: readonly number[]
   residuals: readonly number[]
   rSquared: number
@@ -138,6 +140,7 @@ export function fitMultipleLinearRegression(
   // without reconstructing variances in the original, potentially huge units.
   const responseLength = Math.sqrt(responseVariation)
   const standardizedCoefficients = scaledCoefficients.map(value => value / responseLength)
+  const varianceInflationFactors = getVarianceInflationFactors(triangular, permutation)
   const intercept = responseMean * responseScale - sum(coefficients.map((value, column) => value * (means[column] * scales[column])))
 
   const fittedValues: number[] = []
@@ -158,11 +161,34 @@ export function fitMultipleLinearRegression(
   const residualDegreesOfFreedom = observationCount - parameterCount
   const adjustedRSquared = 1 - (1 - rSquared) * (observationCount - 1) / residualDegreesOfFreedom
   const meanAbsoluteError = mean(normalizedResiduals.map(Math.abs)) * responseScale
-  if (![intercept, ...coefficients, ...standardizedCoefficients, ...fittedValues, ...residuals, rSquared, adjustedRSquared, meanAbsoluteError].every(Number.isFinite)) {
+  if (![intercept, ...coefficients, ...standardizedCoefficients, ...varianceInflationFactors, ...fittedValues, ...residuals,
+    rSquared, adjustedRSquared, meanAbsoluteError].every(Number.isFinite)) {
     throw numericalRangeError()
   }
-  return { intercept, coefficients, standardizedCoefficients, fittedValues, residuals, rSquared, adjustedRSquared, meanAbsoluteError,
+  return { intercept, coefficients, standardizedCoefficients, varianceInflationFactors, fittedValues, residuals,
+    rSquared, adjustedRSquared, meanAbsoluteError,
     observationCount, parameterCount, residualDegreesOfFreedom }
+}
+
+function getVarianceInflationFactors(triangular: readonly (readonly number[])[], permutation: readonly number[]): number[] {
+  if (triangular.length === 1) return [1]
+  const factors = Array<number>(triangular.length)
+  // The centered, unit-norm columns have correlation matrix RᵀR in pivot order.
+  // Its inverse diagonal is the squared column norms of the inverse of Rᵀ.
+  permutation.forEach((originalColumn, pivotColumn) => {
+    const inverseColumn = Array<number>(triangular.length).fill(0)
+    inverseColumn[pivotColumn] = 1 / triangular[pivotColumn][pivotColumn]
+    for (let row = pivotColumn + 1; row < triangular.length; row++) {
+      let projection = 0
+      for (let column = pivotColumn; column < row; column++) {
+        projection += triangular[column][row] * inverseColumn[column]
+      }
+      inverseColumn[row] = -projection / triangular[row][row]
+    }
+    // Correct rounding below the theoretical minimum.
+    factors[originalColumn] = Math.max(1, dot(inverseColumn, inverseColumn))
+  })
+  return factors
 }
 
 function sum(values: readonly number[]): number {

@@ -56,7 +56,7 @@ test('initial overview exposes two result tabs and all nine indicators as detail
   assert.match(markup, /aria-label="スキルDPS分析 \/ 分析一覧 \/ 表の場所をコピー"/)
   const tabs = [...markup.matchAll(/<button\b([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/button>/g)]
   assert.equal(tabs.length, 2)
-  assert.deepEqual(tabs.map(match => text(match[2])), ['分析一覧', '指標別分析'])
+  assert.deepEqual(tabs.map(match => text(match[2])), ['分析一覧', '分析詳細'])
   assert.match(tabs[0][1], /aria-selected="true"/)
   assert.match(tabs[1][1], /aria-selected="false"/)
   const detailId = tabs[1][1].match(/aria-controls="([^"]+)"/)?.[1]
@@ -64,6 +64,11 @@ test('initial overview exposes two result tabs and all nine indicators as detail
     .find(match => match[1].includes(`id="${detailId}"`) && match[1].includes('role="tabpanel"'))
   assert.ok(detailPanel, 'the detail tab controls its own panel')
   assert.match(detailPanel[1], /(?:^|\s)hidden(?:\s|=|$)/)
+  const detail = markup.slice(detailPanel.index, markup.indexOf('</section>', detailPanel.index))
+  assert.match(detail, /role="group" aria-label="分析方法"/)
+  assert.match(detail, /aria-pressed="true"[^>]*>指標別<\/button>/)
+  assert.match(detail, /aria-pressed="false"[^>]*>重回帰<\/button>/)
+  assert.match(detail, /aria-pressed="false"[^>]*>組み合わせ評価<\/button>/)
   const overview = overviewRows(markup)
   assert.equal(overview.length, 9)
   for (const label of INDICATORS) {

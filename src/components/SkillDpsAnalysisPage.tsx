@@ -16,6 +16,8 @@ import { PageViewSwitch, viewLabel, type TableChartView } from './PageViewSwitch
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
 import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
 import { SkillDpsAnalysisOverview } from './SkillDpsAnalysisOverview'
+import { SkillDpsCombinationEvaluation } from './SkillDpsCombinationEvaluation'
+import { SkillDpsMultipleRegression } from './SkillDpsMultipleRegression'
 import { SkillDpsTargetBoxplot } from './SkillDpsTargetBoxplot'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsAnalysisPage.css'
@@ -26,7 +28,8 @@ interface Props {
   error?: string | null
 }
 
-const TABS = [['overview', '分析一覧'], ['detail', '指標別分析']] as const
+const TABS = [['overview', '分析一覧'], ['detail', '分析詳細']] as const
+const DETAIL_MODES = [['indicator', '指標別'], ['multiple', '重回帰'], ['combinations', '組み合わせ評価']] as const
 const VIEWS = [['chart', 'グラフ'], ['table', '表']] as const
 const X_LABELS = SKILL_DPS_ANALYSIS_X_LABELS
 const METRIC_LABELS: Record<SkillDpsAnalysisMetric, string> = { direct: '直接DPS', combined: '合計DPS' }
@@ -70,6 +73,8 @@ function sameConfig(left: SkillDpsAnalysisConfig, right: SkillDpsAnalysisConfig)
 export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const id = useId()
   const [tab, setTab] = useState<typeof TABS[number][0]>('overview')
+  const [detailMode, setDetailMode] = useState<typeof DETAIL_MODES[number][0]>('indicator')
+  const [openedModelModes, setOpenedModelModes] = useState({ multiple: false, combinations: false })
   const [axis, setAxis] = useState<SkillDpsAnalysisAxis>('duration')
   const axisSelect = useRef<HTMLSelectElement>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -94,8 +99,8 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
       return { dataset: null, error: caught instanceof Error ? caught.message : 'DPSを計算できませんでした。' }
     }
   }, [rows, applied, loading, error])
-  const analysis = useMemo(() => calculation.dataset && tab === 'detail' ? analyzeSkillDps(calculation.dataset, axis, metric) : null,
-    [calculation.dataset, tab, axis, metric])
+  const analysis = useMemo(() => calculation.dataset && tab === 'detail' && detailMode === 'indicator'
+    ? analyzeSkillDps(calculation.dataset, axis, metric) : null, [calculation.dataset, tab, detailMode, axis, metric])
   const categorical = axis === 'maxTargets'
   const numericPoints = useMemo(() => analysis?.observations.flatMap(({ id, x, y }) =>
     typeof x === 'number' ? [{ id, x, y }] : []) ?? [], [analysis])
@@ -111,6 +116,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const rarities = [...new Set(rows.map(row => row.rarity))].sort((left, right) => right - left)
   const sourceError = error || calculation.error
   const status = loading ? '読み込み中…' : busy ? '計算中…' : pending ? '未反映' : dataset ? '計算済み' : ''
+  const detailFormat = detailMode === 'indicator' ? [viewLabel(SKILL_DPS_ANALYSIS_AXES, axis), viewLabel(VIEWS, view)] : ['表']
 
   function changeDraft<Key extends keyof DraftConfig>(key: Key, value: DraftConfig[Key]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -125,8 +131,16 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
     startTransition(() => setApplied(next.config!))
   }
 
+  function changeDetailMode(mode: typeof DETAIL_MODES[number][0]) {
+    setDetailMode(mode)
+    if (mode !== 'indicator' && !openedModelModes[mode]) {
+      setOpenedModelModes(current => ({ ...current, [mode]: true }))
+    }
+  }
+
   function openAxisDetail(selectedAxis: SkillDpsAnalysisAxis) {
     setAxis(selectedAxis)
+    setDetailMode('indicator')
     setTab('detail')
     window.requestAnimationFrame(() => axisSelect.current?.focus())
   }
@@ -202,13 +216,20 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
     {sourceError && <p className="skill-dps-error" role="alert">{sourceError}</p>}
     {dataset && <>
       <PageOutputTabs idPrefix={id} tabs={TABS} activeTab={tab} onChange={setTab}
-        label="分析結果" format={tab === 'overview' ? '表' : [viewLabel(SKILL_DPS_ANALYSIS_AXES, axis), viewLabel(VIEWS, view)]} />
+        label="分析結果" format={tab === 'overview' ? '表' : [viewLabel(DETAIL_MODES, detailMode), ...detailFormat]} />
       <AnalysisTabPanel idPrefix={id} tab="overview" activeTab={tab}>
         <div className="skill-dps-result" aria-busy={busy}>
           <SkillDpsAnalysisOverview dataset={dataset} metric={metric} onSelectAxis={openAxisDetail} />
         </div>
       </AnalysisTabPanel>
       <AnalysisTabPanel idPrefix={id} tab="detail" activeTab={tab}>
+        <PageViewSwitch views={DETAIL_MODES} selected={detailMode} onChange={changeDetailMode} label="分析方法" />
+        {openedModelModes.multiple && <div hidden={detailMode !== 'multiple'} aria-busy={busy}>
+          <SkillDpsMultipleRegression dataset={dataset} metric={metric} />
+        </div>}
+        {openedModelModes.combinations && <div hidden={detailMode !== 'combinations'} aria-busy={busy}>
+          <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} />
+        </div>}
         {analysis && <div className="skill-dps-result" aria-busy={busy}>
           <div className="skill-dps-toolbar">
             <label className="skill-dps-inline-label">指標
