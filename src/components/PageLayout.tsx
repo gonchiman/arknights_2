@@ -21,24 +21,27 @@ export function PageLayout({ page, settings, children, className }: {
   </PageTitleContext.Provider>
 }
 
-export function PageOutputHeader({ segments = [], children }: {
+export function PageOutputHeader({ segments = [], actions, children }: {
   segments?: readonly string[]
+  actions?: ReactNode
   children?: ReactNode
 }) {
   const pageTitle = useContext(PageTitleContext)
   if (pageTitle === null) throw new Error('PageOutputHeader requires PageLayout')
-  return <div className="page-output-header">
+  const copyButton = <ElementLocationCopyButton segments={[pageTitle, ...segments]} />
+  return <div className={actions ? 'page-output-header page-output-header-with-actions' : 'page-output-header'}>
     {children && <div className="page-output-heading">{children}</div>}
-    <ElementLocationCopyButton segments={[pageTitle, ...segments]} />
+    {actions ? <div className="page-output-actions">{actions}{copyButton}</div> : copyButton}
   </div>
 }
 
-export function PageOutputTabs<T extends string>({ format, ...tabProps }: Omit<AnalysisTabsProps<T>, 'appearance'> & {
+export function PageOutputTabs<T extends string>({ format, actions, ...tabProps }: Omit<AnalysisTabsProps<T>, 'appearance'> & {
   format?: string | readonly string[] | null
+  actions?: ReactNode
 }) {
   const segments = [viewLabel(tabProps.tabs, tabProps.activeTab)]
   if (format) segments.push(...(typeof format === 'string' ? [format] : format))
-  return <PageOutputHeader segments={segments}>
+  return <PageOutputHeader segments={segments} actions={actions}>
     <AnalysisTabs {...tabProps} appearance="underline" />
   </PageOutputHeader>
 }

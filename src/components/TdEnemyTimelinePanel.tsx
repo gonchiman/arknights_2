@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
 import { buildTdEnemyTimeline, getTdEnemyPositions } from '../lib/tdEnemyTimeline'
 import type { MapDetail, MapIndex, MapSummary } from '../types/map'
 import { MapBoard } from './MapInformation'
+import { TdMapImage } from './TdMapImage'
 import './TdEnemyTimelinePanel.css'
 
 const COLORS = ['#8c4a87', '#1a687f', '#a34b18', '#416d43']
@@ -125,6 +126,10 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   const columns = detail.grid[0].length
   const { cells, moving, waiting, hidden } = groupPositions(getTdEnemyPositions(timeline, seconds), excluded, rows)
   const selected = selectedCell === null ? undefined : cells.get(selectedCell)
+  const selectedDetail = selected && selected.total > 1
+    ? `上から${selected.y + 1}行・左から${selected.x + 1}列　${breakdown(selected, kinds)}` : null
+  const visibleKinds = [...kinds].filter(([id]) => !excluded.has(id))
+  const selectionName = excluded.size === 0 ? '全敵' : visibleKinds.map(([, kind]) => kind.name).join('・') || '敵未選択'
   function seek(second: number) {
     setStartTime(null)
     setSeconds(Math.min(duration, Math.max(0, second)))
@@ -194,20 +199,31 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         {kind.name}
       </label>)}
     </div>
-    <MapBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false} boardOverlay={
-      [...cells].map(([key, cell]) => <CellMarker key={key} cell={cell} rows={rows} columns={columns} kinds={kinds}
-        expanded={key === selectedCell} onSelect={() => {
-          setStartTime(null)
-          setSelectedCell(current => current === key ? null : key)
-        }} />)
-    } />
+    <TdMapImage map={map} filenameParts={['時間別の位置', `${displayedSecond}秒`, selectionName]}
+      caption={`マップ開始から ${displayedSecond} 秒${currentFragment >= 0 ? ` · 区間${currentFragment + 1}` : ''}`}
+      onOpen={() => setStartTime(null)}
+      imageDetails={<div className="td-time-image-details">
+        <div className="td-time-image-legend">
+          {visibleKinds.length === 0 ? '表示する敵が未選択' : visibleKinds.map(([id, kind]) =>
+            <span key={id}><span className="td-time-key" style={{ background: kind.color }}>{kind.letter}</span>{kind.name}</span>)}
+        </div>
+        <div>出現済み {spawnedCount} / {spawns.length}体　未出現 {spawns.length - spawnedCount}体　地図上 {moving + waiting}体</div>
+        {selectedDetail && <div>{selectedDetail}</div>}
+        <div>推定位置 · ブロック・減速・撃破なし</div>
+      </div>}>
+      <MapBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false} boardOverlay={
+        [...cells].map(([key, cell]) => <CellMarker key={key} cell={cell} rows={rows} columns={columns} kinds={kinds}
+          expanded={key === selectedCell} onSelect={() => {
+            setStartTime(null)
+            setSelectedCell(current => current === key ? null : key)
+          }} />)
+      } />
+    </TdMapImage>
     <div className="td-time-footer"><strong aria-live={playing ? 'off' : 'polite'}>
       {excluded.size === kinds.size ? '表示する敵が未選択' : <>
         地図上 {moving + waiting}体　移動 {moving}・待機 {waiting}{hidden > 0 && `　消失中 ${hidden}`}
       </>}
     </strong><span>推定位置 · ブロック・減速・撃破なし</span></div>
-    {selected && selected.total > 1 && <p className="td-time-detail" role="status">
-      上から{selected.y + 1}行・左から{selected.x + 1}列　{breakdown(selected, kinds)}
-    </p>}
+    {selectedDetail && <p className="td-time-detail" role="status">{selectedDetail}</p>}
   </div>
 }
