@@ -3,6 +3,7 @@ import type { DamageCalculatorThreeOutput } from './damageCalculatorThree.ts'
 import type { DamageThreeComparisonEntry } from './damageCalculatorThreeComparison.ts'
 import { resolveDamageThreeStageDuration } from './damageCalculatorThreePeriodTotal.ts'
 import { sameReviewedBlackboard, sameReviewedDescription } from './expandedCombatRegistry.ts'
+import { findSkillStructure, type SkillStructure } from './skillStructure.ts'
 
 export interface SkillDpsUptimeInput {
   entry: DamageThreeComparisonEntry
@@ -113,22 +114,44 @@ const unavailable = (reason: string): SkillDpsUptimeResult => ({ percentage: nul
 const equal = (left: number | null | undefined, right: number) => typeof left === 'number'
   && Number.isFinite(left) && Math.abs(left - right) <= 1e-9 * Math.max(1, Math.abs(right))
 
-/** A full-duration, immediate-recast theoretical cycle at exactly 1 SP/second.
- * SP recovery is locked for the whole reviewed skill, including non-attacking
- * startup; initial SP is never subtracted from a repeated recharge. This is not
- * inferred from DPS/period damage and does not simulate external SP or enemies.
+function reviewedCycles(skill: SkillRecord, levelIndex: number) {
+  return REVIEWED_FIXED_CYCLES.filter(cycle => cycle.operatorId === skill.operatorId
+    && cycle.skillId === skill.skillId && cycle.skillIndex === skill.skillIndex && cycle.levelIndex === levelIndex)
+}
+
+/** The numeric analysis counts each skill once, so its selected level must
+ * have a single reviewed repeatable cycle, including a definite stage.
  */
-export function resolveSkillDpsUptime({ entry, output, skill, durationSeconds, spCost }: SkillDpsUptimeInput): SkillDpsUptimeResult {
-  const structure = entry.structure
-  const info = structure.basicInfo
-  const raw = skill.skillLevels[entry.levelIndex]
+export function resolveSkillNumericUptime(skill: SkillRecord, levelIndex: number): number | null {
+  const cycles = reviewedCycles(skill, levelIndex)
+  if (cycles.length !== 1) return null
+  const structure = findSkillStructure({ operatorId: skill.operatorId, skillId: skill.skillId, skillIndex: skill.skillIndex, levelIndex })
+  if (!structure) return null
+  const [cycle] = cycles
+  return resolveStageUptime(skill, structure, cycle.stageId, cycle).percentage
+}
+
+export function resolveSkillDpsUptime(input: SkillDpsUptimeInput): SkillDpsUptimeResult {
+  const { entry, output, skill } = input
+  const info = entry.structure.basicInfo
   const outputInfo = output.structure?.basicInfo
-  if (!raw || info.operatorId !== skill.operatorId || info.skillId !== skill.skillId || info.skillIndex !== skill.skillIndex
+  if (info.operatorId !== skill.operatorId || info.skillId !== skill.skillId || info.skillIndex !== skill.skillIndex
     || info.levelIndex !== entry.levelIndex || entry.skill.operatorId !== skill.operatorId
     || entry.skill.skillId !== skill.skillId || entry.skill.skillIndex !== skill.skillIndex
     || outputInfo?.operatorId !== info.operatorId || outputInfo.skillId !== info.skillId
-    || outputInfo.skillIndex !== info.skillIndex || outputInfo.levelIndex !== info.levelIndex
-    || !sameReviewedDescription(raw.description ?? '', structure.source.rawDescription)
+    || outputInfo.skillIndex !== info.skillIndex || outputInfo.levelIndex !== info.levelIndex) return unavailable('確認済みソース不一致')
+  const cycle = reviewedCycles(skill, entry.levelIndex).find(item => item.stageId === entry.stageId)
+  return resolveStageUptime(skill, entry.structure, entry.stageId, cycle, input)
+}
+
+/** A full-duration, immediate-recast cycle at 1 SP/second. Initial SP affects
+ * only the first cast. The full skill lock includes non-attacking startup.
+ */
+function resolveStageUptime(skill: SkillRecord, structure: SkillStructure, stageId: string,
+  capability: ReviewedFixedCycle | undefined, calculation?: SkillDpsUptimeInput): SkillDpsUptimeResult {
+  const info = structure.basicInfo
+  const raw = skill.skillLevels[info.levelIndex]
+  if (!raw || !sameReviewedDescription(raw.description ?? '', structure.source.rawDescription)
     || !sameReviewedBlackboard(raw.blackboard, structure.source.blackboard)
     || raw.duration !== structure.source.duration || (raw.rangeId ?? null) !== structure.source.rangeId
     || raw.spData?.spType !== structure.activationSettings.spRecovery
@@ -138,11 +161,12 @@ export function resolveSkillDpsUptime({ entry, output, skill, durationSeconds, s
     || raw.name !== info.skillName
     || raw.skillType !== structure.activationSettings.activationMethod) return unavailable('確認済みソース不一致')
 
-  const stage = structure.guardRecipe?.stages.find(item => item.id === entry.stageId)
-    ?? structure.effectStructure.stages.find(item => item.id === entry.stageId)
-  if (!stage || entry.kind !== 'NORMAL' || output.attackKind !== 'NORMAL' || output.actor
-    || 'actor' in stage && stage.actor) return unavailable('通常攻撃型以外')
-  if (output.activeStageLabel !== entry.stageLabel) return unavailable('選択段階不一致')
+  const stage = structure.guardRecipe?.stages.find(item => item.id === stageId)
+    ?? structure.effectStructure.stages.find(item => item.id === stageId)
+  if (!stage || ('kind' in stage && stage.kind !== 'NORMAL') || ('actor' in stage && stage.actor)
+    || (calculation && (calculation.entry.kind !== 'NORMAL' || calculation.output.attackKind !== 'NORMAL'
+      || calculation.output.actor))) return unavailable('通常攻撃型以外')
+  if (calculation && calculation.output.activeStageLabel !== calculation.entry.stageLabel) return unavailable('選択段階不一致')
   if (stage.periodTotal?.kind === 'UNSUPPORTED' && stage.periodTotal.duration === 'AMMO') return unavailable('弾薬制の周期未確認')
   if (raw.durationType !== 'NONE') return unavailable('確認済みソース不一致')
   if (structure.effectStructure.modeTransitions?.length
@@ -155,17 +179,16 @@ export function resolveSkillDpsUptime({ entry, output, skill, durationSeconds, s
   if (structure.activationSettings.spRecovery !== 'INCREASE_WITH_TIME') return unavailable('自然回復以外')
   if (structure.activationSettings.maxCharges !== 1) return unavailable('チャージ周期未確認')
   if (['char_002_amiya', 'char_134_ifrit', 'char_213_mostma'].includes(skill.operatorId)) return unavailable('自己SP回復を含む周期未確認')
+  const resolvedDuration = resolveDamageThreeStageDuration(stage, {
+    sourceDuration: raw.duration, blackboard: raw.blackboard, conditions: calculation?.output.guard?.conditions,
+  })
+  const durationSeconds = calculation ? calculation.durationSeconds : resolvedDuration
+  const spCost = calculation ? calculation.spCost : structure.activationSettings.spCost
   if (durationSeconds === null || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return unavailable('攻撃可能時間未確定')
   if (spCost === null || !Number.isFinite(spCost) || spCost <= 0) return unavailable('必要SP未確定')
 
-  const capability = REVIEWED_FIXED_CYCLES.find(item => item.operatorId === skill.operatorId
-    && item.skillId === skill.skillId && item.skillIndex === skill.skillIndex
-    && item.stageId === entry.stageId && item.levelIndex === entry.levelIndex)
   if (!capability) return unavailable('反復周期の確認なし')
   const attackSeconds = capability.fullLockSeconds - capability.startupSeconds
-  const resolvedDuration = resolveDamageThreeStageDuration(stage, {
-    sourceDuration: raw.duration, blackboard: raw.blackboard, conditions: output.guard?.conditions,
-  })
   if (!equal(raw.duration, capability.fullLockSeconds) || !equal(spCost, capability.spCost)
     || !equal(raw.spData?.spCost, capability.spCost) || !equal(durationSeconds, attackSeconds)
     || !equal(resolvedDuration, attackSeconds)) return unavailable('スキル拘束時間未確認')
