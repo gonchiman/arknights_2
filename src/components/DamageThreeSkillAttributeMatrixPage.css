@@ -7,25 +7,12 @@
 .dc3-matrix-conditions,
 .dc3-matrix-table-heading nav { color: var(--text-soft); font-size: 12px; }
 
-.dc3-matrix-controls,
 .dc3-matrix-table-heading,
 .dc3-matrix-table-heading nav {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 12px;
-}
-.dc3-matrix-controls { align-items: end; }
-.dc3-matrix-search { display: grid; gap: 4px; font-size: 12px; color: var(--text-soft); max-width: 100%; }
-.dc3-matrix-search input {
-  width: 18rem;
-  max-width: 100%;
-  min-height: 36px;
-  border: 1px solid var(--border);
-  padding: 6px 9px;
-  font: inherit;
-  color: var(--text);
-  background: var(--surface);
 }
 .dc3-matrix-conditions { display: flex; flex-wrap: wrap; gap: 2px 12px; line-height: 2; }
 .dc3-matrix-conditions > span { white-space: nowrap; }

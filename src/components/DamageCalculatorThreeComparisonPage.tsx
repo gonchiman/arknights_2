@@ -14,10 +14,13 @@ import {
   getDamageCalculatorThreeSkillInformationValues,
   type DamageCalculatorThreeSkillInformationKey,
 } from '../lib/damageCalculatorThreeSkillInformation'
-import { PROFESSION_ORDER } from '../lib/operatorFilters'
+import {
+  DAMAGE_TYPE_LABELS, filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues,
+} from '../lib/damageThreeSkillFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
+import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { OperatorDetailLink } from './OperatorDetailLink'
 import { PageLayout, PageOutputHeader } from './PageLayout'
 import { SkillEffectModal } from './SkillEffectModal'
@@ -43,11 +46,10 @@ type SortKey = Metric | DamageCalculatorThreeSkillInformationKey
 type TargetDisplay = 'single' | 'all'
 type TableDisplay = 'auto' | 'full' | 'compact'
 type ConditionValue = number | string | boolean | undefined
-const OUTPUT_KINDS: OutputKind[] = ['NORMAL', 'NEXT_ATTACK', 'COUNTER', 'SKILL_ACTION']
-const FILTER_TITLE = '絞り込み'
+type ComparisonFilters = DamageThreeSkillFilterValues & { kind: OutputKind }
+const DEFAULT_FILTERS: ComparisonFilters = { kind: 'NORMAL', query: '', profession: 'ALL', rarity: 'ALL', damageType: 'ALL' }
 const COMMON_CONDITIONS_TITLE = '共通条件'
 const RESULT_TITLE = '計算結果'
-const DAMAGE_TYPE_LABELS: Record<string, string> = { PHYSICAL: '物理', ARTS: '術', TRUE: '確定', ELEMENTAL: '元素', MIXED: '混合' }
 const ATTACK_LABELS: Record<OutputKind, string> = {
   NORMAL: '1攻撃ダメージ', NEXT_ATTACK: '強化攻撃ダメージ', COUNTER: '反撃ダメージ', SKILL_ACTION: '1動作ダメージ',
 }
@@ -115,11 +117,8 @@ function resultStatus(result: DamageThreeComparisonResult, customized: boolean, 
 }
 
 export default function DamageCalculatorThreeComparisonPage({ rows, loading }: Props) {
-  const [kind, setKind] = useState<OutputKind>('NORMAL')
-  const [query, setQuery] = useState('')
-  const [profession, setProfession] = useState('ALL')
-  const [rarity, setRarity] = useState('ALL')
-  const [attackTypeFilter, setAttackTypeFilter] = useState('ALL')
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const { kind, query, profession, rarity, damageType } = filters
   const [enemy, setEnemy] = useState({ defense: '0', resistance: '0', enemyCount: '1' })
   const [precision, setPrecision] = useState(0)
   const [target, setTarget] = useState<TargetDisplay>('single')
@@ -158,23 +157,14 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
     ...(!Number.isFinite(common.resistance) || common.resistance < 0 || common.resistance > 100 ? ['敵の術耐性は0〜100で入力してください。'] : []),
     ...(!Number.isSafeInteger(common.enemyCount) || common.enemyCount < 1 || common.enemyCount > 10000 ? ['敵の数は1〜10000の整数で入力してください。'] : []),
   ], [common])
-  const professionOptions = useMemo(() => {
-    const labels = new Map(entries.map(({ skill }) => [skill.profession, skill.professionLabel]))
-    return PROFESSION_ORDER.filter((value) => labels.has(value)).map((value) => ({ value, label: labels.get(value) }))
-  }, [entries])
-  const visibleEntries = useMemo(() => {
-    const words = query.normalize('NFKC').toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
-    return entries.filter((entry) => entry.kind === kind
-      && (profession === 'ALL' || entry.skill.profession === profession)
-      && (rarity === 'ALL' || entry.skill.rarity === Number(rarity))
-      && words.every((word) => `${entry.skill.operatorName} ${entry.skill.skillName} S${entry.skill.skillIndex} ${entry.stageLabel}`
-        .normalize('NFKC').toLocaleLowerCase().includes(word)))
-  }, [entries, kind, profession, query, rarity])
+  const professionOptions = useMemo(() => getDamageThreeProfessionOptions(entries), [entries])
+  const visibleEntries = useMemo(() => filterDamageThreeSkillEntries(entries, { kind, query, profession, rarity }),
+    [entries, kind, query, profession, rarity])
   const evaluatedResults = useMemo(() => visibleEntries.map((entry) => evaluateDamageThreeComparisonEntry(entry, common, overrides[entry.key])),
     [visibleEntries, common, overrides])
-  const results = useMemo(() => attackTypeFilter === 'ALL'
-    ? evaluatedResults : evaluatedResults.filter((result) => result.damageType === attackTypeFilter),
-  [evaluatedResults, attackTypeFilter])
+  const results = useMemo(() => damageType === 'ALL'
+    ? evaluatedResults : evaluatedResults.filter(result => result.damageType === damageType),
+  [evaluatedResults, damageType])
   const skillInformation = useMemo(() => new Map(results.map(result => [result.entry.key,
     getDamageCalculatorThreeSkillInformationValues(result.entry.structure, result.entry.skill, result.output)])), [results])
   const sortedResults = useMemo(() => [...results].sort((left, right) => {
@@ -207,27 +197,23 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
       && current.target === target && current.showSkillInformation === showSkillInformation && current.width >= width
       ? current : { results, precision, target, showSkillInformation, width })
   }, [compact, kind, resultsWidth, results, precision, target, showSkillInformation])
-  const hasFilters = query !== '' || profession !== 'ALL' || rarity !== 'ALL' || attackTypeFilter !== 'ALL' || kind !== 'NORMAL'
-  const updateKind = (value: OutputKind) => {
-    setKind(value)
-    const metric = value === 'NORMAL' ? 'combinedDps' : 'perAttack'
-    setDisplayMetric(metric)
-    setSort({ key: metric, direction: 'desc' })
-  }
+  const hasFilters = query !== '' || profession !== 'ALL' || rarity !== 'ALL' || damageType !== 'ALL' || kind !== 'NORMAL'
   const updateDisplayMetric = (metric: Metric) => {
     setDisplayMetric(metric)
     setSort({ key: metric, direction: 'desc' })
+  }
+  const updateFilters = ({ kind: nextKind, ...fields }: DamageThreeSkillFilterValues) => {
+    if (nextKind === 'ALL') return
+    setFilters({ ...fields, kind: nextKind })
+    if (nextKind !== kind) updateDisplayMetric(nextKind === 'NORMAL' ? 'combinedDps' : 'perAttack')
   }
   const updateShowSkillInformation = (show: boolean) => {
     setShowSkillInformation(show)
     if (!show && isSkillInformationKey(sort.key)) setSort({ key: displayMetric, direction: 'desc' })
   }
   const resetFilters = () => {
-    setQuery('')
-    setProfession('ALL')
-    setRarity('ALL')
-    setAttackTypeFilter('ALL')
-    updateKind('NORMAL')
+    setFilters(DEFAULT_FILTERS)
+    updateDisplayMetric('combinedDps')
   }
   const closeDescription = () => {
     const trigger = description?.trigger
@@ -286,32 +272,8 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
 
   return <PageLayout page="damage-three-comparison" className="dc3-comparison-page"
     settings={<>
-      <section className="dc3-comparison-settings-group">
-        <PageOutputHeader segments={[FILTER_TITLE]}>
-          <div className="dc3-comparison-filter-heading">
-            <h2>{FILTER_TITLE}</h2>
-            <button type="button" className="filter-reset-button" disabled={!hasFilters} onClick={resetFilters}>条件をリセット</button>
-          </div>
-        </PageOutputHeader>
-        <div className="skill-directory-filter-grid dc3-comparison-filters">
-          <label><span>出力型</span><select aria-label="出力型" value={kind} onChange={(event) => updateKind(event.target.value as OutputKind)}>
-            {OUTPUT_KINDS.map((value) => <option key={value} value={value}>{DAMAGE_THREE_OUTPUT_KIND_LABELS[value]}</option>)}
-          </select></label>
-          <label><span>文字検索</span><input type="search" aria-label="文字検索" value={query} placeholder="オペレーター名・スキル名・S番号"
-            onChange={(event) => setQuery(event.target.value)} /></label>
-          <label><span>職業</span><select aria-label="職業" value={profession} onChange={(event) => setProfession(event.target.value)}>
-            <option value="ALL">すべて</option>
-            {professionOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-          </select></label>
-          <label><span>レアリティ</span><select aria-label="レアリティ" value={rarity} onChange={(event) => setRarity(event.target.value)}>
-            <option value="ALL">すべて</option>{[6, 5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>★{value}</option>)}
-          </select></label>
-          <label><span>攻撃属性</span><select aria-label="攻撃属性" value={attackTypeFilter} onChange={(event) => setAttackTypeFilter(event.target.value)}>
-            <option value="ALL">すべて</option>
-            {Object.entries(DAMAGE_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select></label>
-        </div>
-      </section>
+      <DamageThreeSkillFilters filters={filters} onChange={updateFilters} onReset={resetFilters}
+        canReset={hasFilters} professionOptions={professionOptions} />
       <section className="dc3-comparison-settings-group">
         <PageOutputHeader segments={[COMMON_CONDITIONS_TITLE]}>
           <h2>{COMMON_CONDITIONS_TITLE}</h2>
