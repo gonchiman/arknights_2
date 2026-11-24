@@ -1,11 +1,13 @@
 import { useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode } from '../lib/damageThreeSkillRankMatrix'
+import { filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues } from '../lib/damageThreeSkillFilters'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabPanel } from './AnalysisTabs'
+import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDataContent } from './EnemyPageShared'
@@ -15,6 +17,7 @@ import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } fro
 import DamageThreeSkillRankStatisticsChart from './DamageThreeSkillRankStatisticsChart'
 import DamageThreeSkillRankStatisticsTable, { STATISTIC_VIEWS, type StatisticView } from './DamageThreeSkillRankStatisticsTable'
 import { useDamageThreeSkillRankStatistics } from './useDamageThreeSkillRankStatistics'
+import { useOriginalDamageTypeFilter } from './useOriginalDamageTypeFilter'
 import { TableSortHeader } from './TableSortHeader'
 import { useSkillDamageMatrixSort, type MatrixSort, type MatrixSortKey } from './useSkillDamageMatrixSort'
 import './DamageCalculatorTwo.css'
@@ -26,6 +29,8 @@ type Mode = typeof MODES[number][0]
 const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
 type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
 const PAGE_SIZE = 15
+const DEFAULT_FILTERS: DamageThreeSkillFilterValues = { kind: 'ALL', query: '', profession: 'ALL', rarity: 'ALL', damageType: 'ALL' }
+const EMPTY_ENTRIES: readonly DamageThreeAttributeEntry[] = []
 const DEFAULT_SORT: MatrixSort = { key: 'operator', direction: 'asc' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const SIGNED_DIFFERENCE = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1, signDisplay: 'exceptZero' })
@@ -34,10 +39,6 @@ const UNIT = { NORMAL: '1攻撃', NEXT_ATTACK: '強化攻撃1回', COUNTER: '反
 
 function formatValue(value: number | null, formatter = NUMBER) {
   return value === null ? '—' : formatter.format(value)
-}
-
-function normalizeSearch(value: string) {
-  return value.normalize('NFKC').toLowerCase()
 }
 
 function commonValue<T>(entries: readonly DamageThreeAttributeEntry[], select: (entry: DamageThreeAttributeEntry) => T) {
@@ -49,7 +50,7 @@ function commonValue<T>(entries: readonly DamageThreeAttributeEntry[], select: (
 export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: { rows: SkillRecord[]; loading: boolean }) {
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
   const [mode, setMode] = useState<Mode>('virtual')
-  const [query, setQuery] = useState('')
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [page, setPage] = useState(0)
   const [sort, setSort] = useState<MatrixSort>(DEFAULT_SORT)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
@@ -69,16 +70,16 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const entries = useMemo(() => getDamageThreeAttributeEntries(rows).sort((left, right) =>
     OPERATOR_ORDER.compare(left.skill.operatorName, right.skill.operatorName)
     || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
-  const filtered = useMemo(() => {
-    const words = normalizeSearch(query).trim().split(/\s+/).filter(Boolean)
-    if (!words.length) return entries
-    return entries.filter(({ skill, stageLabel }) => {
-      const text = normalizeSearch(`${skill.operatorName} S${skill.skillIndex} ${skill.skillName} ${stageLabel}`)
-      return words.every(word => text.includes(word))
-    })
-  }, [query, entries])
-  const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
   const statsActive = mode === 'statistics'
+  const activeFilters = useMemo<DamageThreeSkillFilterValues>(() =>
+    statsActive ? { ...filters, kind: 'NORMAL' } : filters, [filters, statsActive])
+  const professionOptions = useMemo(() => getDamageThreeProfessionOptions(entries), [entries])
+  const candidates = useMemo(() => filterDamageThreeSkillEntries(entries, activeFilters), [entries, activeFilters])
+  const matching = useOriginalDamageTypeFilter(candidates, filters.damageType)
+  const filtered = matching ?? EMPTY_ENTRIES
+  const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
+  const canReset = filters.kind !== 'ALL' || filters.query !== '' || filters.profession !== 'ALL'
+    || filters.rarity !== 'ALL' || filters.damageType !== 'ALL'
   const canShowDifference = mode === 'virtual' && layout === 'columns'
   const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds)
@@ -93,6 +94,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const start = activePage * PAGE_SIZE
   const pageEntries = useMemo(() => sortedEntries?.slice(start, start + PAGE_SIZE) ?? [], [sortedEntries, start])
   const tabs = { idPrefix: tabId, activeTab: mode }
+  function changeFilters(next: DamageThreeSkillFilterValues) {
+    setFilters(statsActive ? { ...next, kind: filters.kind } : next)
+    setPage(0)
+  }
   function changeSort(key: MatrixSortKey, resistance?: number) {
     const sameColumn = key === sort.key && resistance === sort.resistance
     const descending = sameColumn ? sort.direction === 'asc' : resistance !== undefined
@@ -115,27 +120,25 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
     {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
   </>}>
+    <DamageThreeSkillFilters filters={activeFilters} professionOptions={professionOptions} onChange={changeFilters}
+      allowAllKinds lockKind={statsActive} damageTypeLabel="元の攻撃属性" canReset={canReset}
+      onReset={() => { setFilters(DEFAULT_FILTERS); setPage(0) }} />
     <PageOutputTabs {...tabs} tabs={MODES} onChange={next => {
       if (next !== mode && sort.resistance !== undefined) resetSort()
       setMode(next)
     }} label="比較方法" format={format} />
     <AnalysisTabPanel {...tabs} tab={mode}>
-      <div className="dc3-matrix-controls">
-        <label className="dc3-matrix-search">スキル検索
-          <input type="search" value={query} placeholder="オペレーター名・スキル名・S番号"
-            onChange={event => { setQuery(event.target.value); setPage(0) }} />
-        </label>
-        <div className="dc3-matrix-conditions" role="group" aria-label="共通条件">
-          <span>敵1体</span><span>最大Lv</span><span>信頼100</span><span>潜在1</span><span>MODなし</span>
-          {commonLevel && <span>{commonLevel}</span>}
-          {commonUnit && <span>{commonUnit}あたり</span>}
-        </div>
+      <div className="dc3-matrix-conditions" role="group" aria-label="共通条件">
+        <span>敵1体</span><span>最大Lv</span><span>信頼100</span><span>潜在1</span><span>MODなし</span>
+        {commonLevel && <span>{commonLevel}</span>}
+        {commonUnit && <span>{commonUnit}あたり</span>}
       </div>
       <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
         {unavailable ? <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>
           : !distribution?.total ? <p role="status">防御力と術耐性を対応させる出現データがありません。</p>
           : loading && !rows.length ? <p role="status">スキルを読み込んでいます…</p>
           : !rows.length ? <p role="alert">オペレーターデータを取得できません。</p>
+          : matching === null ? <p role="status">元の攻撃属性で絞り込み中…</p>
           : !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
             <div className="dc3-matrix-display-options">

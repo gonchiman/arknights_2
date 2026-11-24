@@ -1,0 +1,22 @@
+.dc3-skill-filters { width: 100%; min-width: 0; }
+.dc3-skill-filters .page-output-header { align-items: center; column-gap: 12px; border-bottom: 0; }
+.dc3-skill-filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dc3-skill-filters-heading h2 { margin: 0; color: var(--text); font-size: 14px; }
+.dc3-skill-filters .skill-directory-filter-grid {
+  grid-template-columns: minmax(165px, 1.2fr) minmax(240px, 2fr) repeat(3, minmax(100px, 1fr));
+  padding: 6px 0 0;
+}
+.dc3-skill-filters label > span { font-size: 12px; font-weight: 400; }
+
+@media (max-width: 850px) {
+  .dc3-skill-filters .skill-directory-filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dc3-skill-filters label:has(input[type="search"]) { grid-column: span 2; }
+}
+@media (max-width: 560px) {
+  .dc3-skill-filters .skill-directory-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dc3-skill-filters label:has(input[type="search"]) { grid-column: auto; }
+}
+@media (pointer: coarse) {
+  .dc3-skill-filters input, .dc3-skill-filters select { min-height: 44px; font-size: 16px; }
+  .dc3-skill-filters-heading .filter-reset-button { min-height: 44px; }
+}
