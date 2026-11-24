@@ -43,17 +43,22 @@ export function getSkillDpsChartImageTitle(snapshot: SkillDpsChartImageSnapshot)
   return `${axisLabel(snapshot.axis)}と${METRIC_LABELS[snapshot.metric]}`
 }
 
-/** Keep the header to the applied cohort, skill level, common enemy and sample size.
- * Fixed build details and display choices remain in the automatic filename.
- */
-export function getSkillDpsChartImageConditions(snapshot: SkillDpsChartImageSnapshot): string {
-  const { config } = snapshot
+export function getSkillDpsAnalysisConditionLabels(config: SkillDpsAnalysisConfig): string[] {
   return [
     ...getCohortLabels(config),
     ...(config.damageType === 'ALL' ? [] : [`主攻撃:${getDamageTypeLabel(config)}`]),
     getSkillLevelLabel(config),
     `防御${NUMBER.format(config.defense)}／術耐性${NUMBER.format(config.resistance)}`,
     '敵1体',
+  ]
+}
+
+/** Keep the header to the applied cohort, skill level, common enemy and sample size.
+ * Fixed build details and display choices remain in the automatic filename.
+ */
+export function getSkillDpsChartImageConditions(snapshot: SkillDpsChartImageSnapshot): string {
+  return [
+    ...getSkillDpsAnalysisConditionLabels(snapshot.config),
     ...(snapshot.axis === 'uptime' ? ['SP回復1/秒・反復固定周期・回復支援なし'] : []),
     `n=${NUMBER.format(snapshot.points.length)}`,
   ].join('・')

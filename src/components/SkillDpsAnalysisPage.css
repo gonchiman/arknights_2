@@ -1,8 +1,11 @@
 .skill-dps-page { font-size: 13px; }
 .skill-dps-page .standard-page-settings { display: block; }
-.skill-dps-settings { display: grid; gap: 16px; width: 100%; }
-.skill-dps-settings-section { display: grid; gap: 10px; min-width: 0; }
-.skill-dps-settings-section h2 { margin: 0; font-size: 14px; font-weight: 500; }
+.skill-dps-settings { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.skill-dps-settings-toolbar { padding-bottom: 6px; }
+.skill-dps-applied-conditions { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.skill-dps-condition-form:not([hidden]) { display: grid; gap: 12px; }
+.skill-dps-condition-form fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.skill-dps-condition-form legend { margin-bottom: 6px; padding: 0; font-weight: 500; }
 .skill-dps-fields { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; }
 .skill-dps-fields > label { display: grid; gap: 4px; min-width: 0; }
 .skill-dps-fields > label > span { color: var(--text-muted); font-size: 12px; }
@@ -11,13 +14,9 @@
 .skill-dps-fields select,
 .skill-dps-fields input { width: 100%; }
 .skill-dps-page input[aria-invalid="true"] { border-color: var(--danger); }
-.skill-dps-conditions summary { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; width: fit-content; cursor: pointer; list-style: none; }
-.skill-dps-conditions summary::-webkit-details-marker { display: none; }
-.skill-dps-conditions summary::before { content: '▸'; }
-.skill-dps-conditions[open] summary::before { content: '▾'; }
-.skill-dps-condition-values,
+.skill-dps-applied-conditions,
 .skill-dps-fixed-condition { color: var(--text-muted); font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.skill-dps-calculation-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px; }
+.skill-dps-calculation-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .skill-dps-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .skill-dps-page .button { min-height: 34px; padding: 5px 15px; font: inherit; }
 .skill-dps-status { color: var(--text-muted); font-size: 12px; }
@@ -54,9 +53,6 @@
 @media (max-width: 600px) {
   .skill-dps-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .skill-dps-calculation-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .skill-dps-conditions summary { display: list-item; list-style-position: inside; }
-  .skill-dps-conditions summary::before { display: none; }
-  .skill-dps-condition-values { display: block; margin-top: 4px; }
   .skill-dps-count { width: 100%; margin-left: 0; }
 }
 
@@ -71,6 +67,5 @@
   .skill-dps-page .skill-dps-table .skill-sort-button { min-height: 44px; }
   .skill-dps-page select,
   .skill-dps-page input[type="number"] { font-size: 16px; }
-  .skill-dps-conditions summary,
   .skill-dps-inline-label { min-height: 44px; align-items: center; }
 }
