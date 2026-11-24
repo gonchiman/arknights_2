@@ -1,16 +1,23 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { BoxPlotStatistics, NumericStatistics } from '../lib/enemyStatistics'
 import { getHpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
+import { calculateNormalQqPlot } from '../lib/normalQqPlot'
 import { createAdaptiveLinearTicks, createScaleTicks, createValueScale } from '../lib/statisticsChartScale'
+import { NormalQqPlotSvg } from './NormalQqPlotSvg'
 import './NumericDistributionChart.css'
 
-export interface NumericDistributionChartProps {
+interface DistributionProps {
   statistics: NumericStatistics
   boxPlot: BoxPlotStatistics | null
   metricLabel: string
   unit?: string
-  view: 'histogram' | 'boxplot'
 }
+
+type SummaryView = 'histogram' | 'boxplot'
+export type NumericDistributionChartProps = DistributionProps & (
+  | { view: SummaryView; values?: readonly number[] }
+  | { view: 'qq'; values: readonly number[] }
+)
 
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 const COUNT = new Intl.NumberFormat('ja-JP')
@@ -22,6 +29,10 @@ const format = (value: number) => NUMBER.format(value)
 export function NumericDistributionChart(props: NumericDistributionChartProps) {
   const container = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(640)
+  const observations = props.view === 'qq' ? props.values : undefined
+  const { firstQuartile, thirdQuartile } = props.statistics
+  const qqPlot = useMemo(() => observations && calculateNormalQqPlot(observations, firstQuartile, thirdQuartile),
+    [observations, firstQuartile, thirdQuartile])
   useLayoutEffect(() => {
     const element = container.current
     if (!element) return
@@ -47,8 +58,16 @@ export function NumericDistributionChart(props: NumericDistributionChartProps) {
       ? <p className="numeric-distribution-empty" role="status">有効な値は0件です。</p>
       : <>
         <div className="numeric-distribution-scroll" role="region" tabIndex={0} aria-label={`${props.metricLabel}の分布グラフ`}>
-          <NumericDistributionSvg {...props} width={Math.max(width, minimumWidth)} />
+          {props.view === 'qq'
+            ? qqPlot && <NormalQqPlotSvg plot={qqPlot} width={Math.max(width, minimumWidth)} metricLabel={props.metricLabel} unit={props.unit} />
+            : <NumericDistributionSvg {...props} width={Math.max(width, minimumWidth)} />}
         </div>
+        {qqPlot && <div className="numeric-distribution-legend" aria-label="凡例">
+          <span><i className="numeric-distribution-qq-point-key" aria-hidden="true" />スキル</span>
+          {qqPlot.reference
+            ? <span><i className="numeric-distribution-qq-reference-key" aria-hidden="true" />基準線（第1・第3四分位）</span>
+            : <span>{qqPlot.points.length === 1 ? '基準線なし（有効1件）' : '基準線なし（Q1＝Q3）'}</span>}
+        </div>}
         {props.view === 'boxplot' && <div className="numeric-distribution-legend" aria-label="凡例">
           <span><i className="numeric-distribution-box-key" aria-hidden="true" />箱 中央50%</span>
           <span><i className="numeric-distribution-median-key" aria-hidden="true" />中央値</span>
@@ -60,7 +79,7 @@ export function NumericDistributionChart(props: NumericDistributionChartProps) {
 }
 
 /** Fixed-width plotting surface, also used to verify tick and mark geometry. */
-export function NumericDistributionSvg({ statistics, boxPlot, metricLabel, unit, view, width }: NumericDistributionChartProps & { width: number }) {
+export function NumericDistributionSvg({ statistics, boxPlot, metricLabel, unit, view, width }: DistributionProps & { view: SummaryView; width: number }) {
   const id = useId()
   const axisLabel = unit ? `${metricLabel}（${unit}）` : metricLabel
   const height = view === 'histogram' ? HISTOGRAM_HEIGHT : BOX_HEIGHT

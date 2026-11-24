@@ -25,7 +25,7 @@ interface Props {
 }
 
 const TABS = [['summary', '統計量'], ['distribution', '分布'], ['scatter', '散布図'], ['skills', 'スキル一覧']] as const
-const VIEWS = [['histogram', 'ヒストグラム'], ['boxplot', '箱ひげ図']] as const
+const VIEWS = [['histogram', 'ヒストグラム'], ['boxplot', '箱ひげ図'], ['qq', '正規Q–Qプロット']] as const
 const POINT_MODES = [['count', '件数を大きさで表示'], ['overplot', '半透明の点を重ねる']] as const
 const STAT_COLUMNS = [
   ['minimum', '最小'], ['firstQuartile', 'Q1'], ['median', '中央値'], ['mean', '平均'],
@@ -159,8 +159,8 @@ export function SkillNumericStatisticsPage({ rows, loading, error }: Props) {
               <span className="skill-numeric-count">有効 {COUNT.format(activeSummary.validCount)}件 ／ 対象外 {COUNT.format(activeSummary.excludedCount)}件</span>
             </div>
             <SkillNumericStatisticStrip statistics={activeSummary.statistics} label={activeMetric.label} />
-            <NumericDistributionChart statistics={activeSummary.statistics} boxPlot={activeSummary.boxPlot}
-              metricLabel={activeMetric.label} unit={activeMetric.unit === '秒' ? activeMetric.unit : undefined} view={view} />
+            <NumericDistributionChart statistics={activeSummary.statistics} boxPlot={activeSummary.boxPlot} values={activeSummary.values}
+              metricLabel={activeMetric.label} unit={view === 'qq' || activeMetric.unit === '秒' ? activeMetric.unit : undefined} view={view} />
             {metric === 'duration' && durationCounts.length > 0 && <dl className="skill-numeric-exclusions" aria-label="持続時間の対象外">
               {durationCounts.map(item => <div key={item.label}><dt>{item.label}</dt><dd>{COUNT.format(item.count)}件</dd></div>)}
             </dl>}
