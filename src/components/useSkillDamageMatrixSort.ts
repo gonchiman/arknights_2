@@ -48,7 +48,7 @@ export function sortSkillDamageMatrixEntries(
 
 export function useSkillDamageMatrixSort(
   entries: readonly DamageThreeAttributeEntry[], mode: DamageThreeSkillRankMode,
-  pairs: readonly EnemyResistanceThreshold[] | undefined, sort: MatrixSort,
+  pairs: readonly EnemyResistanceThreshold[] | undefined, sort: MatrixSort, disablePenetration: boolean,
 ): readonly DamageThreeAttributeEntry[] | null {
   const { key, resistance, direction } = sort
   const pair = isDamageKey(key) ? pairs?.find(item => item.resistance === resistance && item.defense !== null) : undefined
@@ -57,7 +57,7 @@ export function useSkillDamageMatrixSort(
   const caches = useMemo(() => new Map(pairs?.map(condition => [condition, {
     virtual: new WeakMap<DamageThreeAttributeEntry, DamageCell>(),
     actual: new WeakMap<DamageThreeAttributeEntry, DamageCell>(),
-  }])), [pairs])
+  }])), [pairs, disablePenetration])
   const cells = pair ? caches.get(pair)![mode] : null
   const [revision, complete] = useReducer(value => value + 1, 0)
   const pending = useMemo(() => cells ? entries.filter(entry => !cells.has(entry)) : [], [entries, cells, revision])
@@ -69,14 +69,14 @@ export function useSkillDamageMatrixSort(
       const deadline = performance.now() + 10
       do {
         const entry = pending[index++]
-        cells.set(entry, evaluateDamageThreeSkillRankRow(entry, [pair], mode).cells[0])
+        cells.set(entry, evaluateDamageThreeSkillRankRow(entry, [pair], mode, disablePenetration).cells[0])
       } while (index < pending.length && performance.now() < deadline)
       if (index < pending.length) timer = window.setTimeout(calculateBatch, 0)
       else complete()
     }
     let timer = window.setTimeout(calculateBatch, 0)
     return () => window.clearTimeout(timer)
-  }, [pending, cells, pair, mode])
+  }, [pending, cells, pair, mode, disablePenetration])
 
   return useMemo(() => pending.length ? null : sortSkillDamageMatrixEntries(entries, key, direction, cells),
     [pending, entries, key, direction, cells])

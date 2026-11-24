@@ -28,9 +28,10 @@ function quartiles(values: number[]): DamageQuartiles | null {
 export function evaluateSkillRankStatisticsStage(
   entry: DamageThreeAttributeEntry,
   pairs: readonly EnemyResistanceThreshold[],
+  disablePenetration = false,
 ) {
   if (entry.kind !== 'NORMAL' || !entry.capability.supported) return null
-  return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual').cells
+  return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', disablePenetration).cells
 }
 
 export function summarizeSkillRankStatistics(

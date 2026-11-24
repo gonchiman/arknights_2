@@ -19,9 +19,12 @@ export function getDamageDifference({ physical, arts }: DamageCell): number | nu
 /** Evaluate only the skill stages currently visible, at one attack/action against one target. */
 export function evaluateDamageThreeSkillRankRow(
   entry: DamageThreeAttributeEntry, pairs: readonly RankPair[], mode: DamageThreeSkillRankMode,
+  disablePenetration = false,
 ): { cells: DamageCell[]; errors: string[]; isExpectedValue: boolean; hasUnsupportedTalentDamage: boolean } {
   if (mode === 'virtual') {
-    const { rows, errors, hasProbabilisticMainAttack } = evaluateDamageThreeAttributeRankTable({ entry, enemyCount: 1 }, pairs)
+    const { rows, errors, hasProbabilisticMainAttack } = evaluateDamageThreeAttributeRankTable(
+      { entry, enemyCount: 1, disablePenetration }, pairs,
+    )
     return {
       cells: rows.map(({ physical, arts }) => ({ physical, arts })),
       errors,
@@ -36,7 +39,7 @@ export function evaluateDamageThreeSkillRankRow(
   const cells = pairs.map(({ defense, resistance }): DamageCell => {
     const missing = { physical: null, arts: null }
     if (defense === null) return missing
-    const result = evaluateDamageThreeComparisonEntry(entry, { defense, resistance, enemyCount: 1 })
+    const result = evaluateDamageThreeComparisonEntry(entry, { defense, resistance, enemyCount: 1 }, {}, { disablePenetration })
     if (result.errors.length) {
       for (const error of result.errors) errors.add(error)
       return missing
