@@ -92,6 +92,7 @@ const OperatorWikiViewsPage = lazy(() => import('./components/OperatorWikiViewsP
 const SkillKMeansPage = lazy(() => import('./components/SkillKMeansPage').then((module) => ({ default: module.SkillKMeansPage })))
 const SkillDpsAnalysisPage = lazy(() => import('./components/SkillDpsAnalysisPage'))
 const SkillNumericStatisticsPage = lazy(() => import('./components/SkillNumericStatisticsPage'))
+const AttributeEffectCatalogPage = lazy(() => import('./components/AttributeEffectCatalogPage').then(module => ({ default: module.AttributeEffectCatalogPage })))
 const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then((module) => ({ default: module.SkillHdbscanPage })))
 const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
@@ -419,6 +420,10 @@ export default function App() {
           </PanelStateScope.Provider>
         ) : displayedRoute.view === 'damage-three-skill-attribute-matrix' ? (
           <DamageThreeSkillAttributeMatrixPage rows={classifiedRows} loading={loading} />
+        ) : displayedRoute.view === 'attribute-effects' ? (
+          <Suspense fallback={<p className="calculator-loading" role="status">属性限定効果一覧を読み込み中…</p>}>
+            <AttributeEffectCatalogPage rows={classifiedRows} loading={loading} />
+          </Suspense>
         ) : displayedRoute.view === 'physical-arts-comparison' ? (
           <PhysicalArtsComparisonPage />
         ) : displayedRoute.view === 'comparison' ? (

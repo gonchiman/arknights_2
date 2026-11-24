@@ -163,6 +163,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-three-attribute-comparison', 'damage-three-attribute-comparison'],
       ['damage-three-power-by-year', 'damage-three-power-by-year'],
       ['damage-three-skill-attribute-matrix', 'damage-three-skill-attribute-matrix'],
+      ['attribute-effects', 'attribute-effects'],
       ['physical-arts-comparison', 'physical-arts-comparison'],
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],

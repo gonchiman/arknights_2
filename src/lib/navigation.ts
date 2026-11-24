@@ -5,6 +5,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'damage-three-attribute-comparison'
   | 'damage-three-power-by-year'
   | 'damage-three-skill-attribute-matrix'
+  | 'attribute-effects'
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
   | 'enemy-defense-resistance-formula'
@@ -39,6 +40,7 @@ export const STANDARD_PAGE_TITLES = {
   'enemy-defense-resistance': '防御力と術耐性の対応',
   'td-maps': 'TDマップ詳細',
   'damage-three-skill-attribute-matrix': 'スキル別の物理・術ダメージ',
+  'attribute-effects': '属性限定効果一覧',
 } satisfies Partial<Record<AppRoute['view'], string>>
 
 export function getStandardPageTitle(view: AppRoute['view']): string | undefined {
@@ -76,6 +78,14 @@ export const DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM: NavigationItem = {
   id: 'damage-three-skill-attribute-matrix',
   href: '#/damage-3/skill-attribute-matrix',
   label: STANDARD_PAGE_TITLES['damage-three-skill-attribute-matrix'],
+  description: '',
+  section: 'analysis',
+}
+
+export const ATTRIBUTE_EFFECTS_ITEM: NavigationItem = {
+  id: 'attribute-effects',
+  href: '#/analysis/skills/attribute-effects',
+  label: STANDARD_PAGE_TITLES['attribute-effects'],
   description: '',
   section: 'analysis',
 }
@@ -376,6 +386,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   },
   DAMAGE_THREE_POWER_BY_YEAR_ITEM,
   DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM,
+  ATTRIBUTE_EFFECTS_ITEM,
   {
     id: 'physical-arts-comparison',
     href: '#/damage-3/physical-arts-comparison',
