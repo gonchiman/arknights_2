@@ -17,6 +17,16 @@ export interface SkillDpsUptimeResult {
   reason: string | null
 }
 
+interface SkillDpsFixedCycleTiming {
+  fullLockSeconds: number
+  rechargeSeconds: number
+  attackSeconds: number
+}
+
+type SkillDpsFixedCycleResult =
+  | { timing: SkillDpsFixedCycleTiming; reason: null }
+  | { timing: null; reason: string }
+
 interface ReviewedFixedCycle {
   operatorId: string
   skillIndex: number
@@ -109,7 +119,7 @@ const REVIEWED_FIXED_CYCLES: readonly ReviewedFixedCycle[] = [
   fixed('char_377_gdglow', 3, 'skchr_gdglow_3', 30, 35),
 ]
 
-const unavailable = (reason: string): SkillDpsUptimeResult => ({ percentage: null, reason })
+const unavailable = (reason: string): SkillDpsFixedCycleResult => ({ timing: null, reason })
 const equal = (left: number | null | undefined, right: number) => typeof left === 'number'
   && Number.isFinite(left) && Math.abs(left - right) <= 1e-9 * Math.max(1, Math.abs(right))
 
@@ -118,7 +128,7 @@ const equal = (left: number | null | undefined, right: number) => typeof left ==
  * startup; initial SP is never subtracted from a repeated recharge. This is not
  * inferred from DPS/period damage and does not simulate external SP or enemies.
  */
-export function resolveSkillDpsUptime({ entry, output, skill, durationSeconds, spCost }: SkillDpsUptimeInput): SkillDpsUptimeResult {
+export function resolveSkillDpsFixedCycle({ entry, output, skill, durationSeconds, spCost }: SkillDpsUptimeInput): SkillDpsFixedCycleResult {
   const structure = entry.structure
   const info = structure.basicInfo
   const raw = skill.skillLevels[entry.levelIndex]
@@ -175,6 +185,12 @@ export function resolveSkillDpsUptime({ entry, output, skill, durationSeconds, s
       return unavailable('スキル拘束時間未確認')
     }
   }
-  const percentage = attackSeconds / (capability.fullLockSeconds + spCost) * 100
-  return Number.isFinite(percentage) ? { percentage, reason: null } : unavailable('反復周期の確認なし')
+  return { timing: { fullLockSeconds: capability.fullLockSeconds, rechargeSeconds: spCost, attackSeconds }, reason: null }
+}
+
+export function resolveSkillDpsUptime(input: SkillDpsUptimeInput): SkillDpsUptimeResult {
+  const { timing, reason } = resolveSkillDpsFixedCycle(input)
+  if (!timing) return { percentage: null, reason }
+  const percentage = timing.attackSeconds / (timing.fullLockSeconds + timing.rechargeSeconds) * 100
+  return Number.isFinite(percentage) ? { percentage, reason: null } : { percentage: null, reason: '反復周期の確認なし' }
 }

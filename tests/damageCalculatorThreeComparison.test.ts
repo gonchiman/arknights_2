@@ -534,6 +534,55 @@ test('攻撃しない前半を除いた段階時間を使い、SPだけの時間
   assert.equal(pinecone.totalDamageReason, null)
 })
 
+test('周期平均DPSは同じ条件で計算した通常攻撃を加え、発動中と再充填中の対象数を個別に反映する', () => {
+  const surtr = entry('char_350_surtr', 2)
+  const options = { trust: 40, disablePenetration: true }
+  const active = evaluateDamageThreeComparisonEntry(surtr, common, {}, options)
+  const normal = evaluateDamageThreeComparisonEntry(surtr, common, {}, { ...options, normalAttack: true })
+  const cycle = evaluateDamageThreeComparisonEntry(surtr, common, {}, { ...options, includeCycleAverageDps: true })
+
+  assert.deepEqual(cycle.errors, [])
+  assert.deepEqual(normal.errors, [])
+  assert.equal(active.cycleAverageDps, null)
+  assert.equal(active.allTargetsCycleAverageDps, null)
+  assert.equal(active.actualTargetCount, 2)
+  assert.equal(normal.actualTargetCount, 1)
+  assert.ok(active.totalDamage !== null && active.allTargetsTotalDamage !== null)
+  assert.ok(normal.combinedDps !== null && normal.allTargetsCombinedDps !== null)
+  assert.equal(cycle.cycleAverageDps, (active.totalDamage + normal.combinedDps * 18) / 36)
+  assert.equal(cycle.allTargetsCycleAverageDps, (active.allTargetsTotalDamage + normal.allTargetsCombinedDps * 18) / 36)
+})
+
+test('周期平均DPSは攻撃しない前半も拘束時間に含め、初期SPを再充填時間から引かない', () => {
+  const mudrock = entry('char_311_mudrok', 3, 'active')
+  const cycle = evaluateDamageThreeComparisonEntry(mudrock, common, {}, { includeCycleAverageDps: true })
+  const normal = evaluateDamageThreeComparisonEntry(mudrock, common, {}, { normalAttack: true })
+
+  assert.deepEqual(cycle.errors, [])
+  assert.equal(cycle.durationSeconds, 20)
+  assert.ok(cycle.totalDamage !== null)
+  assert.ok(normal.combinedDps !== null)
+  assert.equal(cycle.cycleAverageDps, (cycle.totalDamage + normal.combinedDps * 25) / (10 + 20 + 25))
+})
+
+test('周期平均DPSは期間総ダメージや自然回復の周期を確定できない段階と無効な入力では空欄にする', () => {
+  const options = { includeCycleAverageDps: true }
+  const blaze = evaluateDamageThreeComparisonEntry(entry('char_017_huang', 3, 'normal'), common, {}, options)
+  const lappland = evaluateDamageThreeComparisonEntry(entry('char_140_whitew', 2), common, {}, options)
+  const invalid = evaluateDamageThreeComparisonEntry(entry('char_350_surtr', 2), { ...common, enemyCount: 0 }, {}, options)
+
+  assert.deepEqual(blaze.errors, [])
+  assert.ok(blaze.combinedDps! > 0)
+  assert.equal(blaze.totalDamage, null)
+  assert.deepEqual(lappland.errors, [])
+  assert.ok(lappland.totalDamage! > 0)
+  assert.ok(invalid.errors.length > 0)
+  for (const result of [blaze, lappland, invalid]) {
+    assert.equal(result.cycleAverageDps, null)
+    assert.equal(result.allTargetsCycleAverageDps, null)
+  }
+})
+
 test('配置後の強化・一撃だけの強化・命中数による変化を固定DPSの期間合計にしない', () => {
   for (const [id, skillIndex] of [
     ['char_274_astesi', 1], ['char_155_tiger', 2], ['char_1021_kroos2', 2],
