@@ -5,6 +5,7 @@ import { buildSubProfessionOptions, EMPTY_OPERATOR_FILTERS, hasActiveOperatorFil
 import type { TdDeploymentRosterEntry } from '../lib/tdDeploymentRoster'
 import { Filters } from './Filters'
 import { PageOutputHeader } from './PageLayout'
+import { TdRecentAllies } from './TdRecentAllies'
 import './TdDeploymentPicker.css'
 
 const PAGE_SIZE = 12
@@ -17,9 +18,10 @@ function normalizeName(name: string) {
     .replace(/[ァ-ヶ]/g, kana => String.fromCharCode(kana.charCodeAt(0) - 0x60))
 }
 
-export function TdDeploymentPicker({ active, operators, error, onRetry, onClose, onSelect }: {
+export function TdDeploymentPicker({ active, operators, recentOperators, error, onRetry, onClose, onSelect }: {
   active: boolean
   operators: readonly TdDeploymentRosterEntry[] | null
+  recentOperators: readonly TdDeploymentRosterEntry[]
   error: string
   onRetry: () => void
   onClose: () => void
@@ -56,6 +58,7 @@ export function TdDeploymentPicker({ active, operators, error, onRetry, onClose,
   const currentPage = Math.min(page, lastPage)
   const start = currentPage * PAGE_SIZE
   const visible = matches.slice(start, start + PAGE_SIZE)
+  const hasFilters = hasActiveOperatorFilters(filters)
 
   function changeFilters(next: FilterState) {
     setFilters(next)
@@ -70,11 +73,17 @@ export function TdDeploymentPicker({ active, operators, error, onRetry, onClose,
     }
   }
 
+  function chooseOperator(operator: TdDeploymentRosterEntry, button: HTMLButtonElement) {
+    lastChoice.current = button
+    onSelect(operator)
+  }
+
   const reset = () => changeFilters(EMPTY_OPERATOR_FILTERS)
   const picker = <div className="td-deploy-picker" onKeyDown={selectFromSearch}>
+    {!hasFilters && <TdRecentAllies operators={recentOperators} onSelect={chooseOperator} />}
     <div className="td-deploy-filter-panel">
       <PageOutputHeader segments={['地形', 'オペレーター配置', 'オペレーターの絞り込み']}
-        actions={<button type="button" className="filter-reset-button" disabled={!hasActiveOperatorFilters(filters)} onClick={reset}>条件をリセット</button>}>
+        actions={<button type="button" className="filter-reset-button" disabled={!hasFilters} onClick={reset}>条件をリセット</button>}>
         <h4>オペレーターの絞り込み</h4>
       </PageOutputHeader>
       <Filters value={filters} professionOptions={PROFESSION_OPTIONS} subProfessionOptions={branches}
@@ -87,7 +96,7 @@ export function TdDeploymentPicker({ active, operators, error, onRetry, onClose,
       </div>
       <div ref={results} className="td-deploy-search-results">
         {visible.map(operator => <button key={operator.id} type="button" className="button secondary"
-          onClick={event => { lastChoice.current = event.currentTarget; onSelect(operator) }}>
+          onClick={event => chooseOperator(operator, event.currentTarget)}>
           <strong>{operator.name}</strong>
           <span>{[operator.rarity > 0 && `★${operator.rarity}`, operator.subProfessionName, TD_POSITION_LABEL[operator.position]]
             .filter(Boolean).join(' · ')}</span>

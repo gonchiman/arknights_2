@@ -55,6 +55,25 @@
 
 .td-deploy-position { margin: 0; }
 
+.td-recent-allies {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.td-recent-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.td-recent-names .button {
+  max-width: 100%;
+  padding-inline: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .td-deploy-switch {
   display: inline-flex;
   align-items: center;
@@ -110,4 +129,5 @@
 
 @media (max-width: 760px), (pointer: coarse) {
   .td-deploy-switch { min-height: 44px; }
+  .td-recent-names .button { min-height: 44px; }
 }
