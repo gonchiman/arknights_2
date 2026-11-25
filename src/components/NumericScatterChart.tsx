@@ -1,5 +1,5 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { getHpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
+import { useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { getHpChartValueAxis, type HpChartValueAxis } from '../lib/goldenglowTargetSwitchHpAxis'
 import './NumericScatterChart.css'
 
 export interface NumericScatterPoint { id: string; x: number; y: number }
@@ -11,6 +11,10 @@ export interface NumericScatterChartProps {
   pointMode?: 'count' | 'overplot'
   fit?: { slope: number; intercept: number } | null
   showFit?: boolean
+  axes?: { x: HpChartValueAxis; y: HpChartValueAxis }
+  renderPoint?: (point: NumericScatterPoint, x: number, y: number) => ReactNode
+  description?: string
+  showLegend?: boolean
   imageSize?: { width: number; height: number }
   /** Compatibility presentation for the existing DPS chart and its PNG exports. */
   appearance?: 'numeric' | 'skill-dps'
@@ -51,6 +55,7 @@ function paddedAxis(values: readonly number[], pixels: number, radius: number) {
 /** No point selection, tooltips, jitter, pan or zoom. Controls belong to the owning page. */
 export function NumericScatterChart({
   points, xLabel, yLabel, pointMode = 'count', fit = null, showFit = false, imageSize, appearance = 'numeric',
+  axes, renderPoint, description, showLegend = true,
 }: NumericScatterChartProps) {
   const id = useId()
   const container = useRef<HTMLDivElement>(null)
@@ -87,10 +92,10 @@ export function NumericScatterChart({
   const right = Math.max(left + 1, width - 20)
   const top = 29
   const bottom = height - (forImage ? 28 : 53)
-  const xAxis = useMemo(() => legacy || !values.length ? getHpChartValueAxis(values.map(point => point.x))
-    : paddedAxis(values.map(point => point.x), right - left, maximumRadius), [values, legacy, right, left, maximumRadius])
-  const yAxis = useMemo(() => legacy || !values.length ? getHpChartValueAxis(values.map(point => point.y))
-    : paddedAxis(values.map(point => point.y), bottom - top, maximumRadius), [values, legacy, bottom, maximumRadius])
+  const xAxis = useMemo(() => axes?.x ?? (legacy || !values.length ? getHpChartValueAxis(values.map(point => point.x))
+    : paddedAxis(values.map(point => point.x), right - left, maximumRadius)), [axes?.x, values, legacy, right, left, maximumRadius])
+  const yAxis = useMemo(() => axes?.y ?? (legacy || !values.length ? getHpChartValueAxis(values.map(point => point.y))
+    : paddedAxis(values.map(point => point.y), bottom - top, maximumRadius)), [axes?.y, values, legacy, bottom, maximumRadius])
   const x = (value: number) => left + (value - xAxis.lowerLimit) / (xAxis.upperLimit - xAxis.lowerLimit) * (right - left)
   const y = (value: number) => bottom - (value - yAxis.lowerLimit) / (yAxis.upperLimit - yAxis.lowerLimit) * (bottom - top)
   const ticks = (axis: typeof xAxis) => width >= 430 || axis.yTicks.length <= 4
@@ -113,9 +118,9 @@ export function NumericScatterChart({
           style={legacy ? imageSize : { ...imageSize, width, height }}
           role="img" aria-labelledby={`${id}-title`} aria-describedby={`${id}-description`} focusable="false">
           <title id={`${id}-title`}>{`${xLabel}と${yLabel}`}</title>
-          <desc id={`${id}-description`}>横軸は{xLabel}、縦軸は{yLabel}。{values.length}件のスキルを点で表示します。
+          <desc id={`${id}-description`}>{description ?? <>横軸は{xLabel}、縦軸は{yLabel}。{values.length}件のスキルを点で表示します。
             {useCounts ? `同じ座標のスキルは${groups.length}個の点にまとめ、点の面積を件数に比例させています。` : ''}
-            {fitEnds ? '実線は観測範囲内の単回帰直線です。' : ''}</desc>
+            {fitEnds ? '実線は観測範囲内の単回帰直線です。' : ''}</>}</desc>
           <defs><clipPath id={`${id}-clip`}><rect x={left} y={top} width={right - left} height={bottom - top} /></clipPath></defs>
           {ticks(yAxis).map(tick => <g key={`y:${tick}`}>
             <line className={`${prefix}-grid`} x1={left} x2={right} y1={y(tick)} y2={y(tick)} />
@@ -127,15 +132,19 @@ export function NumericScatterChart({
           </g>)}
           <line className={`${prefix}-axis`} x1={left} x2={left} y1={top} y2={bottom} />
           <line className={`${prefix}-axis`} x1={left} x2={right} y1={bottom} y2={bottom} />
-          {plotted.map(point => <circle className={`${prefix}-point`} key={point.id} cx={x(point.x)} cy={y(point.y)}
-            data-count={useCounts ? point.count : undefined}
-            r={useCounts ? radiusFactor * Math.sqrt(point.count ?? 1) : 4} />)}
+          {plotted.map(point => {
+            const cx = x(point.x), cy = y(point.y)
+            const mark = renderPoint?.(point, cx, cy)
+            return mark == null ? <circle className={`${prefix}-point`} key={point.id} cx={cx} cy={cy}
+              data-count={useCounts ? point.count : undefined}
+              r={useCounts ? radiusFactor * Math.sqrt(point.count ?? 1) : 4} /> : <g key={point.id}>{mark}</g>
+          })}
           {fitEnds && <g clipPath={`url(#${id}-clip)`}><line className={`${prefix}-fit`}
             x1={x(fitEnds.min)} x2={x(fitEnds.max)} y1={y(fitEnds.first)} y2={y(fitEnds.last)} /></g>}
           <text className={`${prefix}-label`} x={left} y={14}>{yLabel}</text>
           {!forImage && <text className={`${prefix}-label`} x={(left + right) / 2} y={height - 7} textAnchor="middle">{xLabel}</text>}
         </svg>
-        {!forImage && <div className={`${prefix}-legend`} aria-label="凡例">
+        {!forImage && showLegend && <div className={`${prefix}-legend`} aria-label="凡例">
           {useCounts ? <>
             <span>件数</span>
             {legendCounts.map(value => {

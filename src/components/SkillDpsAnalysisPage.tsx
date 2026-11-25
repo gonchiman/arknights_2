@@ -13,7 +13,7 @@ import type { SkillDpsRegressionPredictor } from '../lib/skillDpsMultipleRegress
 import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
-import { PageViewSwitch, viewLabel, type TableChartView } from './PageViewSwitch'
+import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
 import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
 import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
 import { SkillDpsAnalysisOverview } from './SkillDpsAnalysisOverview'
@@ -86,6 +86,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const axisSelect = useRef<HTMLSelectElement>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [view, setView] = useState<TableChartView>('chart')
+  const [combinationView, setCombinationView] = useState<TableChartView>('table')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
   const [includeUptime, setIncludeUptime] = useState(true)
   const axes = includeUptime ? SKILL_DPS_ANALYSIS_AXES : AXES_WITHOUT_UPTIME
@@ -125,7 +126,9 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const rarities = [...new Set(rows.map(row => row.rarity))].sort((left, right) => right - left)
   const sourceError = error || calculation.error
   const status = loading ? '読み込み中…' : busy ? '計算中…' : pending ? '未反映' : dataset ? '計算済み' : ''
-  const detailFormat = detailMode === 'indicator' ? [viewLabel(axes, axis), viewLabel(VIEWS, view)] : ['表']
+  const detailFormat = detailMode === 'indicator'
+    ? [viewLabel(axes, axis), viewLabel(VIEWS, view)]
+    : [detailMode === 'combinations' ? viewLabel(TABLE_CHART_VIEWS, combinationView) : '表']
 
   function changeDraft<Key extends keyof DraftConfig>(key: Key, value: DraftConfig[Key]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -255,7 +258,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
         </div>}
         {openedModelModes.combinations && <div hidden={detailMode !== 'combinations'} aria-busy={busy}>
           <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} includeUptime={includeUptime}
-            onOpenRegression={openCombinationRegression} />
+            view={combinationView} onViewChange={setCombinationView} onOpenRegression={openCombinationRegression} />
         </div>}
         {analysis && <div className="skill-dps-result" aria-busy={busy}>
           <div className="skill-dps-toolbar">
