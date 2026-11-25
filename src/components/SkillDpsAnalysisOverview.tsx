@@ -65,7 +65,7 @@ export function SkillDpsAnalysisOverview({ dataset, metric, onSelectAxis }: {
         </tr></thead>
         <tbody>{orderedRows.map(({ axis, label, count, correlation, rSquared }) => <tr key={axis}>
           <th scope="row">
-            <button type="button" className="skill-dps-overview-indicator" onClick={() => onSelectAxis(axis)}>{label}</button>
+            <button type="button" className="skill-dps-table-action" onClick={() => onSelectAxis(axis)}>{label}</button>
           </th>
           <td>{COUNT.format(count)}</td>
           <td>{correlation === null ? '—' : CORRELATION.format(correlation)}</td>

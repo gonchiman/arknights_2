@@ -68,6 +68,19 @@ test('数値の説明変数を2種類以上求める', () => {
   const unsupported = analyzeSkillDpsMultipleRegression(data, ['duration', 'maxTargets' as SkillDpsRegressionPredictor], 'direct')
   assert.equal(unsupported.fit, null)
   assert.match(unsupported.error!, /数値の説明変数/)
+
+  const candidates = ['duration', 'spCost', 'attack'] as const
+  for (const predictors of [['duration'], ['duration', 'duration']] as const) {
+    assert.match(analyzeSkillDpsMultipleRegression(data, predictors, 'direct', candidates).error!, /異なる説明変数を2つ以上/)
+  }
+  const outsidePool = analyzeSkillDpsMultipleRegression(data, ['duration', 'interval'], 'direct', candidates)
+  assert.match(outsidePool.error!, /組み合わせ評価の候補から/)
+  const invalidPool = analyzeSkillDpsMultipleRegression(data, DEFAULT_SKILL_DPS_REGRESSION_PREDICTORS, 'direct',
+    ['duration', 'spCost', 'maxTargets' as SkillDpsRegressionPredictor])
+  assert.match(invalidPool.error!, /候補が無効/)
+  const duplicatedPool = analyzeSkillDpsMultipleRegression(data, DEFAULT_SKILL_DPS_REGRESSION_PREDICTORS, 'direct',
+    ['duration', 'spCost', 'duration'])
+  assert.match(duplicatedPool.error!, /候補が無効/)
 })
 
 test('揃ったスキルが不足する場合と説明変数が線形従属する場合の使用件数を返す', () => {
@@ -107,6 +120,8 @@ test('組み合わせを比較するときは全候補と選択中のDPSが揃�
     assert.equal(result.failedCount, 0)
     assert.equal(result.observationCount, 6)
     assert.equal(unfixed.observationCount, 7)
+    assert.ok(unfixed.fit)
+    assert.notDeepEqual(result.models[0].varianceInflationFactors, unfixed.fit.varianceInflationFactors)
     assert.deepEqual(result.models.map(model => model.predictors), [
       ['duration', 'spCost'], ['duration', 'attack'], ['spCost', 'attack'], ['duration', 'spCost', 'attack'],
     ])
@@ -114,10 +129,15 @@ test('組み合わせを比較するときは全候補と選択中のDPSが揃�
       const fixed = analyzeSkillDpsMultipleRegression(fixedData, model.predictors, metric)
       assert.equal(result.observationCount, fixed.observationCount)
       assert.ok(fixed.fit)
+      assert.deepEqual(analyzeSkillDpsMultipleRegression(data, model.predictors, metric, candidates), fixed)
       close(model.adjustedRSquared, fixed.fit.adjustedRSquared)
       assert.deepEqual(model.varianceInflationFactors, fixed.fit.varianceInflationFactors)
       assert.equal(model.maxVif, Math.max(...model.varianceInflationFactors))
     }
+
+    const reversed = [...candidates].reverse()
+    const opened = analyzeSkillDpsMultipleRegression(data, reversed, metric, candidates)
+    assert.deepEqual(opened, analyzeSkillDpsMultipleRegression(fixedData, reversed, metric))
   }
 })
 

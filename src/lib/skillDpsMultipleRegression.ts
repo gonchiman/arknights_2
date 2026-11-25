@@ -39,8 +39,9 @@ export function analyzeSkillDpsMultipleRegression(
   dataset: SkillDpsAnalysisDataset,
   predictors: readonly SkillDpsRegressionPredictor[],
   metric: SkillDpsAnalysisMetric,
+  cohortCandidates?: readonly SkillDpsRegressionPredictor[],
 ): SkillDpsMultipleRegressionResult {
-  const cohort = prepareRegressionCohort(dataset, predictors, metric)
+  const cohort = prepareRegressionCohort(dataset, predictors, metric, cohortCandidates)
   if (cohort.error !== null) return { fit: null, observationCount: 0, error: cohort.error }
   const { predictorValues, dpsValues, labels } = cohort
   const observationCount = dpsValues.length
@@ -96,6 +97,7 @@ function prepareRegressionCohort(
   dataset: SkillDpsAnalysisDataset,
   predictors: readonly SkillDpsRegressionPredictor[],
   metric: SkillDpsAnalysisMetric,
+  cohortCandidates: readonly SkillDpsRegressionPredictor[] = predictors,
 ): { error: string } | { error: null; labels: string[]; predictorValues: number[][]; dpsValues: number[] } {
   if (predictors.length < 2 || new Set(predictors).size !== predictors.length) {
     return { error: '異なる説明変数を2つ以上選んでください。' }
@@ -104,15 +106,25 @@ function prepareRegressionCohort(
   if (!labels.every(label => label !== undefined)) {
     return { error: '重回帰に対応する数値の説明変数を選んでください。' }
   }
+  const columns = predictors.map(predictor => cohortCandidates.indexOf(predictor))
+  if (cohortCandidates !== predictors) {
+    if (new Set(cohortCandidates).size !== cohortCandidates.length
+      || !cohortCandidates.every(candidate => SKILL_DPS_REGRESSION_PREDICTORS.some(([key]) => key === candidate))) {
+      return { error: '組み合わせ評価の候補が無効です。' }
+    }
+    if (columns.some(index => index < 0)) {
+      return { error: '説明変数を組み合わせ評価の候補から選んでください。' }
+    }
+  }
 
   const predictorValues: number[][] = []
   const dpsValues: number[] = []
   for (const observation of dataset.observations) {
     const dps = metric === 'direct' ? observation.directDps : observation.combinedDps
     if (dps === null || !Number.isFinite(dps)) continue
-    const values = predictors.map(predictor => getSkillDpsAnalysisAxisValue(observation, predictor))
+    const values = cohortCandidates.map(candidate => getSkillDpsAnalysisAxisValue(observation, candidate))
     if (!values.every((value): value is number => typeof value === 'number')) continue
-    predictorValues.push(values)
+    predictorValues.push(columns.map(index => values[index]))
     dpsValues.push(dps)
   }
   if (!dpsValues.length) {
