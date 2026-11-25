@@ -52,6 +52,24 @@ function commonValue<T>(entries: readonly DamageThreeAttributeEntry[], select: (
   return entries.every(entry => select(entry) === first) ? first : null
 }
 
+function ResistanceSelector({ pairs, value, onChange }: {
+  pairs: readonly EnemyResistanceThreshold[]
+  value: number
+  onChange: (resistance: number) => void
+}) {
+  const name = useId()
+  return <fieldset className="dc3-matrix-option-group enemy-chart-visibility">
+    <legend>表示する術耐性</legend>
+    <div>
+      {pairs.map(({ resistance }) => <label key={resistance} className={value === resistance ? 'active' : ''}>
+        <input type="radio" name={name} value={resistance} checked={value === resistance}
+          aria-label={`術耐性 ${resistance}`} onChange={() => onChange(resistance)} />
+        {resistance}
+      </label>)}
+    </div>
+  </fieldset>
+}
+
 export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: { rows: SkillRecord[]; loading: boolean }) {
   const [scope, setScope] = useState<EnemyAggregationScope>('main')
   const [mode, setMode] = useState<Mode>('virtual')
@@ -66,6 +84,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [selectedResistance, setSelectedResistance] = useState(0)
+  const [histogramResistance, setHistogramResistance] = useState(60)
   const tabId = useId()
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const { data } = aggregation
@@ -98,7 +117,6 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const format = statsActive
     ? [viewLabel(STATISTIC_VIEWS, statisticView), viewLabel(TABLE_CHART_VIEWS, statisticFormat)]
     : `表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`
-  const StatisticsOutput = statisticFormat === 'table' ? DamageThreeSkillRankStatisticsTable : DamageThreeSkillRankStatisticsChart
   const pages = Math.ceil(filtered.length / PAGE_SIZE)
   const activePage = Math.min(page, Math.max(0, pages - 1))
   const start = activePage * PAGE_SIZE
@@ -169,18 +187,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           : !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
             <div className="dc3-matrix-display-options">
-              {!statsActive && <fieldset className="dc3-matrix-option-group enemy-chart-visibility">
-                <legend>表示する術耐性</legend>
-                <div>
-                  {distribution.resistanceThresholds.map(({ resistance }) => (
-                    <label key={resistance} className={selectedResistance === resistance ? 'active' : ''}>
-                      <input type="radio" name={`${tabId}-resistance`} value={resistance} checked={selectedResistance === resistance}
-                        aria-label={`術耐性 ${resistance}`} onChange={() => changeResistance(resistance)} />
-                      {resistance}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>}
+              {!statsActive && <ResistanceSelector pairs={distribution.resistanceThresholds}
+                value={selectedResistance} onChange={changeResistance} />}
               <div className="dc3-matrix-option-group">
                 {statsActive ? <>
                   <span className="dc3-matrix-option-label">統計の表示</span>
@@ -208,10 +216,16 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 <span className="dc3-matrix-option-label">表示形式</span>
                 <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />
               </div>}
+              {statsActive && statisticView === 'distribution' && statisticFormat === 'chart' &&
+                <ResistanceSelector pairs={distribution.resistanceThresholds}
+                  value={histogramResistance} onChange={setHistogramResistance} />}
             </div>
             {statsActive ? (
-              statistics ? <StatisticsOutput rows={statistics} view={statisticView} advantageUnit={advantageUnit} />
-                : <p role="status">主攻撃のダメージを集計中…</p>
+              !statistics ? <p role="status">主攻撃のダメージを集計中…</p>
+                : statisticFormat === 'chart'
+                  ? <DamageThreeSkillRankStatisticsChart rows={statistics} view={statisticView}
+                      advantageUnit={advantageUnit} resistance={histogramResistance} />
+                  : <DamageThreeSkillRankStatisticsTable rows={statistics} view={statisticView} advantageUnit={advantageUnit} />
             ) : <>
               <div className="dc3-matrix-table-heading">
                 <h2>{mode === 'virtual' ? '出現順位別の主攻撃ダメージ' : '出現順位別の直接ダメージ内訳'}</h2>
