@@ -6,6 +6,7 @@ import {
   EMPTY_SKILL_DPS_CROSS_VALIDATION_RUN,
   SkillDpsCrossValidationRunner, type SkillDpsCrossValidationRunState,
 } from '../lib/skillDpsCrossValidationRunner'
+import { HelpPopover } from './HelpPopover'
 import { SkillDpsCombinationDialog } from './SkillDpsCombinationDialog'
 import './SkillDpsCrossValidation.css'
 
@@ -108,8 +109,18 @@ export function SkillDpsCrossValidation({ dataset, candidates, metric, observati
         <colgroup><col /><col className="skill-dps-cross-validation-number" /><col className="skill-dps-cross-validation-number" /></colgroup>
         <thead><tr>
           <th scope="col">組み合わせの選び方</th>
-          <th scope="col">MAE<span>（DPS）</span></th>
-          <th scope="col">RMSE<span>（DPS）</span></th>
+          <th scope="col" aria-label="MAE（DPS）">
+            <HelpPopover label="MAEの意味" triggerText="MAE" mode="dialog" title="MAE（平均絶対誤差）">
+              <p>各スキルの予測DPSとDC3の計算値の差の絶対値を平均した値です。小さいほど、平均的なずれが小さくなります。</p>
+            </HelpPopover>
+            <span className="skill-dps-cross-validation-unit">（DPS）</span>
+          </th>
+          <th scope="col" aria-label="RMSE（DPS）">
+            <HelpPopover label="RMSEの意味" triggerText="RMSE" mode="dialog" title="RMSE（二乗平均平方根誤差）">
+              <p>予測DPSとDC3の計算値の差を二乗して平均し、平方根を取った値です。大きなずれを重く見る指標で、小さいほど予測誤差が小さいと評価します。</p>
+            </HelpPopover>
+            <span className="skill-dps-cross-validation-unit">（DPS）</span>
+          </th>
         </tr></thead>
         <tbody>{METHODS.map(([key, label]) => {
           const errors = result.methods[key]
