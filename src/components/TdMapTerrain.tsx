@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { getMapEntrances } from '../lib/mapWaves'
 import { formatTdCell } from '../lib/tdCoordinates'
+import { canDeployAt } from '../lib/tdDeployment'
 import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdEnemyRoutes'
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
 import { TdDeploymentBoard } from './TdDeploymentBoard'
@@ -20,9 +22,9 @@ function tileCenter({ row, col }: MapPosition, rows: number) {
   return { x: (col + 0.5) * 32, y: (rows - row - 0.5) * 32 }
 }
 
-function RouteOverlay({ rows, geometry }: { rows: number; geometry: Geometry }) {
+function RouteLinks({ rows, links }: { rows: number; links: Geometry['links'] }) {
   return <g className="td-route-overlay" aria-hidden="true">
-    {geometry.links.map(({ from, to }, i) => {
+    {links.map(({ from, to }, i) => {
       const a = tileCenter(from, rows)
       const b = tileCenter(to, rows)
       const angle = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI
@@ -32,10 +34,46 @@ function RouteOverlay({ rows, geometry }: { rows: number; geometry: Geometry }) 
         <path d="M-3 -3.5 L4 0 L-3 3.5 Z" transform={`translate(${length * 0.62} 0)`} className="td-route-arrow" />
       </g>
     })}
-    {geometry.markers.map(({ position, labels, kind }) => {
+  </g>
+}
+
+function RouteOverlay({ detail, geometry }: { detail: MapDetail; geometry: Geometry }) {
+  const rows = detail.grid.length
+  const entrances = useMemo(() => getMapEntrances(detail), [detail])
+  const deployment = useTdDeployment()
+  return <g className="td-route-overlay" aria-hidden="true">
+    {geometry.markers.map(({ position, labels: routeLabels, kind }) => {
       const { x, y } = tileCenter(position, rows)
+      const entrance = kind === 'start' && entrances.find(cell => cell.row === position.row && cell.col === position.col)
+      const sharesEntrance = entrance && (routeLabels[0] === entrance.label || routeLabels[0] === '始')
+      const labels = sharesEntrance ? routeLabels.slice(1) : routeLabels
+      if (!labels.length) return null
+      const markerKind = sharesEntrance ? (labels.includes('終') ? 'end' : 'waypoint') : kind
+      const gridRow = rows - 1 - position.row
+      const occupied = deployment?.placements.some(unit => unit.row === gridRow && unit.col === position.col)
+      const candidate = deployment?.targeting && deployment.selectedOperator
+        && canDeployAt(detail, deployment.selectedOperator, gridRow, position.col) && !occupied
+      const compact = sharesEntrance || occupied || candidate
+      const labelsPerLine = compact ? Math.max(3, Math.ceil(labels.length / 2)) : 3
       const lines = []
-      for (let i = 0; i < labels.length; i += 3) lines.push(labels.slice(i, i + 3).join('·'))
+      for (let i = 0; i < labels.length; i += labelsPerLine) lines.push(labels.slice(i, i + labelsPerLine).join('·'))
+      if (compact) {
+        return <g key={`${x}-${y}`} className={`td-route-marker td-route-marker-${markerKind} td-route-marker-compact`}
+          transform={`translate(${x} ${y})`}>
+          {lines.map((line, index) => {
+            // Keep the entrance badge at upper left and a candidate + at lower right readable.
+            const available = index === 0 && entrance ? 23 - entrance.label.length * 6 : index > 0 && candidate ? 18 : 26
+            const width = Math.min(available, Math.max(10, line.length * 4.5 + 4))
+            const top = index === 0 ? -15 : 6
+            const left = index > 0 && candidate ? -15 : 15 - width
+            return <g key={index}>
+              <rect x={left} y={top} width={width} height={9} rx={2} />
+              <text x={left + width / 2} y={top + 4.5} textAnchor="middle" dy=".35em"
+                textLength={line.length * 4.5 > width - 3 ? width - 3 : undefined} lengthAdjust="spacingAndGlyphs">{line}</text>
+            </g>
+          })}
+        </g>
+      }
       const width = kind === 'waypoint' && labels.length === 1 ? 18 : 28
       const height = Math.min(30, Math.max(18, lines.length * 9 + 2))
       return <g key={`${x}-${y}`} className={`td-route-marker td-route-marker-${kind}`} transform={`translate(${x} ${y})`}>
@@ -60,9 +98,10 @@ function RouteBoard({ detail, name, selection }: {
     `${labels.join('・')}は${formatTdCell(detail.grid[0].length, detail.grid.length - 1 - position.row, position.col)}`)
   return <>
     <TdDeploymentBoard detail={detail} name={name} markedEntrance={selection.route.startPosition ?? undefined}
+      routeLinks={<RouteLinks rows={detail.grid.length} links={geometry.links} />}
       routeDescription={[...description, ...notes].join('。')}
       routeLegend={geometry.links.length > 0 && <span><i className="td-route-legend-line" aria-hidden="true" />経由地点の接続</span>}>
-      <RouteOverlay rows={detail.grid.length} geometry={geometry} />
+      <RouteOverlay detail={detail} geometry={geometry} />
     </TdDeploymentBoard>
     {notes.length > 0 && <p className="td-route-events" aria-live="polite">{notes.join(' ／ ')}</p>}
   </>

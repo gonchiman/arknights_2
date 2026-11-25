@@ -18,6 +18,8 @@
 .td-route-marker-start rect { fill: #994f48; stroke: #fff; stroke-width: 1; }
 .td-route-marker-end rect { fill: #436e80; stroke: #fff; stroke-width: 1; }
 .td-route-marker-start text, .td-route-marker-end text { fill: #fff; }
+.td-route-marker-compact rect { stroke-width: 1; }
+.td-route-marker-compact text { font-size: 8px; }
 .map-board-legend i.td-route-legend-line {
   width: 18px;
   height: 0;
