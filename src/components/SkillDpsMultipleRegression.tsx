@@ -18,9 +18,10 @@ export interface SkillDpsRegressionSelection {
   cohortCandidates?: readonly SkillDpsRegressionPredictor[]
 }
 
-export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, sectionRef }: {
+export function SkillDpsMultipleRegression({ dataset, metric, includeUptime, initialSelection, sectionRef }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
+  includeUptime: boolean
   initialSelection?: SkillDpsRegressionSelection
   sectionRef?: Ref<HTMLElement>
 }) {
@@ -28,10 +29,16 @@ export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, 
   const [applied, setApplied] = useState<SkillDpsRegressionSelection>(() =>
     initialSelection ?? { predictors: DEFAULT_SKILL_DPS_REGRESSION_PREDICTORS })
   const [draft, setDraft] = useState(applied.predictors)
-  const pending = draft.join() !== applied.predictors.join()
-  const canFit = draft.length >= 2
-  const result = useMemo(() => analyzeSkillDpsMultipleRegression(dataset, applied.predictors, metric, applied.cohortCandidates),
-    [dataset, applied, metric])
+  const activeSelection = useMemo(() => includeUptime ? applied : {
+    predictors: applied.predictors.filter(key => key !== 'uptime'),
+    cohortCandidates: applied.cohortCandidates?.filter(key => key !== 'uptime'),
+  }, [applied, includeUptime])
+  const visibleDraft = includeUptime ? draft : draft.filter(key => key !== 'uptime')
+  const options = SKILL_DPS_REGRESSION_PREDICTORS.filter(([key]) => includeUptime || key !== 'uptime')
+  const pending = visibleDraft.join() !== activeSelection.predictors.join()
+  const canFit = visibleDraft.length >= 2
+  const result = useMemo(() => analyzeSkillDpsMultipleRegression(dataset, activeSelection.predictors, metric,
+    activeSelection.cohortCandidates), [dataset, activeSelection, metric])
   const fit = result.fit
 
   function togglePredictor(predictor: SkillDpsRegressionPredictor) {
@@ -41,7 +48,10 @@ export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, 
 
   function calculate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (canFit && pending) setApplied({ predictors: draft })
+    if (canFit && pending) {
+      setDraft(visibleDraft)
+      setApplied({ predictors: visibleDraft })
+    }
   }
 
   return <section ref={sectionRef} tabIndex={-1} className="skill-dps-multiple-regression" aria-label="重回帰分析">
@@ -49,8 +59,8 @@ export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, 
       <fieldset className="skill-dps-regression-predictors">
         <legend>説明変数</legend>
         <div>
-          {SKILL_DPS_REGRESSION_PREDICTORS.map(([key, label]) => <label key={key}>
-            <input type="checkbox" value={key} checked={draft.includes(key)} onChange={() => togglePredictor(key)} />
+          {options.map(([key, label]) => <label key={key}>
+            <input type="checkbox" value={key} checked={visibleDraft.includes(key)} onChange={() => togglePredictor(key)} />
             <span>{label}</span>
           </label>)}
         </div>
@@ -60,7 +70,7 @@ export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, 
         <span id={statusId} role="status" className={`skill-dps-status${pending ? ' pending' : ''}`}>
           {!canFit ? '2項目以上を選択' : pending ? '未反映' : ''}
         </span>
-        {applied.cohortCandidates && <span className="skill-dps-fixed-condition">組み合わせ評価と同じ対象</span>}
+        {activeSelection.cohortCandidates && <span className="skill-dps-fixed-condition">組み合わせ評価と同じ対象</span>}
       </div>
     </form>
     {result.error && <p className="skill-dps-error" role="alert">{result.error}</p>}
@@ -75,7 +85,7 @@ export function SkillDpsMultipleRegression({ dataset, metric, initialSelection, 
           <thead><tr>
             <th scope="col">説明変数</th><th scope="col">係数</th><th scope="col">標準化係数</th><th scope="col">VIF</th>
           </tr></thead>
-          <tbody>{applied.predictors.map((predictor, index) => <tr key={predictor}>
+          <tbody>{activeSelection.predictors.map((predictor, index) => <tr key={predictor}>
             <th scope="row">{SKILL_DPS_ANALYSIS_X_LABELS[predictor]}</th>
             <td>{COEFFICIENT.format(fit.coefficients[index])}</td>
             <td>{COEFFICIENT.format(fit.standardizedCoefficients[index])}</td>

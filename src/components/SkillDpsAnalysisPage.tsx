@@ -32,6 +32,7 @@ interface Props {
 const TABS = [['overview', '分析一覧'], ['detail', '分析詳細']] as const
 const DETAIL_MODES = [['indicator', '指標別'], ['multiple', '重回帰'], ['combinations', '組み合わせ評価']] as const
 const VIEWS = [['chart', 'グラフ'], ['table', '表']] as const
+const AXES_WITHOUT_UPTIME = SKILL_DPS_ANALYSIS_AXES.filter(([key]) => key !== 'uptime')
 const X_LABELS = SKILL_DPS_ANALYSIS_X_LABELS
 const METRIC_LABELS: Record<SkillDpsAnalysisMetric, string> = { direct: '直接DPS', combined: '合計DPS' }
 const DAMAGE_TYPES: readonly (readonly [SkillDpsDamageType, string])[] = [
@@ -86,6 +87,8 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [view, setView] = useState<TableChartView>('chart')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
+  const [includeUptime, setIncludeUptime] = useState(true)
+  const axes = includeUptime ? SKILL_DPS_ANALYSIS_AXES : AXES_WITHOUT_UPTIME
   const [showFit, setShowFit] = useState(true)
   const [imageSnapshot, setImageSnapshot] = useState<SkillDpsChartImageSnapshot | null>(null)
   const [draft, setDraft] = useState<DraftConfig>(() => ({
@@ -122,7 +125,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const rarities = [...new Set(rows.map(row => row.rarity))].sort((left, right) => right - left)
   const sourceError = error || calculation.error
   const status = loading ? '読み込み中…' : busy ? '計算中…' : pending ? '未反映' : dataset ? '計算済み' : ''
-  const detailFormat = detailMode === 'indicator' ? [viewLabel(SKILL_DPS_ANALYSIS_AXES, axis), viewLabel(VIEWS, view)] : ['表']
+  const detailFormat = detailMode === 'indicator' ? [viewLabel(axes, axis), viewLabel(VIEWS, view)] : ['表']
 
   function changeDraft<Key extends keyof DraftConfig>(key: Key, value: DraftConfig[Key]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -170,6 +173,13 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
             onChange={event => setMetric(event.target.value as SkillDpsAnalysisMetric)}>
             {Object.entries(METRIC_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
+        </label>
+        <label className="skill-dps-inline-label">
+          <input type="checkbox" checked={includeUptime} disabled={loading || Boolean(error)} onChange={event => {
+            const checked = event.target.checked
+            setIncludeUptime(checked)
+            if (!checked && axis === 'uptime') setAxis('duration')
+          }} />理論稼働率を含める
         </label>
       </div>
     </PageOutputHeader>
@@ -234,23 +244,24 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
         label="分析結果" format={tab === 'overview' ? '表' : [viewLabel(DETAIL_MODES, detailMode), ...detailFormat]} />
       <AnalysisTabPanel idPrefix={id} tab="overview" activeTab={tab}>
         <div className="skill-dps-result" aria-busy={busy}>
-          <SkillDpsAnalysisOverview dataset={dataset} metric={metric} onSelectAxis={openAxisDetail} />
+          <SkillDpsAnalysisOverview dataset={dataset} metric={metric} axes={axes} onSelectAxis={openAxisDetail} />
         </div>
       </AnalysisTabPanel>
       <AnalysisTabPanel idPrefix={id} tab="detail" activeTab={tab}>
         <PageViewSwitch views={DETAIL_MODES} selected={detailMode} onChange={changeDetailMode} label="分析方法" />
         {openedModelModes.multiple && <div hidden={detailMode !== 'multiple'} aria-busy={busy}>
           <SkillDpsMultipleRegression key={regressionRequest?.version ?? 0} dataset={dataset} metric={metric}
-            initialSelection={regressionRequest?.selection} sectionRef={regressionSection} />
+            includeUptime={includeUptime} initialSelection={regressionRequest?.selection} sectionRef={regressionSection} />
         </div>}
         {openedModelModes.combinations && <div hidden={detailMode !== 'combinations'} aria-busy={busy}>
-          <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} onOpenRegression={openCombinationRegression} />
+          <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} includeUptime={includeUptime}
+            onOpenRegression={openCombinationRegression} />
         </div>}
         {analysis && <div className="skill-dps-result" aria-busy={busy}>
           <div className="skill-dps-toolbar">
             <label className="skill-dps-inline-label">指標
               <select ref={axisSelect} value={axis} onChange={event => setAxis(event.target.value as SkillDpsAnalysisAxis)}>
-                {SKILL_DPS_ANALYSIS_AXES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                {axes.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
               </select>
             </label>
             <PageViewSwitch views={VIEWS} selected={view} onChange={setView} label="分析結果の表示形式" />
