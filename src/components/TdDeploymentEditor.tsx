@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { formatTdCell } from '../lib/tdCoordinates'
 import { canPlaceTdOperatorAt, placeTdOperator, TD_DIRECTIONS, type TdDirection, type TdPlacedOperator } from '../lib/tdDeployment'
 import { loadTdDeploymentRoster, type TdDeployOperator } from '../lib/tdDeploymentRoster'
 import type { MapDetail } from '../types/map'
@@ -140,7 +141,7 @@ export function TdDeploymentEditor({ detail, placements, onChange, viewSwitch, c
               </div>
             </>}
             {(step.mode === 'edit' || step.mode === 'facing') && placed && <p className="td-deploy-position">
-              {placed.row + 1}行 {placed.col + 1}列 · {TD_POSITION_LABEL[placed.operator.position]} · {TD_DIRECTIONS[placed.direction].label}向き
+              {formatTdCell(detail.grid[0].length, placed.row, placed.col)} · {TD_POSITION_LABEL[placed.operator.position]} · {TD_DIRECTIONS[placed.direction].label}向き
             </p>}
             {step.mode === 'facing' && <div className="td-deploy-actions">
               <button type="button" data-cancel className="button secondary" onClick={cancel}>この向きで完了</button>

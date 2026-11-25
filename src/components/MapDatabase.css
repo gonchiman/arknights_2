@@ -104,6 +104,34 @@
 .map-board-figure { --map-blocked-line: #c2c6c5; margin: 0; border: 1px solid var(--border); padding: 14px; background: var(--surface-soft); }
 .map-board, .map-board-layers { display: block; width: 100%; max-width: 550px; height: auto; margin: 0 auto; }
 .map-board-layers { position: relative; }
+.map-board-axes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-areas: "files ." "board ranks";
+  max-width: 550px;
+  margin-inline: auto;
+}
+.map-board-axes > :is(.map-board, .map-board-layers) { grid-area: board; min-width: 0; }
+.map-board-files, .map-board-ranks {
+  display: grid;
+  place-items: center;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.map-board-files { grid-area: files; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.map-board-ranks { grid-area: ranks; grid-auto-rows: minmax(0, 1fr); min-width: 1.75em; }
+.map-board-axes :is(.map-board-files, .map-board-ranks) span {
+  width: min(1.75em, 100%);
+  line-height: 1.75;
+  text-align: center;
+}
+.map-board-axes :is(.map-board-files, .map-board-ranks) [data-active] {
+  color: #175b50;
+  background: #deeee7;
+  border-radius: 3px;
+  font-weight: 700;
+}
 .map-board-overlay { position: absolute; inset: 0; pointer-events: none; }
 .map-board-overlay button { pointer-events: auto; }
 .map-tile rect, .map-blocked-pattern rect { fill: var(--map-tile-fill); }

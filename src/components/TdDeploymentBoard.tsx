@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, type ComponentProps, type CSSProperties, type KeyboardEvent } from 'react'
 import { canPlaceTdOperatorAt, TD_DIRECTIONS, type TdDirection, type TdPlacedOperator } from '../lib/tdDeployment'
+import { formatTdCell } from '../lib/tdCoordinates'
 import type { TdDeployOperator } from '../lib/tdDeploymentRoster'
 import type { MapDetail } from '../types/map'
 import { MapBoard } from './MapInformation'
@@ -85,6 +86,7 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
     if (!deployment || !detail.grid[0]?.length) return null
     const { placements, editing, facing, targeting, selectedOperator, actions } = deployment
     if (!editing && !placements.length) return null
+    const columns = detail.grid[0].length
     const markers = placements.map(({ row, col, operator, direction }) => {
       const label = markerLabel(operator)
       const length = Array.from(label).length
@@ -92,7 +94,7 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
       const height = 13
       const tipOffset = (direction === 'up' || direction === 'down' ? height : width) / 2
       return <g key={operator.id} className="td-ally-mark" transform={`translate(${col * 32 + 16} ${row * 32 + 16})`}>
-        <title>{`${operator.name}（上から${row + 1}行、左から${col + 1}列・${TD_DIRECTIONS[direction].label}向き）`}</title>
+        <title>{`${operator.name}（${formatTdCell(columns, row, col)}・${TD_DIRECTIONS[direction].label}向き）`}</title>
         {editing && (facing || targeting === 'move') && selectedOperator?.id === operator.id &&
           <rect className={facing ? 'td-facing-origin' : 'td-move-origin'} x="-15" y="-15" width="30" height="30" />}
         <rect x={-width / 2} y={-height / 2} width={width} height={height} rx="1.6" />
@@ -103,7 +105,7 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
     })
     const legend = placements.map(({ operator, row, col, direction }) => {
       const content = <><b className="td-ally-key" aria-hidden="true">{markerLabel(operator)}</b>{operator.name}
-        <span className="visually-hidden">上から{row + 1}行、左から{col + 1}列、{TD_DIRECTIONS[direction].label}向き</span></>
+        <span className="visually-hidden">{formatTdCell(columns, row, col)}、{TD_DIRECTIONS[direction].label}向き</span></>
       return actions && editing && !targeting && !facing
         ? <button key={operator.id} className="td-ally-choice" type="button"
             aria-pressed={selectedOperator?.id === operator.id} onClick={() => actions.selectOperator(operator, 'edit')}>{content}</button>
@@ -127,7 +129,7 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
         const action = targeting === 'place' ? 'を配置' : targeting === 'move' ? 'を移動' : 'の移動先を選ぶ'
         return <button key={`${row}-${col}`} data-cell={`${row}-${col}`} type="button"
           className={targeting ? 'td-candidate-cell' : 'td-placed-cell'} data-selected={(!targeting && operator.id === selectedOperator?.id) || undefined}
-          aria-label={`上から${row + 1}行、左から${col + 1}列：${operator.name}${action}`}
+          aria-label={`${formatTdCell(columns, row, col)}：${operator.name}${action}`}
           style={{ gridRow: row + 1, gridColumn: col + 1 }}
           onClick={() => targeting ? actions.selectDestination(row, col) : actions.selectOperator(operator, 'move')}
           onKeyDown={event => navigateCells(event, row, col, detail)}>
@@ -137,10 +139,11 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
     </div>
     return { terrain, legend: boardLegend, targets }
   }, [deployment, detail, children, routeLegend])
-  if (!layers) return <MapBoard {...props} detail={detail} boardOverlay={boardOverlay} routeLegend={routeLegend}>{children}</MapBoard>
+  const selectedPlacement = deployment?.placements.find(unit => unit.operator.id === deployment.selectedOperator?.id)
   const enemyOverlay = deployment?.editing && boardOverlay ? <div inert>{boardOverlay}</div> : boardOverlay
-  return <MapBoard {...props} detail={detail} routeLegend={layers.legend}
-    boardOverlay={layers.targets ? <>{layers.targets}{enemyOverlay}</> : enemyOverlay}>
-    {layers.terrain}
+  return <MapBoard {...props} detail={detail} showShogiCoordinates highlightedCell={selectedPlacement ?? props.highlightedCell}
+    routeLegend={layers?.legend ?? routeLegend}
+    boardOverlay={layers?.targets ? <>{layers.targets}{enemyOverlay}</> : enemyOverlay}>
+    {layers?.terrain ?? children}
   </MapBoard>
 }

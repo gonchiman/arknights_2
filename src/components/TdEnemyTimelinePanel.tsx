@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
+import { formatTdCell } from '../lib/tdCoordinates'
 import { buildTdEnemyTimeline, getTdEnemyPositions } from '../lib/tdEnemyTimeline'
 import type { MapDetail, MapIndex, MapSummary } from '../types/map'
 import { TdDeploymentBoard } from './TdDeploymentBoard'
@@ -72,7 +73,7 @@ function CellMarker({ cell, rows, columns, kinds, expanded, onSelect }: {
   })
   const background = stops.length === 1 ? firstKind?.color : `conic-gradient(${stops.join(', ')})`
   return <button className="td-time-mark td-time-stack" type="button" style={{ ...style, background }}
-    aria-expanded={expanded} aria-label={`上から${cell.y + 1}行・左から${cell.x + 1}列の内訳：${breakdown(cell, kinds)}`}
+    aria-expanded={expanded} aria-label={`${formatTdCell(columns, cell.y, cell.x)}の内訳：${breakdown(cell, kinds)}`}
     onClick={onSelect}><span>{cell.total}</span></button>
 }
 
@@ -129,7 +130,7 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   const { cells, moving, waiting, hidden } = groupPositions(getTdEnemyPositions(timeline, seconds), excluded, rows)
   const selected = selectedCell === null ? undefined : cells.get(selectedCell)
   const selectedDetail = selected && selected.total > 1
-    ? `上から${selected.y + 1}行・左から${selected.x + 1}列　${breakdown(selected, kinds)}` : null
+    ? `${formatTdCell(columns, selected.y, selected.x)}　${breakdown(selected, kinds)}` : null
   const visibleKinds = [...kinds].filter(([id]) => !excluded.has(id))
   const selectionName = excluded.size === 0 ? '全敵' : visibleKinds.map(([, kind]) => kind.name).join('・') || '敵未選択'
   function seek(second: number) {
@@ -215,7 +216,8 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         {selectedDetail && <div>{selectedDetail}</div>}
         <div>推定位置 · ブロック・減速・撃破なし</div>
       </div>}>
-      <TdDeploymentBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false} boardOverlay={
+      <TdDeploymentBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false}
+        highlightedCell={!editing && selected && selected.total > 1 ? { row: selected.y, col: selected.x } : undefined} boardOverlay={
         [...cells].map(([key, cell]) => <CellMarker key={key} cell={cell} rows={rows} columns={columns} kinds={kinds}
           expanded={key === selectedCell} onSelect={() => {
             setStartTime(null)

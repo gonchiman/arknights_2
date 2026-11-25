@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { loadMapDetail } from '../lib/mapDatabase'
 import { getMapEntrances } from '../lib/mapWaves'
+import { formatTdCell, tdFile, tdRank } from '../lib/tdCoordinates'
 import { getMapCoverageReasons, getMapCoverageStatus, getMapCoverageStatusLabel } from '../lib/enemyMapCoverage'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
 import type { MapDetail, MapIndex, MapSummary, MapTile } from '../types/map'
@@ -151,13 +152,18 @@ interface MapBoardProps {
   routeDescription?: string
   routeLegend?: ReactNode
   boardOverlay?: ReactNode
+  showShogiCoordinates?: boolean
+  highlightedCell?: { row: number; col: number }
   children?: ReactNode
 }
 
-function boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children }: MapBoardProps, blockedPatternId: string) {
+function boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children }: MapBoardProps, blockedPatternId: string) {
   if (!detail.grid[0]?.length) return null
   const rows = detail.grid.length
   const columns = detail.grid[0].length
+  const cellLabel = (row: number, col: number) => showShogiCoordinates
+    ? formatTdCell(columns, row, col)
+    : `上から${row + 1}行、左から${col + 1}列`
   const entrances = showEntranceLabels === false ? [] : getMapEntrances(detail).filter((entrance) => !markedEntrance
     || entrance.row === markedEntrance.row && entrance.col === markedEntrance.col)
   const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
@@ -165,7 +171,7 @@ function boardContents({ detail, name, markedEntrance, showEntranceLabels, route
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
   const terrain = (
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
-      <desc>{[...entrances.map((entrance) => `出現口${entrance.label}：上から${rows - entrance.row}行、左から${entrance.col + 1}列`), routeDescription].filter(Boolean).join('。')}</desc>
+      <desc>{[showShogiCoordinates && '右から筋、上から段', ...entrances.map(entrance => `出現口${entrance.label}：${cellLabel(rows - 1 - entrance.row, entrance.col)}`), routeDescription].filter(Boolean).join('。')}</desc>
       <defs>
         <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="6.4" height="6.4" />
@@ -177,7 +183,7 @@ function boardContents({ detail, name, markedEntrance, showEntranceLabels, route
         const entrance = entranceByTile.get(`${y}-${x}`)
         const label = entrance?.label ?? (kind === 'start' ? 'IN' : kind === 'end' ? 'BASE' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : '')
         return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}${entrance ? ' map-tile-entrance' : ''}`}>
-          {entrance && <title>{`出現口${entrance.label}（上から${y + 1}行、左から${x + 1}列）`}</title>}
+          {entrance && <title>{`出現口${entrance.label}（${cellLabel(y, x)}）`}</title>}
           <rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />
           {entrance && kind !== 'start' && <circle className="map-entrance-marker" cx={x * 32 + 16} cy={y * 32 + 16} r="11" />}
           {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
@@ -192,17 +198,26 @@ function boardContents({ detail, name, markedEntrance, showEntranceLabels, route
   return { terrain, legend }
 }
 
-export function MapBoard({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, boardOverlay, children }: MapBoardProps) {
+export function MapBoard({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, boardOverlay, showShogiCoordinates, highlightedCell, children }: MapBoardProps) {
   const blockedPatternId = useId()
   // Moving markers can update many times per second over the same terrain.
-  const board = useMemo(() => boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children }, blockedPatternId),
-    [detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, children, blockedPatternId])
+  const board = useMemo(() => boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children }, blockedPatternId),
+    [detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children, blockedPatternId])
   if (!board) return <p className="map-empty">マス配置のデータがありません</p>
+  const terrain = boardOverlay == null ? board.terrain : <div className="map-board-layers">
+    {board.terrain}
+    <div className="map-board-overlay">{boardOverlay}</div>
+  </div>
   return <figure className="map-board-figure">
-    {boardOverlay == null ? board.terrain : <div className="map-board-layers">
-      {board.terrain}
-      <div className="map-board-overlay">{boardOverlay}</div>
-    </div>}
+    {showShogiCoordinates ? <div className="map-board-axes">
+      <div className="map-board-files" aria-hidden="true">
+        {detail.grid[0].map((_, col) => <span key={col} data-active={col === highlightedCell?.col || undefined}>{tdFile(detail.grid[0].length, col)}</span>)}
+      </div>
+      {terrain}
+      <div className="map-board-ranks" aria-hidden="true">
+        {detail.grid.map((_, row) => <span key={row} data-active={row === highlightedCell?.row || undefined}>{tdRank(row)}</span>)}
+      </div>
+    </div> : terrain}
     {board.legend}
   </figure>
 }
