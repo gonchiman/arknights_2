@@ -18,12 +18,36 @@ interface AdvantageVotes {
   artsWins: number
 }
 
+const DAMAGE_BIN_WIDTH = 500
+const OVERFLOW_BIN_INDEX = 4000 / DAMAGE_BIN_WIDTH
+
+interface DamageHistogramBin {
+  lower: number
+  upper: number | null
+  physical: number
+  arts: number
+}
+
+function createDamageHistogram(): DamageHistogramBin[] {
+  return Array.from({ length: OVERFLOW_BIN_INDEX + 1 }, (_, index) => ({
+    lower: index * DAMAGE_BIN_WIDTH,
+    upper: index === OVERFLOW_BIN_INDEX ? null : (index + 1) * DAMAGE_BIN_WIDTH,
+    physical: 0,
+    arts: 0,
+  }))
+}
+
+function damageBinIndex(value: number) {
+  return Math.min(Math.floor(value / DAMAGE_BIN_WIDTH), OVERFLOW_BIN_INDEX)
+}
+
 export interface SkillRankStatistics extends AdvantageVotes {
   resistance: number
   defense: number | null
   count: number
   physical: DamageQuartiles | null
   arts: DamageQuartiles | null
+  histogram: readonly DamageHistogramBin[]
   bySkill: AdvantageVotes & { count: number }
 }
 
@@ -58,6 +82,7 @@ export function summarizeSkillRankStatistics(
 ): SkillRankStatistics[] {
   const samples = pairs.map(({ resistance, defense }) => ({
     resistance, defense, physical: [] as number[], arts: [] as number[],
+    histogram: createDamageHistogram(),
     stageVotes: { physicalWins: 0, ties: 0, artsWins: 0 },
     skills: new Map<string, AdvantageVotes>(),
   }))
@@ -69,6 +94,8 @@ export function summarizeSkillRankStatistics(
         || !Number.isFinite(physical) || !Number.isFinite(arts) || physical < 0 || arts < 0) return
       sample.physical.push(physical)
       sample.arts.push(arts)
+      sample.histogram[damageBinIndex(physical)].physical++
+      sample.histogram[damageBinIndex(arts)].arts++
       let votes = sample.skills.get(skillKey)
       if (!votes) {
         votes = { physicalWins: 0, ties: 0, artsWins: 0 }
@@ -79,7 +106,7 @@ export function summarizeSkillRankStatistics(
       sample.stageVotes[result]++
     })
   }
-  return samples.map(({ resistance, defense, physical, arts, stageVotes, skills }) => {
+  return samples.map(({ resistance, defense, physical, arts, histogram, stageVotes, skills }) => {
     const bySkill = { count: skills.size, physicalWins: 0, ties: 0, artsWins: 0 }
     for (const votes of skills.values()) {
       const validStages = votes.physicalWins + votes.ties + votes.artsWins
@@ -88,6 +115,6 @@ export function summarizeSkillRankStatistics(
       bySkill.artsWins += votes.artsWins / validStages
     }
     return { resistance, defense, count: physical.length, physical: quartiles(physical),
-      arts: quartiles(arts), ...stageVotes, bySkill }
+      arts: quartiles(arts), histogram, ...stageVotes, bySkill }
   })
 }

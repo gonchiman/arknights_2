@@ -24,8 +24,28 @@
 }
 .dc3-stat-chart-legend li { display: flex; align-items: center; gap: 5px; }
 .dc3-stat-chart-legend i { width: 11px; height: 11px; background: currentColor; }
-.dc3-stat-chart-legend .is-circle { width: 8px; height: 8px; border-radius: 50%; }
-.dc3-stat-chart-legend .is-diamond { width: 7px; height: 7px; transform: rotate(45deg); }
+
+.dc3-histogram-caption { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; color: var(--text-soft); }
+.dc3-histogram-caption .dc3-stat-chart-legend { margin: 0; }
+.dc3-histogram-scroll { overflow-x: auto; }
+.dc3-histogram-grid {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 8px;
+  min-width: 550px;
+  padding: 10px 4px 4px 0;
+}
+.dc3-histogram-y-title { grid-column: 1 / -1; margin-bottom: 9px; }
+.dc3-histogram-ticks { position: relative; min-width: 3ch; color: var(--text-muted); }
+.dc3-histogram-ticks span { position: absolute; right: 0; transform: translateY(50%); }
+.dc3-histogram-plot,
+.dc3-histogram-bins { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; }
+.dc3-histogram-plot { height: 235px; position: relative; }
+.dc3-histogram-guide { position: absolute; inset-inline: 0; border-top: 1px solid var(--border); }
+.dc3-histogram-bin { display: flex; align-items: end; justify-content: center; gap: 2px; position: relative; }
+.dc3-histogram-bin span { width: 38%; max-width: 42px; background: currentColor; }
+.dc3-histogram-bins { grid-column: 2; margin-top: 5px; text-align: center; white-space: nowrap; }
+.dc3-histogram-x-title { grid-column: 2; text-align: center; margin-top: 8px; }
 
 .dc3-stat-chart-heading,
 .dc3-stat-chart-row {
@@ -51,7 +71,6 @@
 }
 .dc3-stat-chart-ticks > :nth-child(2) { position: absolute; left: 50%; transform: translateX(-50%); }
 .dc3-stat-chart-track { display: flex; align-items: center; }
-.dc3-stat-chart-intervals { width: 100%; height: 32px; overflow: visible; }
 .dc3-stat-chart-stack { display: flex; width: 100%; height: 18px; }
 .dc3-stat-chart-stack span { background: currentColor; }
 .dc3-stat-chart-empty { color: var(--text-muted); }

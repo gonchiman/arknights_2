@@ -128,19 +128,38 @@ test('各条件の共通有効段階から四分位数と丸め前の勝敗を�
     { skill: { ...skill, skillId: 'uncalculable' }, cells: [cell(null, 100), cell(20, null), cell(null, null)] },
   ]
   const [first, second, missing] = summarizeSkillRankStatistics(pairs, stages.values())
+  const emptyHistogram = Array.from({ length: 9 }, (_, index) => ({
+    lower: index * 500, upper: index === 8 ? null : (index + 1) * 500, physical: 0, arts: 0,
+  }))
   assert.deepEqual(first, {
     resistance: 50, defense: 300, count: 4,
     physical: { q1: 1.5, median: 3, q3: 4.5 }, arts: { q1: 3, median: 5, q3: 7 },
+    histogram: [{ lower: 0, upper: 500, physical: 4, arts: 4 }, ...emptyHistogram.slice(1)],
     physicalWins: 1, ties: 1, artsWins: 2,
     bySkill: { count: 3, physicalWins: 0.5, ties: 1, artsWins: 1.5 },
   })
   assert.equal(second.count, 2)
+  assert.deepEqual(second.histogram[0], { lower: 0, upper: 500, physical: 2, arts: 2 })
   assert.deepEqual([second.physicalWins, second.ties, second.artsWins], [0, 1, 1])
   assert.deepEqual(second.bySkill, { count: 2, physicalWins: 0, ties: 1, artsWins: 1 })
   assert.deepEqual(missing, {
     resistance: 100, defense: null, count: 0, physical: null, arts: null, physicalWins: 0, ties: 0, artsWins: 0,
+    histogram: emptyHistogram,
     bySkill: { count: 0, physicalWins: 0, ties: 0, artsWins: 0 },
   })
+})
+
+test('1攻撃ダメージは丸めず500幅の共通階級に分け、4,000ちょうどを最後の階級に含める', () => {
+  const pairs = [{ resistance: 60, defense: 1200, percentage: 4, rankCutoff: 1 }]
+  const skill = { operatorId: 'operator-a', skillIndex: 1, skillId: 'shared' }
+  const stages = [
+    [0, 4000], [499.99, 3999.99], [500, 3500], [1000, 2500], [4000, 499.99],
+    [10000, 499.99], [-1, 20], [10, Infinity], [0, null],
+  ].map(([physical, arts]) => ({ skill, cells: [{ physical, arts }] }))
+  const [row] = summarizeSkillRankStatistics(pairs, stages)
+  assert.equal(row.count, 6)
+  assert.deepEqual(row.histogram.map(bin => bin.physical), [2, 1, 1, 0, 0, 0, 0, 0, 2])
+  assert.deepEqual(row.histogram.map(bin => bin.arts), [2, 0, 0, 0, 0, 1, 0, 2, 1])
 })
 
 test('スキル別の行は元の混合攻撃の内訳と主攻撃の属性変更を区別し、空の順位を保つ', () => {
