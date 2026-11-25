@@ -3,7 +3,7 @@ import type { TdPlacedOperator } from '../lib/tdDeployment'
 import { loadTdMapDatabase, loadTdMapDetail } from '../lib/tdMaps'
 import type { MapIndex, MapSummary } from '../types/map'
 import { AnalysisTabPanel } from './AnalysisTabs'
-import { MapBattleFacts, MapEnemyTable } from './MapInformation'
+import { MapBattleFacts, MapEnemyTable, type MapEntranceVisibility } from './MapInformation'
 import { MapWaveDetail } from './MapWaveInformation'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel } from './PageViewSwitch'
@@ -72,9 +72,10 @@ function StagePicker({ maps, selected }: { maps: MapSummary[]; selected?: MapSum
   </aside>
 }
 
-function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }: {
+function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange, nonTileEntrances }: {
   map: MapSummary; index: MapIndex; tab: MapTab; setTab: (tab: MapTab) => void
   placements: readonly TdPlacedOperator[]; onPlacementsChange: (placements: readonly TdPlacedOperator[]) => void
+  nonTileEntrances: MapEntranceVisibility
 }) {
   const load = useCallback(() => loadTdMapDetail(map), [map])
   const resource = useMapResource(load)
@@ -86,6 +87,7 @@ function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }
   const hasTimeline = map.code === 'TD-8'
   const showTimeline = hasTimeline && terrainView === 'timeline'
   const tabProps = { activeTab: tab, idPrefix: 'td-map' }
+  const terrainBoard = detail && <TdTerrainBoard map={map} detail={detail} nonTileEntrances={nonTileEntrances} />
   function showTerrain(enemyId: string | null) {
     setRouteEnemyId(enemyId)
     setTerrainView('route')
@@ -113,10 +115,12 @@ function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }
           <div hidden={showTimeline}>
             <TdMapSaveButtonTarget.Provider value={showTimeline ? null : saveButtonTarget}>
               {routeEnemyId === null
-                ? <TdTerrainBoard map={map} detail={detail} />
+                ? terrainBoard
                 : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
                   enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
-                  onClear={() => showTerrain(null)} />}
+                  onClear={() => showTerrain(null)}>
+                  {terrainBoard}
+                </TdEnemyRoutePanel>}
             </TdMapSaveButtonTarget.Provider>
           </div>
           {hasTimeline && <div hidden={!showTimeline}>
@@ -140,12 +144,14 @@ export default function TdMapPage({ stageCode }: { stageCode?: string }) {
   const resource = useMapResource(loadTdMapDatabase)
   const index = resource.data
   const [tab, setTab] = useState<MapTab>('terrain')
+  const [showNonTileEntrances, setShowNonTileEntrances] = useState(true)
   const [stagePlacements, setStagePlacements] = useState<Record<string, readonly TdPlacedOperator[]>>({})
   const selected = index?.maps.find(map => map.code === (stageCode ?? 'TD-8'))
   return <PageLayout page="td-maps" className="td-map-page map-database-page">
     {index ? <div className="td-map-layout">
       <StagePicker maps={index.maps} selected={selected} />
       {selected ? <StageOutput key={selected.stageId} map={selected} index={index} tab={tab} setTab={setTab}
+        nonTileEntrances={{ visible: showNonTileEntrances, onChange: setShowNonTileEntrances }}
         placements={stagePlacements[selected.stageId] ?? []}
         onPlacementsChange={next => setStagePlacements(current => ({ ...current, [selected.stageId]: next }))} />
         : <p className="map-empty" role="status">{stageCode ? `「${stageCode}」に一致するTDマップはありません。` : '対象のTDマップはありません。'}</p>}
