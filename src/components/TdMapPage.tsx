@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import type { TdPlacedOperator } from '../lib/tdDeployment'
 import { loadTdMapDatabase, loadTdMapDetail } from '../lib/tdMaps'
 import type { MapIndex, MapSummary } from '../types/map'
 import { AnalysisTabPanel } from './AnalysisTabs'
@@ -6,6 +7,8 @@ import { MapBattleFacts, MapEnemyTable } from './MapInformation'
 import { MapWaveDetail } from './MapWaveInformation'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, viewLabel } from './PageViewSwitch'
+import { TdDeploymentEditor } from './TdDeploymentEditor'
+import { useMapResource } from './useMapResource'
 import { TdEnemyTimelinePanel } from './TdEnemyTimelinePanel'
 import { TdMapSaveButtonTarget } from './TdMapImage'
 import { TdEnemyRoutePanel, TdTerrainBoard } from './TdMapTerrain'
@@ -17,23 +20,6 @@ const TERRAIN_VIEWS = [['route', '経路'], ['timeline', '時間別の位置']] 
 type MapTab = typeof TABS[number][0]
 type TerrainView = typeof TERRAIN_VIEWS[number][0]
 const PICKER_TITLE = 'マップを選ぶ'
-
-function useMapResource<T>(load: () => Promise<T>) {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState('')
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    let active = true
-    setError('')
-    void load().then(result => {
-      if (active) setData(result)
-    }).catch((cause: unknown) => {
-      if (active) setError(cause instanceof Error ? cause.message : 'データを読み込めませんでした。')
-    })
-    return () => { active = false }
-  }, [load, attempt])
-  return { data, error, retry: () => setAttempt(value => value + 1) }
-}
 
 function MapLoadingState({ message, error, retry }: { message: string; error: string; retry: () => void }) {
   if (error) return <div className="map-load-state" role="alert">
@@ -86,8 +72,9 @@ function StagePicker({ maps, selected }: { maps: MapSummary[]; selected?: MapSum
   </aside>
 }
 
-function StageOutput({ map, index, tab, setTab }: {
+function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }: {
   map: MapSummary; index: MapIndex; tab: MapTab; setTab: (tab: MapTab) => void
+  placements: readonly TdPlacedOperator[]; onPlacementsChange: (placements: readonly TdPlacedOperator[]) => void
 }) {
   const load = useCallback(() => loadTdMapDetail(map), [map])
   const resource = useMapResource(load)
@@ -115,22 +102,24 @@ function StageOutput({ map, index, tab, setTab }: {
         actions={tab === 'terrain' && <span ref={setSaveButtonTarget} />}
         format={tab === 'terrain' && showTimeline ? viewLabel(TERRAIN_VIEWS, terrainView) : undefined} />
       <AnalysisTabPanel {...tabProps} tab="terrain">
-        {hasTimeline && <PageViewSwitch views={TERRAIN_VIEWS} selected={terrainView}
-          onChange={setTerrainView} label="地形の表示形式" />}
-        <div hidden={showTimeline}>
-          <TdMapSaveButtonTarget.Provider value={showTimeline ? null : saveButtonTarget}>
-            {routeEnemyId === null
-              ? <TdTerrainBoard map={map} detail={detail} />
-              : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
-                enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
-                onClear={() => showTerrain(null)} />}
-          </TdMapSaveButtonTarget.Provider>
-        </div>
-        {hasTimeline && <div hidden={!showTimeline}>
-          <TdMapSaveButtonTarget.Provider value={showTimeline ? saveButtonTarget : null}>
-            <TdEnemyTimelinePanel map={map} detail={detail} index={index} active={tab === 'terrain' && showTimeline} />
-          </TdMapSaveButtonTarget.Provider>
-        </div>}
+        <TdDeploymentEditor detail={detail} placements={placements} onChange={onPlacementsChange}
+          viewSwitch={hasTimeline && <PageViewSwitch views={TERRAIN_VIEWS} selected={terrainView}
+            onChange={setTerrainView} label="地形の表示形式" />}>
+          <div hidden={showTimeline}>
+            <TdMapSaveButtonTarget.Provider value={showTimeline ? null : saveButtonTarget}>
+              {routeEnemyId === null
+                ? <TdTerrainBoard map={map} detail={detail} />
+                : <TdEnemyRoutePanel key={routeEnemyId} map={map} detail={detail}
+                  enemyId={routeEnemyId} enemyName={index.enemies[routeEnemyId]?.name ?? routeEnemyId}
+                  onClear={() => showTerrain(null)} />}
+            </TdMapSaveButtonTarget.Provider>
+          </div>
+          {hasTimeline && <div hidden={!showTimeline}>
+            <TdMapSaveButtonTarget.Provider value={showTimeline ? saveButtonTarget : null}>
+              <TdEnemyTimelinePanel map={map} detail={detail} index={index} active={tab === 'terrain' && showTimeline} />
+            </TdMapSaveButtonTarget.Provider>
+          </div>}
+        </TdDeploymentEditor>
       </AnalysisTabPanel>
       <AnalysisTabPanel {...tabProps} tab="enemies">
         <MapEnemyTable detail={detail} index={index} heading="出現敵" showBaseStatLabels onSelectEnemy={showTerrain} />
@@ -146,11 +135,14 @@ export default function TdMapPage({ stageCode }: { stageCode?: string }) {
   const resource = useMapResource(loadTdMapDatabase)
   const index = resource.data
   const [tab, setTab] = useState<MapTab>('terrain')
+  const [stagePlacements, setStagePlacements] = useState<Record<string, readonly TdPlacedOperator[]>>({})
   const selected = index?.maps.find(map => map.code === (stageCode ?? 'TD-8'))
   return <PageLayout page="td-maps" className="td-map-page map-database-page">
     {index ? <div className="td-map-layout">
       <StagePicker maps={index.maps} selected={selected} />
-      {selected ? <StageOutput key={selected.stageId} map={selected} index={index} tab={tab} setTab={setTab} />
+      {selected ? <StageOutput key={selected.stageId} map={selected} index={index} tab={tab} setTab={setTab}
+        placements={stagePlacements[selected.stageId] ?? []}
+        onPlacementsChange={next => setStagePlacements(current => ({ ...current, [selected.stageId]: next }))} />
         : <p className="map-empty" role="status">{stageCode ? `「${stageCode}」に一致するTDマップはありません。` : '対象のTDマップはありません。'}</p>}
     </div> : <MapLoadingState {...resource} message="TDマップを読み込んでいます…" />}
   </PageLayout>

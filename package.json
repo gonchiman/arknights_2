@@ -14,6 +14,7 @@
     "archive:dc3-coverage": "node --experimental-strip-types scripts/archiveDc3Coverage.mjs",
     "generate:maps": "node scripts/generateMapDatabase.mjs",
     "generate:td-maps": "node --experimental-strip-types scripts/generateTdMaps.mjs",
+    "generate:td-roster": "node --experimental-strip-types scripts/generateTdDeploymentRoster.mjs",
     "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",
     "refresh:operator-wiki-roster": "node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiRoster.mjs",

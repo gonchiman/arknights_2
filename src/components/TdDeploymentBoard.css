@@ -1,0 +1,88 @@
+.map-board-figure { --td-ally-color: #175b50; }
+.td-ally-mark rect, .td-ally-mark path { fill: var(--td-ally-color); }
+.td-ally-mark :is(.td-move-origin, .td-facing-origin) { fill: none; stroke: var(--td-ally-color); stroke-width: 2px; }
+.td-ally-mark text { fill: #fff; font: 650 9px "Yu Gothic UI", system-ui, sans-serif; }
+.td-ally-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.2em;
+  height: 1.5em;
+  padding-inline: 2px;
+  border-radius: 2px;
+  background: var(--td-ally-color);
+  color: #fff;
+}
+.td-ally-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.td-ally-choice:is(:hover, [aria-pressed="true"]) { color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+@media (pointer: coarse) {
+  .td-ally-choice { min-height: 44px; }
+}
+.td-placement-cells { position: absolute; inset: 0; display: grid; }
+.td-placement-cells button {
+  position: relative;
+  display: grid;
+  place-items: start end;
+  margin: 1px;
+  min-width: 0;
+  min-height: 0;
+  line-height: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 1px;
+  cursor: pointer;
+}
+.td-placement-cells .td-candidate-cell { place-items: center; border: 2px solid #427b69; background: #498a7614; }
+.td-candidate-cell span {
+  background: #e8f2ec;
+  color: #245847;
+  font-size: 11px;
+  font-weight: 700;
+}
+.td-placement-cells button[data-selected] { border: 2px solid var(--td-ally-color); }
+.td-placement-cells button:focus-visible { outline: 2px solid #111; outline-offset: -3px; }
+.td-placement-cells button:hover { background-color: #498a7624; }
+
+.td-facing-pad {
+  --td-facing-button: 38px;
+  --td-facing-radius: calc(1.5 * var(--td-facing-button) + 2px);
+  position: absolute;
+  z-index: 1;
+  left: clamp(var(--td-facing-radius), calc(var(--td-facing-x) + var(--td-shift-x, 0px)), calc(100% - var(--td-facing-radius)));
+  top: clamp(var(--td-facing-radius), calc(var(--td-facing-y) + var(--td-shift-y, 0px)), calc(100% - var(--td-facing-radius)));
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: repeat(3, var(--td-facing-button));
+  grid-template-rows: repeat(3, var(--td-facing-button));
+  grid-template-areas: ". up ." "left . right" ". down .";
+  gap: 2px;
+  pointer-events: none;
+}
+.td-facing-pad .button {
+  padding: 0;
+  border-radius: 4px;
+  color: var(--td-ally-color);
+  font-size: 19px;
+  box-shadow: 0 1px 3px #0002;
+}
+.td-facing-pad .button[aria-pressed="true"] {
+  border-color: var(--td-ally-color);
+  background: var(--td-ally-color);
+  color: #fff;
+}
+.td-facing-pad [data-direction="up"] { grid-area: up; }
+.td-facing-pad [data-direction="right"] { grid-area: right; }
+.td-facing-pad [data-direction="down"] { grid-area: down; }
+.td-facing-pad [data-direction="left"] { grid-area: left; }
+@media (pointer: coarse) {
+  .td-facing-pad { --td-facing-button: 44px; }
+}

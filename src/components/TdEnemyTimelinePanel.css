@@ -1,4 +1,5 @@
 .td-time-panel { display: grid; min-width: 0; gap: 8px; }
+.td-time-controls:not([hidden]) { display: grid; min-width: 0; gap: 8px; }
 .td-time-heading, .td-time-transport, .td-time-footer, .td-time-filters,
 .td-time-limits, .td-time-filters label {
   display: flex;

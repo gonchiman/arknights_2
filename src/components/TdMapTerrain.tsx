@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdEnemyRoutes'
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
-import { MapBoard } from './MapInformation'
+import { TdDeploymentBoard } from './TdDeploymentBoard'
+import { useTdDeployment } from './TdDeploymentContext'
 import { PageOutputHeader } from './PageLayout'
 import { TdMapImage } from './TdMapImage'
 import './TdMapTerrain.css'
@@ -10,7 +11,7 @@ type Geometry = ReturnType<typeof describeTdRoute>
 
 export function TdTerrainBoard({ map, detail }: { map: MapSummary; detail: MapDetail }) {
   return <TdMapImage map={map} filenameParts={['地形']} caption="地形">
-    <MapBoard detail={detail} name={`${map.code} ${map.name}`} />
+    <TdDeploymentBoard detail={detail} name={`${map.code} ${map.name}`} />
   </TdMapImage>
 }
 
@@ -57,11 +58,11 @@ function RouteBoard({ detail, name, selection }: {
   const description = geometry.markers.map(({ labels, position }) =>
     `${labels.join('・')}は上から${detail.grid.length - position.row}行、左から${position.col + 1}列`)
   return <>
-    <MapBoard detail={detail} name={name} markedEntrance={selection.route.startPosition ?? undefined}
+    <TdDeploymentBoard detail={detail} name={name} markedEntrance={selection.route.startPosition ?? undefined}
       routeDescription={[...description, ...notes].join('。')}
       routeLegend={geometry.links.length > 0 && <span><i className="td-route-legend-line" aria-hidden="true" />経由地点の接続</span>}>
       <RouteOverlay rows={detail.grid.length} geometry={geometry} />
-    </MapBoard>
+    </TdDeploymentBoard>
     {notes.length > 0 && <p className="td-route-events" aria-live="polite">{notes.join(' ／ ')}</p>}
   </>
 }
@@ -70,11 +71,12 @@ interface RoutePanelProps { map: MapSummary; detail: MapDetail; enemyId: string;
 
 export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: RoutePanelProps) {
   const [selected, setSelected] = useState(0)
+  const editing = useTdDeployment()?.editing
   const routes = getTdEnemyRoutes(map, detail, enemyId)
   const position = selected < routes.length ? selected : 0
   const selection = routes[position]
   return <div className="td-map-route-panel">
-    <PageOutputHeader segments={['地形', '経路']}>
+    {editing ? <strong>{enemyName}{selection && `　経路 ${position + 1} / ${routes.length}`}</strong> : <PageOutputHeader segments={['地形', '経路']}>
       <strong>{enemyName}</strong>
       {routes.length > 1 ? <label className="map-wave-picker">経路
         <select value={position} onChange={event => setSelected(Number(event.currentTarget.value))}>
@@ -84,7 +86,7 @@ export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: 
         </select>
       </label> : selection?.entrance && <span>出現口{selection.entrance}</span>}
       <button className="button secondary" type="button" onClick={onClear}>経路を消す</button>
-    </PageOutputHeader>
+    </PageOutputHeader>}
     {selection
       ? <TdMapImage map={map} filenameParts={['経路', enemyName, `経路${position + 1}`]}
           caption={`${enemyName}　経路${position + 1}${selection.entrance ? `　出現口${selection.entrance}` : ''}`}>
