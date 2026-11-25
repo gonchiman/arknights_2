@@ -5,8 +5,8 @@ import { createChartImageFilename } from '../lib/chartImageFilename'
 import type { MapSummary } from '../types/map'
 import { ChartImageHeading } from './ChartImageFrame'
 import { ChartImageSaveDialog } from './ChartImageSaveDialog'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
 import { TdDeploymentContext, useTdDeployment } from './TdDeploymentContext'
-import './ElementLocationCopyButton.css'
 import './TdMapImage.css'
 
 export const TdMapSaveButtonTarget = createContext<HTMLSpanElement | null>(null)
@@ -102,14 +102,7 @@ export function TdMapImage({ map, filenameParts, caption, imageDetails, onOpen, 
   }
   return <>
     {buttonTarget && !deployment?.choosing && createPortal(
-      <button type="button" className="output-icon-button" aria-label="画像を保存" aria-haspopup="dialog" onClick={open}>
-        <span className="output-icon-face" aria-hidden="true">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false">
-            <path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4" />
-          </svg>
-        </span>
-      </button>,
+      <OutputImageSaveButton onClick={open} />,
       buttonTarget,
     )}
     {children}

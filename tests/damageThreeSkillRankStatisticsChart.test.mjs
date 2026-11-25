@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-let server, Chart, Table
+let server, Chart, Table, ImagePlot, DistributionImage, getHistogram, createStatisticsImage
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react()], logLevel: 'error',
@@ -14,6 +14,10 @@ before(async () => {
   })
   Chart = (await server.ssrLoadModule('/src/components/DamageThreeSkillRankStatisticsChart.tsx')).default
   Table = (await server.ssrLoadModule('/src/components/DamageThreeSkillRankStatisticsTable.tsx')).default
+  ImagePlot = (await server.ssrLoadModule('/src/components/DamageThreeAdvantageChartImage.tsx')).DamageThreeAdvantageChartImage
+  DistributionImage = (await server.ssrLoadModule('/src/components/DamageThreeDistributionChartImage.tsx')).DamageThreeDistributionChartImage
+  getHistogram = (await server.ssrLoadModule('/src/lib/damageThreeDistributionChart.ts')).getDamageThreeDistributionHistogram
+  createStatisticsImage = (await server.ssrLoadModule('/src/components/createDamageThreeStatisticsChartImage.tsx')).createDamageThreeStatisticsChartImage
 })
 after(async () => { await server?.close() })
 
@@ -36,9 +40,11 @@ const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
 
+const peakRow = { ...sample, resistance: 0, defense: 0, count: 20,
+  histogram: sample.histogram.map(bin => ({ ...bin, physical: bin.lower === 0 ? 20 : 0, arts: bin.lower === 0 ? 20 : 0 })) }
+
 test('分布は選択中の術耐性で両属性を同一階級に描き、表は全条件の四分位数を保持する', () => {
-  const rows = [sample, { ...sample, resistance: 0, defense: 0, count: 20,
-    histogram: sample.histogram.map(bin => ({ ...bin, physical: bin.lower === 0 ? 20 : 0, arts: bin.lower === 0 ? 20 : 0 })) }, missing]
+  const rows = [sample, peakRow, missing]
   const chart = render(Chart, 'distribution', rows, 'skill')
   assert.equal(chart, render(Chart, 'distribution', rows, 'stage'))
   assert.match(chart, /対応防御力 1,200 · 有効段階数 8/)
@@ -60,11 +66,64 @@ test('分布は選択中の術耐性で両属性を同一階級に描き、表�
   for (const value of ['60', '100', '1,200', '110', '222', '333', '0']) assert.ok(table.includes(`>${value}<`), value)
 })
 
+test('保存する分布図は術耐性を切り替えても同じ縦軸を使い、0件と4,000以上も同じ階級に描く', () => {
+  const rows = [sample, peakRow, missing]
+  function renderHistogram(resistance) {
+    const histogram = getHistogram(rows, resistance)
+    return renderToStaticMarkup(createElement(DistributionImage, { histogram, width: 960, height: 334 }))
+  }
+  function heights(svg, series) {
+    return [...svg.matchAll(/<rect\b[^>]*>/g)].map(match => match[0])
+      .filter(rect => rect.includes('data-series="' + series + '"'))
+      .map(rect => Number(rect.match(/\bheight="([^"]+)"/)[1]))
+  }
+  const svg = renderHistogram(60)
+  const peakHeight = heights(renderHistogram(0), 'physical')[0]
+  assert.ok(peakHeight > 0)
+  for (const series of ['physical', 'arts']) {
+    const actual = heights(svg, series)
+    assert.equal(actual.length, sample.histogram.length)
+    sample.histogram.forEach((bin, index) => {
+      assert.ok(Math.abs(actual[index] - peakHeight * bin[series] / peakRow.count) < 1e-8, series + ' / ' + bin.lower)
+    })
+  }
+  const binLabels = markup => labels(markup).filter(label => label.includes('段階、術化'))
+  assert.deepEqual(binLabels(svg), binLabels(render(Chart, 'distribution', rows, 'stage')))
+  assert.match(svg, />4,000以上<\/text>/)
+  assert.equal(getHistogram(rows, 100), null)
+  assert.equal(getHistogram(rows, 30), null)
+})
+
+test('分布画像の条件とファイル名は選択中の術耐性と絞り込みに従う', () => {
+  const options = {
+    rows: [sample, peakRow, missing], view: 'distribution', advantageUnit: 'skill', resistance: 60,
+    aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'apply',
+    filters: { kind: 'NORMAL', profession: 'ALL', damageType: 'ARTS', rarity: '6', query: ' スルト ' },
+  }
+  const snapshot = createStatisticsImage(options)
+  assert.ok(snapshot)
+  for (const label of ['術耐性 60', 'メインストーリー', '属性限定効果を適用', '元の攻撃属性 術', '★6', '検索「スルト」']) {
+    assert.ok(snapshot.conditions.includes(label), label)
+    assert.ok(snapshot.filenameParts.includes(label), label)
+  }
+  assert.ok(snapshot.conditions.includes('対応防御力 1,200'))
+  assert.ok(snapshot.conditions.includes('有効段階数 8'))
+  assert.doesNotMatch(snapshot.filenameParts.join('_'), /有効段階数|スキル単位|段階単位/)
+  const zero = createStatisticsImage({ ...options, resistance: 0 })
+  assert.ok(zero.conditions.includes('術耐性 0'))
+  assert.ok(zero.conditions.includes('対応防御力 0'))
+  assert.ok(zero.conditions.includes('有効段階数 20'))
+  assert.equal(createStatisticsImage({ ...options, resistance: 100 }), null)
+})
+
 test('属性別の優勢率は段階数に対する割合に換算し、同値を独立した区分にする', () => {
   const chart = render(Chart, 'advantage', [sample], 'stage')
   const table = render(Table, 'advantage', [sample], 'stage')
   const description = labels(chart).find(label => label.includes('37.5'))
   assert.ok(description)
+  assert.match(chart, /<strong>ダメージが高い属性<\/strong>/)
+  const legendLabels = [...chart.matchAll(/<\/i>([^<]+)<\/li>/g)].map(match => match[1])
+  assert.deepEqual(legendLabels, ['物理', '同じ', '術'])
   for (const value of ['60', '1,200', '37.5', '12.5', '50.0']) {
     assert.ok(description.includes(value), value)
     assert.ok(table.includes(`>${value}<`), value)
@@ -79,7 +138,7 @@ test('スキル単位の優勢率は同じ分母で表と棒を描画し、重�
   const table = render(Table, 'advantage', [sample], 'skill')
   assert.match(table, /<th scope="col">有効スキル数<\/th>/)
   assert.match(table, />4<\/td><td>62\.5<\/td><td>12\.5<\/td><td>25\.0<\/td>/)
-  assert.match(chart, /有効スキル数 4。物理化優勢 2\.5票（62\.5%）、同値 0\.5票（12\.5%）、術化優勢 1票（25\.0%）/)
+  assert.match(chart, /有効スキル数 4。物理の方がダメージが高い 2\.5票（62\.5%）、同じダメージ 0\.5票（12\.5%）、術の方がダメージが高い 1票（25\.0%）/)
   for (const [series, width] of [['physical', 62.5], ['tie', 12.5], ['arts', 25]]) {
     assert.ok(chart.includes(`data-series="${series}" style="width:${width}%"`))
   }
@@ -94,5 +153,19 @@ test('対応がない術耐性を両方のグラフに残し、0ダメージや0
     const table = render(Table, view, [missing], unit)
     assert.match(table, />—<\/td>/)
     assert.doesNotMatch(table, />0\.0<\/td>/)
+  }
+})
+
+test('画像の積み上げ棒に集計単位ごとの割合を使い、対象なしの行も表示する', () => {
+  for (const [advantageUnit, expected] of [['skill', [0.625, 0.125, 0.25]], ['stage', [0.375, 0.125, 0.5]]]) {
+    const svg = renderToStaticMarkup(createElement(ImagePlot, { rows: [sample, missing], advantageUnit, width: 960, height: 400 }))
+    const bars = [...svg.matchAll(/<rect\b[^>]*data-series="([^"]+)"[^>]*width="([^"]+)"/g)]
+    assert.deepEqual(bars.map(match => match[1]), ['physical', 'tie', 'arts'])
+    const widths = bars.map(match => Number(match[2]))
+    const total = widths.reduce((sum, width) => sum + width, 0)
+    assert.deepEqual(widths.map(width => width / total), expected)
+    const emptyRow = svg.slice(svg.indexOf('data-resistance="100"'))
+    assert.match(emptyRow, />対象なし<\/text>/)
+    assert.doesNotMatch(emptyRow, /<rect\b|NaN|Infinity/)
   }
 })

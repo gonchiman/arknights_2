@@ -8,11 +8,14 @@ import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from 
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabPanel } from './AnalysisTabs'
+import { createDamageThreeStatisticsChartImage } from './createDamageThreeStatisticsChartImage'
+import { DamageCalculatorThreeAttributeChartImageDialog, type DamageCalculatorThreeAttributeChartImageSnapshot } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyDataContent } from './EnemyPageShared'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
 import DamageThreeSkillRankStatisticsChart from './DamageThreeSkillRankStatisticsChart'
@@ -83,6 +86,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
+  const [imageSnapshot, setImageSnapshot] = useState<DamageCalculatorThreeAttributeChartImageSnapshot | null>(null)
   const [selectedResistance, setSelectedResistance] = useState(0)
   const [histogramResistance, setHistogramResistance] = useState(60)
   const tabId = useId()
@@ -112,6 +116,12 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
+  const currentImage = statsActive && statisticFormat === 'chart' && statistics
+    ? createDamageThreeStatisticsChartImage({
+        rows: statistics, view: statisticView, resistance: histogramResistance, advantageUnit,
+        aggregationVersion: aggregation.selectedId, scope, comparisonPolicy, filters: activeFilters,
+      })
+    : null
   const sortedEntries = useSkillDamageMatrixSort(filtered, mode === 'actual' ? 'actual' : 'virtual',
     distribution?.resistanceThresholds, statsActive ? DEFAULT_SORT : sort, effectPolicy)
   const format = statsActive
@@ -164,7 +174,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     <PageOutputTabs {...tabs} tabs={MODES} onChange={next => {
       if (next !== mode && sort.resistance !== undefined) resetSort()
       setMode(next)
-    }} label="比較方法" format={format} />
+    }} label="比較方法" format={format}
+      actions={currentImage && <OutputImageSaveButton onClick={() => setImageSnapshot(currentImage)} />} />
     <AnalysisTabPanel {...tabs} tab={mode}>
       <div className="dc3-matrix-conditions" role="group" aria-label="共通条件">
         <span>敵1体</span><span>最大Lv</span><span>信頼100</span><span>潜在1</span><span>MODなし</span>
@@ -249,6 +260,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           </>}
       </EnemyDataContent>
     </AnalysisTabPanel>
+    {imageSnapshot && <DamageCalculatorThreeAttributeChartImageDialog snapshot={imageSnapshot} onClose={() => setImageSnapshot(null)} />}
   </PageLayout>
 }
 

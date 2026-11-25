@@ -42,6 +42,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
     axisTitle: snapshot.axisTitle ?? 'ゲーム内評価',
     naturalChartHeight: NATURAL_CHART_HEIGHT + (snapshot.additionalChartHeight ?? 0),
     aspectRatio,
+    exactAspect: parsedAspect ?? undefined,
     children: snapshot.chart,
   }
 
