@@ -7,7 +7,6 @@ interface TdDeploymentBoardState {
   selectedOperator: TdDeployOperator | null
   targeting: 'place' | 'move' | null
   editing: boolean
-  choosing: boolean
   facing: boolean
   actions?: {
     selectOperator: (operator: TdDeployOperator, mode: 'move' | 'edit') => void

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { lockPageScroll } from '../lib/pageScrollLock'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { buildSubProfessionOptions, EMPTY_OPERATOR_FILTERS, hasActiveOperatorFilters, matchesOperatorAttributes, type FilterState } from '../lib/operatorSearchFilters'
 import type { TdDeploymentRosterEntry } from '../lib/tdDeploymentRoster'
@@ -7,6 +8,7 @@ import { PageOutputHeader } from './PageLayout'
 import './TdDeploymentPicker.css'
 
 const PAGE_SIZE = 12
+const TITLE = '配置する味方を選択'
 const PROFESSION_OPTIONS = PROFESSION_ORDER.map(value => ({ value, label: getProfessionLabel(value) }))
 export const TD_POSITION_LABEL = { MELEE: '地上', RANGED: '高台', ALL: '地上・高台' }
 
@@ -15,25 +17,34 @@ function normalizeName(name: string) {
     .replace(/[ァ-ヶ]/g, kana => String.fromCharCode(kana.charCodeAt(0) - 0x60))
 }
 
-export function TdDeploymentPicker({ active, operators, onSelect }: {
+export function TdDeploymentPicker({ active, operators, error, onRetry, onClose, onSelect }: {
   active: boolean
   operators: readonly TdDeploymentRosterEntry[] | null
+  error: string
+  onRetry: () => void
+  onClose: () => void
   onSelect: (operator: TdDeploymentRosterEntry) => void
 }) {
   const [filters, setFilters] = useState(EMPTY_OPERATOR_FILTERS)
   const [page, setPage] = useState(0)
-  const picker = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const backdropPress = useRef(false)
   const results = useRef<HTMLDivElement>(null)
   const lastChoice = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    if (!active) return
-    if (lastChoice.current?.isConnected) {
-      lastChoice.current.focus()
-      return
-    }
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current
+    if (!active || !dialog) return
+    dialog.showModal()
+    const unlock = lockPageScroll(document.documentElement)
     const firstControl = window.matchMedia('(pointer: coarse)').matches ? '.initial-button' : '.search'
-    picker.current?.querySelector<HTMLElement>(firstControl)?.focus({ preventScroll: true })
+    if (lastChoice.current?.isConnected) lastChoice.current.focus()
+    else dialog.querySelector<HTMLElement>(firstControl)?.focus({ preventScroll: true })
+    return () => {
+      unlock()
+      dialog.close()
+    }
   }, [active])
 
   const needle = normalizeName(filters.query)
@@ -60,7 +71,7 @@ export function TdDeploymentPicker({ active, operators, onSelect }: {
   }
 
   const reset = () => changeFilters(EMPTY_OPERATOR_FILTERS)
-  return <div ref={picker} className="td-deploy-picker" hidden={!active} onKeyDown={selectFromSearch}>
+  const picker = <div className="td-deploy-picker" onKeyDown={selectFromSearch}>
     <div className="td-deploy-filter-panel">
       <PageOutputHeader segments={['地形', 'オペレーター配置', 'オペレーターの絞り込み']}
         actions={<button type="button" className="filter-reset-button" disabled={!hasActiveOperatorFilters(filters)} onClick={reset}>条件をリセット</button>}>
@@ -91,4 +102,23 @@ export function TdDeploymentPicker({ active, operators, onSelect }: {
       </div>}
     </section>
   </div>
+
+  return <dialog ref={dialogRef} className="td-deploy-dialog" aria-labelledby={titleId}
+    onCancel={event => { event.preventDefault(); onClose() }}
+    onPointerDown={event => { backdropPress.current = event.target === event.currentTarget }}
+    onPointerCancel={() => { backdropPress.current = false }}
+    onClick={event => {
+      if (backdropPress.current && event.target === event.currentTarget) onClose()
+      backdropPress.current = false
+    }}>
+    <header className="td-deploy-dialog-header">
+      <PageOutputHeader segments={['地形', 'オペレーター配置', TITLE]}
+        actions={<button type="button" className="button secondary" onClick={onClose}>閉じる</button>}>
+        <h2 id={titleId}>{TITLE}</h2>
+      </PageOutputHeader>
+    </header>
+    <div className="td-deploy-dialog-body">
+      {error ? <div role="alert">{error} <button type="button" className="button secondary" onClick={onRetry}>再読み込み</button></div> : picker}
+    </div>
+  </dialog>
 }
