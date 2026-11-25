@@ -4,6 +4,8 @@ import {
   analyzeSkillDpsMultipleRegression, DEFAULT_SKILL_DPS_REGRESSION_PREDICTORS,
   SKILL_DPS_REGRESSION_PREDICTORS, type SkillDpsRegressionPredictor,
 } from '../lib/skillDpsMultipleRegression'
+import { PageViewSwitch, TABLE_CHART_VIEWS, type TableChartView } from './PageViewSwitch'
+import { SkillDpsRegressionCoefficientChart } from './SkillDpsRegressionCoefficientChart'
 import { SkillDpsVifCell } from './SkillDpsVifCell'
 import './SkillDpsMultipleRegression.css'
 
@@ -18,10 +20,12 @@ export interface SkillDpsRegressionSelection {
   cohortCandidates?: readonly SkillDpsRegressionPredictor[]
 }
 
-export function SkillDpsMultipleRegression({ dataset, metric, includeUptime, initialSelection, sectionRef }: {
+export function SkillDpsMultipleRegression({ dataset, metric, includeUptime, view, onViewChange, initialSelection, sectionRef }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
   includeUptime: boolean
+  view: TableChartView
+  onViewChange: (view: TableChartView) => void
   initialSelection?: SkillDpsRegressionSelection
   sectionRef?: Ref<HTMLElement>
 }) {
@@ -40,6 +44,13 @@ export function SkillDpsMultipleRegression({ dataset, metric, includeUptime, ini
   const result = useMemo(() => analyzeSkillDpsMultipleRegression(dataset, activeSelection.predictors, metric,
     activeSelection.cohortCandidates), [dataset, activeSelection, metric])
   const fit = result.fit
+  const rows = fit ? activeSelection.predictors.map((predictor, index) => ({
+    predictor,
+    label: SKILL_DPS_ANALYSIS_X_LABELS[predictor],
+    coefficient: fit.coefficients[index],
+    value: fit.standardizedCoefficients[index],
+    vif: fit.varianceInflationFactors[index],
+  })) : []
 
   function togglePredictor(predictor: SkillDpsRegressionPredictor) {
     setDraft(current => SKILL_DPS_REGRESSION_PREDICTORS.filter(([key]) => key === predictor
@@ -75,24 +86,29 @@ export function SkillDpsMultipleRegression({ dataset, metric, includeUptime, ini
     </form>
     {result.error && <p className="skill-dps-error" role="alert">{result.error}</p>}
     {fit && <div className="skill-dps-regression-result">
-      <dl className="skill-dps-statistics">
-        <div><dt>使用件数</dt><dd>{COUNT.format(result.observationCount)}</dd></div>
-        <div><dt>R²</dt><dd>{PERCENTAGE.format(fit.rSquared)}</dd></div>
-        <div><dt>調整済みR²</dt><dd>{PERCENTAGE.format(fit.adjustedRSquared)}</dd></div>
-      </dl>
-      <div className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="回帰係数">
-        <table className="skill-dps-table skill-dps-regression-table" aria-label="回帰係数">
-          <thead><tr>
-            <th scope="col">説明変数</th><th scope="col">係数</th><th scope="col">標準化係数</th><th scope="col">VIF</th>
-          </tr></thead>
-          <tbody>{activeSelection.predictors.map((predictor, index) => <tr key={predictor}>
-            <th scope="row">{SKILL_DPS_ANALYSIS_X_LABELS[predictor]}</th>
-            <td>{COEFFICIENT.format(fit.coefficients[index])}</td>
-            <td>{COEFFICIENT.format(fit.standardizedCoefficients[index])}</td>
-            <SkillDpsVifCell value={fit.varianceInflationFactors[index]} />
-          </tr>)}</tbody>
-        </table>
+      <div className="skill-dps-toolbar skill-dps-regression-result-toolbar">
+        <dl className="skill-dps-statistics">
+          <div><dt>使用件数</dt><dd>{COUNT.format(result.observationCount)}</dd></div>
+          <div><dt>R²</dt><dd>{PERCENTAGE.format(fit.rSquared)}</dd></div>
+          <div><dt>調整済みR²</dt><dd>{PERCENTAGE.format(fit.adjustedRSquared)}</dd></div>
+        </dl>
+        <PageViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange} label="重回帰結果の表示形式" />
       </div>
+      {view === 'chart' ? <SkillDpsRegressionCoefficientChart rows={rows} /> : (
+        <div className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="回帰係数">
+          <table className="skill-dps-table skill-dps-regression-table" aria-label="回帰係数">
+            <thead><tr>
+              <th scope="col">説明変数</th><th scope="col">係数</th><th scope="col">標準化係数</th><th scope="col">VIF</th>
+            </tr></thead>
+            <tbody>{rows.map(({ predictor, label, coefficient, value, vif }) => <tr key={predictor}>
+              <th scope="row">{label}</th>
+              <td>{COEFFICIENT.format(coefficient)}</td>
+              <td>{COEFFICIENT.format(value)}</td>
+              <SkillDpsVifCell value={vif} />
+            </tr>)}</tbody>
+          </table>
+        </div>
+      )}
     </div>}
   </section>
 }
