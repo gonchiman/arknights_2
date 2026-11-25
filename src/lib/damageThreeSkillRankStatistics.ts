@@ -72,7 +72,7 @@ export function evaluateSkillRankStatisticsStage(
   pairs: readonly EnemyResistanceThreshold[],
   effectPolicy: SkillRankEffectPolicy | boolean = 'apply',
 ) {
-  if (entry.kind !== 'NORMAL' || !entry.capability.supported) return null
+  if (!entry.capability.supported) return null
   return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', effectPolicy).cells
 }
 
