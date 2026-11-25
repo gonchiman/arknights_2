@@ -3,6 +3,8 @@
 .skill-dps-combination-toolbar .skill-dps-statistics { gap: 6px 18px; border: 0; padding: 0; }
 .skill-dps-combination-toolbar .skill-dps-statistics > div { gap: 5px; }
 .skill-dps-combination-toolbar .skill-dps-statistics dd { font-size: inherit; }
+.skill-dps-toolbar.skill-dps-combination-filters { column-gap: 14px; min-width: 0; }
+.skill-dps-combination-filters .skill-dps-inline-label { white-space: nowrap; }
 .skill-dps-page .skill-dps-table.skill-dps-combination-table { min-width: 320px; table-layout: fixed; }
 .skill-dps-page .skill-dps-combination-table thead th { white-space: normal; overflow-wrap: anywhere; }
 .skill-dps-page .skill-dps-combination-table thead th:not([aria-sort]) { padding: 7px 8px; }
@@ -25,9 +27,11 @@
 .skill-dps-combination-pages { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 480px) {
-  .skill-dps-page .skill-dps-combination-table :is(th, td),
+  .skill-dps-page .skill-dps-table.skill-dps-combination-table :is(th, td),
   .skill-dps-page .skill-dps-combination-table thead th:not([aria-sort]),
-  .skill-dps-page .skill-dps-combination-table .skill-sort-button { padding-inline: 5px; }
+  .skill-dps-page .skill-dps-table.skill-dps-combination-table .skill-sort-button { padding-inline: 5px; }
+  .skill-dps-page .skill-dps-table.skill-dps-combination-table .skill-sort-button { column-gap: 2px; }
+  .skill-dps-combination-table .skill-dps-vif-detail-trigger { padding-inline: 0; }
 }
 
 @media (pointer: coarse) {

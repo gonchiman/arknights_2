@@ -11,10 +11,13 @@ import './SkillDpsCombinationEvaluation.css'
 
 const COUNT = new Intl.NumberFormat('ja-JP')
 const PERCENTAGE = new Intl.NumberFormat('ja-JP', {
-  style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1,
+  style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2,
 })
 const PAGE_SIZE = 8
+const DIFFERENCE_LIMITS = [0.5, 1, 2, 5] as const
+const DIFFERENCE_EPSILON = 1e-10
 type SortKey = 'adjusted' | 'vif'
+type SortMode = 'all' | 'withinLimit'
 const predictorLabel = (predictor: SkillDpsRegressionPredictor) => SKILL_DPS_REGRESSION_PREDICTORS.find(([key]) => key === predictor)![1]
 const PREDICTORS_WITHOUT_UPTIME = SKILL_DPS_REGRESSION_PREDICTORS.filter(([key]) => key !== 'uptime')
 
@@ -34,7 +37,12 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
   const [draft, setDraft] = useState<readonly SkillDpsRegressionPredictor[]>(() => SKILL_DPS_REGRESSION_PREDICTORS.map(([key]) => key))
   const [applied, setApplied] = useState<readonly SkillDpsRegressionPredictor[]>(() => SKILL_DPS_REGRESSION_PREDICTORS.map(([key]) => key))
   const [itemCount, setItemCount] = useState(0)
-  const [sort, setSort] = useState<TableSort<SortKey>>({ key: 'adjusted', direction: 'desc' })
+  const [differenceLimit, setDifferenceLimit] = useState<number | null>(null)
+  const [sortByMode, setSortByMode] = useState<Record<SortMode, TableSort<SortKey>>>({
+    all: { key: 'adjusted', direction: 'desc' }, withinLimit: { key: 'vif', direction: 'asc' },
+  })
+  const sortMode = differenceLimit === null ? 'all' : 'withinLimit'
+  const sort = sortByMode[sortMode]
   const candidateOptions = includeUptime ? SKILL_DPS_REGRESSION_PREDICTORS : PREDICTORS_WITHOUT_UPTIME
   const appliedCandidates = useMemo(() => includeUptime ? applied : applied.filter(key => key !== 'uptime'), [applied, includeUptime])
   const draftCandidates = includeUptime ? draft : draft.filter(key => key !== 'uptime')
@@ -44,14 +52,17 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
   const pending = draftCandidates.join() !== appliedCandidates.join()
   const canEvaluate = draftCandidates.length >= 2
   const activeItemCount = itemCount <= appliedCandidates.length ? itemCount : 0
+  // The reference is the best fitted model on the common cohort, before table filters.
+  const bestAdjustedRSquared = useMemo(() => Math.max(...evaluation.models.map(model => model.adjustedRSquared)), [evaluation.models])
   const filteredModels = useMemo(() => evaluation.models
-    .filter(model => activeItemCount === 0 || model.predictors.length === activeItemCount)
+    .filter(model => (activeItemCount === 0 || model.predictors.length === activeItemCount)
+      && (differenceLimit === null || (bestAdjustedRSquared - model.adjustedRSquared) * 100 <= differenceLimit + DIFFERENCE_EPSILON))
     .sort((left, right) => {
       const first = sort.key === 'adjusted' ? left.adjustedRSquared : left.maxVif
       const second = sort.key === 'adjusted' ? right.adjustedRSquared : right.maxVif
       return (sort.direction === 'asc' ? first - second : second - first)
-        || right.adjustedRSquared - left.adjustedRSquared || left.maxVif - right.maxVif
-    }), [evaluation, activeItemCount, sort])
+        || right.adjustedRSquared - left.adjustedRSquared || left.maxVif - right.maxVif || left.predictors.length - right.predictors.length
+    }), [evaluation, activeItemCount, differenceLimit, bestAdjustedRSquared, sort])
   const pageCount = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE))
   const page = Math.min(pagination.evaluation === evaluation ? pagination.page : 0, pageCount - 1)
   const start = page * PAGE_SIZE
@@ -71,8 +82,12 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
   }
 
   function changeSort(key: SortKey) {
-    setSort(current => ({ key, direction: current.key === key
-      ? current.direction === 'asc' ? 'desc' : 'asc' : key === 'vif' ? 'asc' : 'desc' }))
+    setSortByMode(current => {
+      const selection = current[sortMode]
+      const direction = selection.key === key
+        ? selection.direction === 'asc' ? 'desc' : 'asc' : key === 'vif' ? 'asc' : 'desc'
+      return { ...current, [sortMode]: { key, direction } }
+    })
     setPagination({ evaluation, page: 0 })
   }
 
@@ -106,42 +121,61 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
       <dl className="skill-dps-statistics" aria-live="polite">
         <div><dt>使用件数</dt><dd>{COUNT.format(evaluation.observationCount)}件</dd></div>
         <div><dt>評価数</dt><dd>{COUNT.format(evaluation.models.length)}通り</dd></div>
+        <div><dt>最高の調整済みR²</dt><dd>{evaluation.models.length ? PERCENTAGE.format(bestAdjustedRSquared) : '—'}</dd></div>
         {evaluation.failedCount > 0 && <div><dt>計算不可</dt><dd>{COUNT.format(evaluation.failedCount)}通り</dd></div>}
       </dl>
-      <label className="skill-dps-inline-label">項目数
-        <select value={activeItemCount} onChange={event => { setItemCount(Number(event.target.value)); setPagination({ evaluation, page: 0 }) }}>
-          <option value={0}>すべて</option>
-          {Array.from({ length: Math.max(0, appliedCandidates.length - 1) }, (_, index) => index + 2)
-            .map(count => <option key={count} value={count}>{count}項目</option>)}
-        </select>
-      </label>
+      <div className="skill-dps-toolbar skill-dps-combination-filters">
+        <label className="skill-dps-inline-label">項目数
+          <select value={activeItemCount} onChange={event => { setItemCount(Number(event.target.value)); setPagination({ evaluation, page: 0 }) }}>
+            <option value={0}>すべて</option>
+            {Array.from({ length: Math.max(0, appliedCandidates.length - 1) }, (_, index) => index + 2)
+              .map(count => <option key={count} value={count}>{count}項目</option>)}
+          </select>
+        </label>
+        <label className="skill-dps-inline-label">首位との差
+          <select value={differenceLimit ?? ''} onChange={event => {
+            const value = event.target.value
+            setDifferenceLimit(value === '' ? null : Number(value))
+            setPagination({ evaluation, page: 0 })
+          }}>
+            <option value="">すべて</option>
+            {DIFFERENCE_LIMITS.map(limit => <option key={limit} value={limit}>{limit.toFixed(1)} pt以内</option>)}
+          </select>
+        </label>
+      </div>
     </div>
     <div ref={tableRegion} className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="説明変数の組み合わせ評価">
       <table className="skill-dps-table skill-dps-combination-table" aria-label="説明変数の組み合わせ評価">
-        <colgroup><col style={{ width: '49%' }} /><col style={{ width: '12%' }} /><col style={{ width: '22%' }} /><col style={{ width: '17%' }} /></colgroup>
+        <colgroup><col style={{ width: '41%' }} /><col style={{ width: '12%' }} /><col style={{ width: '16%' }} />
+          <col style={{ width: '15%' }} /><col style={{ width: '16%' }} /></colgroup>
         <thead><tr>
           <th scope="col">説明変数の組み合わせ</th>
           <th scope="col">項目数</th>
           <TableSortHeader label="調整済みR²" sortKey="adjusted" sort={sort} onSort={changeSort} ariaLabel="調整済みR²で並べ替え" />
+          <th scope="col">首位との差（pt）</th>
           <TableSortHeader label="最大VIF" sortKey="vif" sort={sort} onSort={changeSort} ariaLabel="最大VIFで並べ替え" />
         </tr></thead>
         <tbody>{filteredModels.length ? filteredModels.slice(start, end).map(model => {
           const modelLabel = model.predictors.map(predictorLabel).join('・')
+          const difference = (bestAdjustedRSquared - model.adjustedRSquared) * 100
           return <tr key={model.predictors.join(',')}>
             <th scope="row"><button type="button" className="skill-dps-table-action"
               onClick={() => onOpenRegression(model.predictors, appliedCandidates)}>{modelLabel}</button></th>
             <td>{model.predictors.length}</td>
             <td>{PERCENTAGE.format(model.adjustedRSquared)}</td>
+            <td>{difference > DIFFERENCE_EPSILON && difference < 0.01 ? '<0.01' : difference.toFixed(2)}</td>
             <SkillDpsVifCell value={model.maxVif} detail={{ modelLabel,
               onOpen: trigger => setDetail({ model, observationCount: evaluation.observationCount, trigger }),
             }} />
           </tr>
-        }) : <tr><td colSpan={4} className="skill-dps-table-empty">計算可能な組み合わせなし</td></tr>}</tbody>
+        }) : <tr><td colSpan={5} className="skill-dps-table-empty">
+          {evaluation.models.length ? '条件に合う組み合わせなし' : '計算可能な組み合わせなし'}
+        </td></tr>}</tbody>
       </table>
     </div>
     <nav className="skill-dps-combination-pages" aria-label="評価結果のページ">
       <button className="button secondary" type="button" disabled={page === 0} onClick={() => setPagination({ evaluation, page: page - 1 })}>前へ</button>
-      <span role="status">{filteredModels.length ? `${COUNT.format(start + 1)}–${COUNT.format(end)} / ${COUNT.format(filteredModels.length)}` : '0件'}</span>
+      <span role="status">{filteredModels.length ? `${COUNT.format(start + 1)}–${COUNT.format(end)} / ${COUNT.format(filteredModels.length)}通り` : '0通り'}</span>
       <button className="button secondary" type="button" disabled={end >= filteredModels.length} onClick={() => setPagination({ evaluation, page: page + 1 })}>次へ</button>
     </nav>
     {detail && <SkillDpsCombinationVifDialog model={detail.model}
