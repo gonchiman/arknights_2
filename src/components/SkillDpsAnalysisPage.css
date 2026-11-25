@@ -55,6 +55,16 @@
 .skill-dps-page .skill-dps-table .skill-sort-button:hover { background: var(--surface-soft); }
 .skill-dps-page .skill-dps-table .skill-sort-indicator { color: var(--text-muted); }
 .skill-dps-page .skill-dps-table .skill-dps-table-empty { text-align: center; }
+.skill-dps-table-action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.skill-dps-table-action:hover { text-decoration: underline; }
 .skill-dps-page .skill-dps-table td.skill-dps-vif-warning {
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 12%, var(--surface));
@@ -72,6 +82,8 @@
 }
 
 @media (pointer: coarse) {
+  .skill-dps-table-action { min-height: 44px; }
+  .skill-dps-page .skill-dps-table tbody th:has(.skill-dps-table-action) { padding-block: 0; }
   .skill-dps-page select,
   .skill-dps-page input[type="number"],
   .skill-dps-page .button,

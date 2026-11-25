@@ -5,16 +5,6 @@
 .skill-dps-page .skill-dps-overview-table thead th:not([aria-sort]) { padding: 7px 8px; }
 .skill-dps-page .skill-dps-overview-table .skill-sort-button { justify-content: flex-end; text-align: right; }
 
-.skill-dps-overview-indicator {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--link);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.skill-dps-overview-indicator:hover { text-decoration: underline; }
 .skill-dps-overview-targets { min-width: 0; }
 .skill-dps-overview-targets > summary { padding-block: 6px; font-weight: 500; cursor: pointer; }
 .skill-dps-overview-target-content { display: grid; gap: 8px; min-width: 0; }
@@ -26,7 +16,5 @@
 }
 
 @media (pointer: coarse) {
-  .skill-dps-overview-indicator { min-height: 44px; }
   .skill-dps-overview-targets > summary { padding-block: 12px; }
-  .skill-dps-page .skill-dps-overview-table tbody th:has(.skill-dps-overview-indicator) { padding-block: 0; }
 }

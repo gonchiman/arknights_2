@@ -17,9 +17,10 @@ const PAGE_SIZE = 8
 type SortKey = 'adjusted' | 'vif'
 const predictorLabel = (predictor: SkillDpsRegressionPredictor) => SKILL_DPS_REGRESSION_PREDICTORS.find(([key]) => key === predictor)![1]
 
-export function SkillDpsCombinationEvaluation({ dataset, metric }: {
+export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegression }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
+  onOpenRegression: (predictors: readonly SkillDpsRegressionPredictor[], cohortCandidates: readonly SkillDpsRegressionPredictor[]) => void
 }) {
   const statusId = useId()
   const tableRegion = useRef<HTMLDivElement>(null)
@@ -120,7 +121,8 @@ export function SkillDpsCombinationEvaluation({ dataset, metric }: {
         <tbody>{filteredModels.length ? filteredModels.slice(start, end).map(model => {
           const modelLabel = model.predictors.map(predictorLabel).join('・')
           return <tr key={model.predictors.join(',')}>
-            <th scope="row">{modelLabel}</th>
+            <th scope="row"><button type="button" className="skill-dps-table-action"
+              onClick={() => onOpenRegression(model.predictors, applied)}>{modelLabel}</button></th>
             <td>{model.predictors.length}</td>
             <td>{PERCENTAGE.format(model.adjustedRSquared)}</td>
             <SkillDpsVifCell value={model.maxVif} detail={{ modelLabel,

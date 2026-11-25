@@ -9,6 +9,7 @@ import {
   type SkillDpsDamageType, type SkillDpsObservation, type SkillDpsSpRecovery,
 } from '../lib/skillDpsAnalysis'
 import { getSkillDpsAnalysisConditionLabels, type SkillDpsChartImageSnapshot } from '../lib/skillDpsChartImage'
+import type { SkillDpsRegressionPredictor } from '../lib/skillDpsMultipleRegression'
 import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
@@ -17,7 +18,7 @@ import { SkillDpsAnalysisChart } from './SkillDpsAnalysisChart'
 import { SkillDpsAnalysisImageDialog } from './SkillDpsAnalysisImageDialog'
 import { SkillDpsAnalysisOverview } from './SkillDpsAnalysisOverview'
 import { SkillDpsCombinationEvaluation } from './SkillDpsCombinationEvaluation'
-import { SkillDpsMultipleRegression } from './SkillDpsMultipleRegression'
+import { SkillDpsMultipleRegression, type SkillDpsRegressionSelection } from './SkillDpsMultipleRegression'
 import { SkillDpsTargetBoxplot } from './SkillDpsTargetBoxplot'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsAnalysisPage.css'
@@ -75,6 +76,11 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const [tab, setTab] = useState<typeof TABS[number][0]>('overview')
   const [detailMode, setDetailMode] = useState<typeof DETAIL_MODES[number][0]>('indicator')
   const [openedModelModes, setOpenedModelModes] = useState({ multiple: false, combinations: false })
+  const [regressionRequest, setRegressionRequest] = useState<{
+    version: number
+    selection: SkillDpsRegressionSelection
+  } | null>(null)
+  const regressionSection = useRef<HTMLElement>(null)
   const [axis, setAxis] = useState<SkillDpsAnalysisAxis>('duration')
   const axisSelect = useRef<HTMLSelectElement>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -143,6 +149,15 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
     setDetailMode('indicator')
     setTab('detail')
     window.requestAnimationFrame(() => axisSelect.current?.focus())
+  }
+
+  function openCombinationRegression(
+    predictors: readonly SkillDpsRegressionPredictor[],
+    cohortCandidates: readonly SkillDpsRegressionPredictor[],
+  ) {
+    setRegressionRequest(current => ({ version: (current?.version ?? 0) + 1, selection: { predictors, cohortCandidates } }))
+    changeDetailMode('multiple')
+    window.requestAnimationFrame(() => regressionSection.current?.focus())
   }
 
   const settings = <section className="skill-dps-settings" aria-label="分析条件">
@@ -225,10 +240,11 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
       <AnalysisTabPanel idPrefix={id} tab="detail" activeTab={tab}>
         <PageViewSwitch views={DETAIL_MODES} selected={detailMode} onChange={changeDetailMode} label="分析方法" />
         {openedModelModes.multiple && <div hidden={detailMode !== 'multiple'} aria-busy={busy}>
-          <SkillDpsMultipleRegression dataset={dataset} metric={metric} />
+          <SkillDpsMultipleRegression key={regressionRequest?.version ?? 0} dataset={dataset} metric={metric}
+            initialSelection={regressionRequest?.selection} sectionRef={regressionSection} />
         </div>}
         {openedModelModes.combinations && <div hidden={detailMode !== 'combinations'} aria-busy={busy}>
-          <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} />
+          <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} onOpenRegression={openCombinationRegression} />
         </div>}
         {analysis && <div className="skill-dps-result" aria-busy={busy}>
           <div className="skill-dps-toolbar">
