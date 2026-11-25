@@ -14,7 +14,7 @@ import { classifySkill } from './classifier.ts'
 import { DATA_SOURCE_URLS } from './dataSources.ts'
 import { gameDataClient, type GameDataClient } from './gameDataClient.ts'
 import { getOperatorAffiliation, getOperatorAffiliationIds, type OperatorAffiliationIds, type OperatorAffiliationTable } from './operatorAffiliation.ts'
-import { getOperatorInitial, getProfessionLabel } from './operatorFilters.ts'
+import { getOperatorInitial, getProfessionLabel, parseOperatorRarity } from './operatorFilters.ts'
 
 export const DATA_URLS = {
   character: DATA_SOURCE_URLS.character,
@@ -119,7 +119,7 @@ export async function loadOperatorAndSkillRecords(client: GameDataClient = gameD
         subProfessionId,
         subProfessionName: subProfessions[subProfessionId]?.subProfessionName ?? subProfessionId,
         nameInitial: getOperatorInitial(operator.name ?? operatorId),
-        rarity: parseRarity(operator.rarity),
+        rarity: parseOperatorRarity(operator.rarity),
         skillIndex: index + 1,
         skillId,
         overrideTokenKey: skillRef.overrideTokenKey ?? null,
@@ -194,12 +194,6 @@ function buildModulesByOperator(
   )))
 
   return result
-}
-
-function parseRarity(value: number | string | undefined): number {
-  if (typeof value === 'number') return value + 1
-  const match = value?.match(/TIER_(\d+)/)
-  return match ? Number(match[1]) : 0
 }
 
 function stripMarkup(value: string): string {
