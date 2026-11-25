@@ -3,10 +3,12 @@ import { createPortal } from 'react-dom'
 import { formatTdCell } from '../lib/tdCoordinates'
 import { canPlaceTdOperatorAt, placeTdOperator, TD_DIRECTIONS, type TdDirection, type TdPlacedOperator } from '../lib/tdDeployment'
 import { loadTdDeploymentRoster, type TdDeployOperator } from '../lib/tdDeploymentRoster'
+import { loadTdRecentOperatorIds, rememberTdOperator } from '../lib/tdRecentOperators'
 import type { MapDetail } from '../types/map'
 import { PageOutputHeader } from './PageLayout'
 import { TdDeploymentContext } from './TdDeploymentContext'
 import { TdDeploymentPicker, TD_POSITION_LABEL } from './TdDeploymentPicker'
+import { TdRecentAllies } from './TdRecentAllies'
 import { useMapResource } from './useMapResource'
 import './TdDeploymentEditor.css'
 
@@ -33,15 +35,18 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
 }) {
   const [step, setStep] = useState<Step>({ mode: 'view' })
   const [choosing, setChoosing] = useState(false)
+  const [recentIds, setRecentIds] = useState(loadTdRecentOperatorIds)
   const editing = step.mode !== 'view'
   const selectedOperator = 'operator' in step ? step.operator : null
   const targeting = step.mode === 'place' || step.mode === 'move' ? step.mode : null
   const placed = placements.find(p => p.operator.id === selectedOperator?.id)
   const canPlace = targeting && selectedOperator && detail.grid.some((cells, row) =>
     cells.some((_, col) => canPlaceTdOperatorAt(detail, placements, selectedOperator, row, col)))
-  const roster = useMapResource(loadTdDeploymentRoster, choosing)
+  const roster = useMapResource(loadTdDeploymentRoster, choosing || (editing && recentIds.length > 0))
   const availableOperators = useMemo(() => roster.data?.filter(operator =>
     !placements.some(placed => placed.operator.id === operator.id)) ?? null, [roster.data, placements])
+  const recentOperators = recentIds.map(id => availableOperators?.find(operator => operator.id === id))
+    .filter(operator => operator !== undefined)
   const controlsId = useId()
   const board = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLElement>(null)
@@ -86,9 +91,15 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
     setStep({ mode, operator })
   }
 
+  function chooseOperator(operator: TdDeployOperator) {
+    setChoosing(false)
+    setStep({ mode: 'place', operator })
+  }
+
   function selectDestination(row: number, col: number) {
     if (!targeting || !selectedOperator || !canPlaceTdOperatorAt(detail, placements, selectedOperator, row, col)) return
     onChange(placeTdOperator(detail, placements, { operator: selectedOperator, row, col, direction: placed?.direction ?? 'right' }))
+    if (targeting === 'place') setRecentIds(rememberTdOperator(selectedOperator.id, recentIds))
     setStep({ mode: targeting === 'place' ? 'facing' : 'edit', operator: selectedOperator })
   }
 
@@ -155,16 +166,14 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
                 <button type="button" className="button secondary" onClick={remove}>外す</button>
               </div>
             }
+            {step.mode === 'idle' && <TdRecentAllies operators={recentOperators.slice(0, 3)} onSelect={chooseOperator} />}
             {(step.mode === 'idle' || step.mode === 'edit') && <div className="td-deploy-actions">{add}</div>}
           </div>
         </aside>}
       </div>
       {(choosing || step.mode === 'place') &&
-        <TdDeploymentPicker active={choosing} operators={availableOperators} error={roster.error} onRetry={roster.retry}
-          onClose={() => setChoosing(false)} onSelect={operator => {
-            setChoosing(false)
-            setStep({ mode: 'place', operator })
-          }} />}
+        <TdDeploymentPicker active={choosing} operators={availableOperators} recentOperators={recentOperators}
+          error={roster.error} onRetry={roster.retry} onClose={() => setChoosing(false)} onSelect={chooseOperator} />}
     </div>
   </TdDeploymentContext.Provider>
 }
