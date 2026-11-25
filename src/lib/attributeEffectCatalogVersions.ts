@@ -4,6 +4,7 @@ import type { AttributeEffectRow } from './attributeEffectCatalog.ts'
 
 export interface AttributeEffectCatalogVersion {
   version: string
+  summary: string
   codeRevision: string
   gameDataRevision: string
   rows: AttributeEffectRow[]
@@ -22,12 +23,18 @@ function isCatalogRow(row: StoredRow): row is AttributeEffectRow {
     && (row.href === null ? !!row.description : !!row.href && row.description === undefined)
 }
 
-function readVersion(snapshot: Omit<AttributeEffectCatalogVersion, 'rows'> & { rows: StoredRow[] }): AttributeEffectCatalogVersion {
+function readVersion(
+  snapshot: Omit<AttributeEffectCatalogVersion, 'rows' | 'summary'> & { rows: StoredRow[] },
+  summary: string,
+): AttributeEffectCatalogVersion {
   const { rows } = snapshot
   if (!rows.every(isCatalogRow) || new Set(rows.map(row => row.id)).size !== rows.length) {
     throw new Error(`属性限定効果一覧 ${snapshot.version} の保存データが不正です。`)
   }
-  return { ...snapshot, rows }
+  return { ...snapshot, rows, summary }
 }
 
-export const ATTRIBUTE_EFFECT_CATALOG_VERSIONS = [v2, v1].map(readVersion)
+export const ATTRIBUTE_EFFECT_CATALOG_VERSIONS = [
+  readVersion(v2, 'スキルを持たないオペレーターの素質やミュルジスの召喚物の効果など、物理7件・術3件を追加しました。'),
+  readVersion(v1, '初版として、物理・術のどちらかに作用する素質・スキルの効果を7種類・65件掲載しました。'),
+]

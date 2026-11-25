@@ -6,6 +6,7 @@
 .attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: auto; }
 
 .attribute-catalog-results { display: grid; gap: 6px; min-width: 0; }
+.attribute-catalog-release-summary { margin: 0; }
 .attribute-catalog-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .attribute-catalog-summary, .attribute-catalog-baseline {
   margin: 0;
