@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { formatTdCell } from '../lib/tdCoordinates'
 import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdEnemyRoutes'
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
 import { TdDeploymentBoard } from './TdDeploymentBoard'
@@ -56,7 +57,7 @@ function RouteBoard({ detail, name, selection }: {
   const goal = tile != null && ['tile_end', 'tile_end_cooperate'].includes(detail.tiles[tile]?.tileKey)
   const notes = goal ? [...geometry.notes, '防衛地点へ'] : geometry.notes
   const description = geometry.markers.map(({ labels, position }) =>
-    `${labels.join('・')}は上から${detail.grid.length - position.row}行、左から${position.col + 1}列`)
+    `${labels.join('・')}は${formatTdCell(detail.grid[0].length, detail.grid.length - 1 - position.row, position.col)}`)
   return <>
     <TdDeploymentBoard detail={detail} name={name} markedEntrance={selection.route.startPosition ?? undefined}
       routeDescription={[...description, ...notes].join('。')}

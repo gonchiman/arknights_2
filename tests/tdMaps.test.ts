@@ -2,7 +2,14 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { gameDataClient } from '../src/lib/gameDataClient.ts'
+import { formatTdCell } from '../src/lib/tdCoordinates.ts'
 import { loadTdMapDatabase, loadTdMapDetail, selectTdMapIndex } from '../src/lib/tdMaps.ts'
+
+test('TD files start at the right edge of each stage and ranks start at the top', () => {
+  assert.equal(formatTdCell(11, 0, 10), '1筋一段')
+  assert.equal(formatTdCell(11, 3, 4), '7筋四段')
+  assert.equal(formatTdCell(13, 8, 0), '13筋九段')
+})
 
 test('the shipped TD event opens offline with matching enemy, terrain, and wave data for each stage', async (t) => {
   const bytes = await readFile(new URL('../public/data/maps/td-event.json', import.meta.url), 'utf8')
