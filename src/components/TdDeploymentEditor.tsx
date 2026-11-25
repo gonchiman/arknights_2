@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { formatTdCell } from '../lib/tdCoordinates'
 import { canPlaceTdOperatorAt, placeTdOperator, TD_DIRECTIONS, type TdDirection, type TdPlacedOperator } from '../lib/tdDeployment'
@@ -34,12 +34,15 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
 }) {
   const [step, setStep] = useState<Step>({ mode: 'view' })
   const editing = step.mode !== 'view'
+  const choosing = step.mode === 'search'
   const selectedOperator = 'operator' in step ? step.operator : null
   const targeting = step.mode === 'place' || step.mode === 'move' ? step.mode : null
   const placed = placements.find(p => p.operator.id === selectedOperator?.id)
   const canPlace = targeting && selectedOperator && detail.grid.some((cells, row) =>
     cells.some((_, col) => canPlaceTdOperatorAt(detail, placements, selectedOperator, row, col)))
-  const roster = useMapResource(loadTdDeploymentRoster, step.mode === 'search')
+  const roster = useMapResource(loadTdDeploymentRoster, choosing)
+  const availableOperators = useMemo(() => roster.data?.filter(operator =>
+    !placements.some(placed => placed.operator.id === operator.id)) ?? null, [roster.data, placements])
   const controlsId = useId()
   const board = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLElement>(null)
@@ -69,7 +72,7 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
       case 'move':
       case 'facing': setStep({ mode: 'edit', operator: step.operator }); break
       case 'edit': setStep({ mode: 'idle' }); break
-      case 'search': if (placements.length) setStep({ mode: 'idle' }); else finish(); break
+      case 'search': setStep({ mode: 'idle' }); break
       case 'idle': finish(); break
     }
   }
@@ -108,13 +111,13 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
     onClick={() => selectOperator(placed.operator, 'facing')}>向きを変更</button>
   const visibleViewSwitch = !editing && viewSwitch
   const showCount = editing || placements.length > 0
-  return <TdDeploymentContext.Provider value={{ placements, selectedOperator, targeting, editing,
+  return <TdDeploymentContext.Provider value={{ placements, selectedOperator, targeting, editing, choosing,
     facing: step.mode === 'facing', actions: { selectOperator, selectDestination, setDirection } }}>
     <div className="td-deploy-editor" onKeyDown={onKeyDown}>
       {switchTarget && createPortal(
         <button type="button" className="td-deploy-switch" role="switch" ref={toggle}
           aria-checked={editing} aria-controls={editing ? controlsId : undefined}
-          onClick={() => editing ? finish() : setStep({ mode: 'search' })}>
+          onClick={() => editing ? finish() : setStep({ mode: placements.length ? 'idle' : 'search' })}>
           配置編集<span className="td-deploy-switch-track" aria-hidden="true" />
         </button>, switchTarget)}
       {(visibleViewSwitch || showCount) && <div className="td-terrain-tools">
@@ -124,19 +127,18 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
           {detail.deployLimit !== null && <span>配置枠 {detail.deployLimit}</span>}
         </div>}
       </div>}
-      <div className={`td-deploy-workspace${editing ? ' is-editing' : ''}`}>
-        <div ref={board} className="td-deploy-map">{children}</div>
+      <div className={`td-deploy-workspace${editing && !choosing ? ' is-editing' : ''}`}>
+        <div ref={board} className="td-deploy-map" hidden={choosing}>{children}</div>
         {editing && <aside id={controlsId} className="td-deploy-console" ref={panel} aria-label="オペレーター配置">
-          <PageOutputHeader segments={['地形', 'オペレーター配置']}>
+          <PageOutputHeader segments={choosing ? ['地形', 'オペレーター配置', panelHeading(step)] : ['地形', 'オペレーター配置']}
+            actions={choosing && <button type="button" className="button secondary" onClick={cancel}>盤面に戻る</button>}>
             <h3 aria-live="polite">{panelHeading(step)}</h3>
           </PageOutputHeader>
           <div className="td-deploy-console-body">
-            {step.mode === 'search' && <>
-              {roster.error ? <div role="alert">{roster.error} <button type="button" className="button secondary" onClick={roster.retry}>再読み込み</button></div>
-                : <TdDeploymentPicker operators={roster.data?.filter(op => !placements.some(p => p.operator.id === op.id)) ?? null}
-                    onSelect={operator => setStep({ mode: 'place', operator })} />}
-              {placements.length > 0 && <div className="td-deploy-actions"><button type="button" className="button secondary" onClick={cancel}>閉じる</button></div>}
-            </>}
+            {(choosing || step.mode === 'place') && !roster.error &&
+              <TdDeploymentPicker active={choosing} operators={availableOperators}
+                onSelect={operator => setStep({ mode: 'place', operator })} />}
+            {step.mode === 'search' && roster.error && <div role="alert">{roster.error} <button type="button" className="button secondary" onClick={roster.retry}>再読み込み</button></div>}
             {targeting && selectedOperator && <>
               <p className="td-deploy-position">{canPlace ? `${TD_POSITION_LABEL[selectedOperator.position]}の「＋」を選択` : '配置できる空きマスがありません'}</p>
               <div className="td-deploy-actions">

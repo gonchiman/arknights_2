@@ -78,6 +78,13 @@ export function matchesOperatorFilters(row: SkillRecord, filters: FilterState): 
     query
     && !normalizeSearchText(`${row.operatorName} ${row.skillName} ${row.description} ${row.skillId}`).includes(query)
   ) return false
+  return matchesOperatorAttributes(row, filters)
+}
+
+export function matchesOperatorAttributes(
+  row: Pick<SkillRecord, 'nameInitial' | 'profession' | 'subProfessionId' | 'rarity'>,
+  filters: FilterState,
+): boolean {
   if (filters.nameInitial !== 'ALL' && row.nameInitial !== filters.nameInitial) return false
   if (filters.profession !== 'ALL' && row.profession !== filters.profession) return false
   if (filters.subProfession !== 'ALL' && row.subProfessionId !== filters.subProfession) return false
@@ -86,7 +93,7 @@ export function matchesOperatorFilters(row: SkillRecord, filters: FilterState): 
 }
 
 export function buildSubProfessionOptions(
-  rows: SkillRecord[],
+  rows: readonly Pick<SkillRecord, 'profession' | 'subProfessionId' | 'subProfessionName'>[],
   profession: string | 'ALL',
 ): SubProfessionOption[] {
   const matchingRows = profession === 'ALL'
