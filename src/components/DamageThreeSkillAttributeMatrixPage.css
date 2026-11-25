@@ -16,6 +16,10 @@
 }
 .dc3-matrix-conditions { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 12px; line-height: 2; }
 .dc3-matrix-conditions > span { white-space: nowrap; }
+.dc3-matrix-comparison-settings .page-output-header { align-items: center; border-bottom: 0; }
+.dc3-matrix-comparison-settings h2 { margin: 0; color: var(--text); font-size: 14px; }
+.dc3-matrix-comparison-policy { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.dc3-matrix-comparison-policy > span { color: var(--text-soft); font-size: 12px; }
 .dc3-matrix-table-heading { justify-content: space-between; }
 .dc3-matrix-table-heading h2 { margin: 0; font-size: 14px; font-weight: 600; }
 .dc3-matrix-table-heading nav { gap: 6px; font-variant-numeric: tabular-nums; }

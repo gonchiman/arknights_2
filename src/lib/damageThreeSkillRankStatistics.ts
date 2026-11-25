@@ -1,5 +1,5 @@
 import type { DamageThreeAttributeEntry } from './damageCalculatorThreeAttributeComparison.ts'
-import { evaluateDamageThreeSkillRankRow, type DamageCell } from './damageThreeSkillRankMatrix.ts'
+import { evaluateDamageThreeSkillRankRow, type DamageCell, type SkillRankEffectPolicy } from './damageThreeSkillRankMatrix.ts'
 import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 import { calculateBoxPlotStatistics } from './enemyStatistics.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
@@ -46,10 +46,10 @@ function quartiles(values: number[]): DamageQuartiles | null {
 export function evaluateSkillRankStatisticsStage(
   entry: DamageThreeAttributeEntry,
   pairs: readonly EnemyResistanceThreshold[],
-  disablePenetration = false,
+  effectPolicy: SkillRankEffectPolicy | boolean = 'apply',
 ) {
   if (entry.kind !== 'NORMAL' || !entry.capability.supported) return null
-  return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', disablePenetration).cells
+  return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', effectPolicy).cells
 }
 
 export function summarizeSkillRankStatistics(

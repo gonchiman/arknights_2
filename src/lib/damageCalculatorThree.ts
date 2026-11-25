@@ -27,7 +27,7 @@ import { getDamageSensitivityTablePoints } from './damageSensitivity.ts'
 import { evaluateDamageCalculatorThreeTalents, type DamageCalculatorThreeTalentEvaluation, type DamageCalculatorThreeTalentOutput } from './damageCalculatorThreeTalents.ts'
 import { calculateMaintainedDamageOverTime, type MaintainedDamageOverTime } from './damageOverTime.ts'
 import { calculateProbabilisticDefenseIgnoreDamage, type ProbabilisticDamageBranch } from './probabilisticDamage.ts'
-import type { CombatCondition } from './combatEffectStructure.ts'
+import { conditionUsesMetric } from './combatEffectStructure.ts'
 import { buildTraitStructures, type TraitStructureEffect } from './traitStructure.ts'
 import { evaluateTraitStructure, type TraitCombatResult } from './traitCombatEvaluation.ts'
 import { getComparisonMaximumSkillLevelIndex, getComparisonMinimumPhaseIndex } from './operatorBuildComparison.ts'
@@ -191,6 +191,8 @@ export interface DamageCalculatorThreeInput {
   virtualMainAttackType?: VirtualMainAttackType
   /** Counterfactual only: omit defense and resistance ignore effects. */
   disablePenetration?: boolean
+  /** Counterfactual only: remove modifiers benefiting just one of physical or Arts damage. */
+  excludeAttributeEffects?: boolean
 }
 
 export interface DamageCalculatorThreeEffectEvaluation {
@@ -664,7 +666,7 @@ function buildDamageCalculatorThree(input: DamageCalculatorThreeInput, normalAtt
     }
   }
   reasons.push(...talents.blockingReasons)
-  if (input.disablePenetration) {
+  if (input.disablePenetration || input.excludeAttributeEffects) {
     for (const result of [talents, ...actionPlans.map(plan => plan.talents)]) {
       result.defenseIgnore = null
       result.resistanceIgnoreFixed = 0
@@ -757,7 +759,7 @@ function buildDamageCalculatorThree(input: DamageCalculatorThreeInput, normalAtt
       const targetGroups = module?.type === 'Y' ? {
         blockedCount: module.blockedTargetCount,
         unblockedCount: actualTargetCount - module.blockedTargetCount,
-        blockedPerHit: mitigation.result * (damageType === 'ARTS' ? module.artsFragilityMultiplier : 1),
+        blockedPerHit: mitigation.result * (damageType === 'ARTS' && !input.excludeAttributeEffects ? module.artsFragilityMultiplier : 1),
       } : null
       const perHit = targetGroups && targetGroups.blockedCount > 0 ? targetGroups.blockedPerHit : mitigation.result
       const perAttack = perHit * model.hitCount
@@ -854,12 +856,6 @@ function mergeActionTalentEvaluations(plans: readonly ResolvedDamageAction[]): D
     merged.set(key, { ...(failure ?? applied ?? current ?? entry)!, appliedAttackIds: ids })
   }
   return [...merged.values()]
-}
-
-function conditionUsesMetric(condition: CombatCondition | null, metric: string): boolean {
-  if (!condition || condition.type === 'UNKNOWN') return false
-  if (condition.type === 'COMPARE') return condition.metric === metric
-  return condition.conditions.some(child => conditionUsesMetric(child, metric))
 }
 
 function resolveConditions(conditions: DamageCalculatorThreeConditions = {}): ConditionContext {

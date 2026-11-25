@@ -4,6 +4,7 @@ import { evaluateDamageThreeComparisonEntry } from './damageCalculatorThreeCompa
 import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 
 export type DamageThreeSkillRankMode = 'virtual' | 'actual'
+export type SkillRankEffectPolicy = 'apply' | 'excludePenetration' | 'excludeAttributeEffects'
 type RankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense' | 'percentage'>
 export interface DamageCell {
   physical: number | null
@@ -19,11 +20,13 @@ export function getDamageDifference({ physical, arts }: DamageCell): number | nu
 /** Evaluate only the skill stages currently visible, at one attack/action against one target. */
 export function evaluateDamageThreeSkillRankRow(
   entry: DamageThreeAttributeEntry, pairs: readonly RankPair[], mode: DamageThreeSkillRankMode,
-  disablePenetration = false,
+  effectPolicy: SkillRankEffectPolicy | boolean = 'apply',
 ): { cells: DamageCell[]; errors: string[]; isExpectedValue: boolean; hasUnsupportedTalentDamage: boolean } {
+  // Boolean inputs reproduce the v1 penetration-only comparison.
+  const disablePenetration = effectPolicy === true || effectPolicy === 'excludePenetration'
   if (mode === 'virtual') {
     const { rows, errors, hasProbabilisticMainAttack } = evaluateDamageThreeAttributeRankTable(
-      { entry, enemyCount: 1, disablePenetration }, pairs,
+      { entry, enemyCount: 1, disablePenetration, excludeAttributeEffects: effectPolicy === 'excludeAttributeEffects' }, pairs,
     )
     return {
       cells: rows.map(({ physical, arts }) => ({ physical, arts })),

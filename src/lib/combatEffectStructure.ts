@@ -105,6 +105,12 @@ export function resolveCombatNumericValue(value: CombatNumericValue, metrics: Re
   if (!Number.isFinite(result)) return null
   return Math.min(value.max ?? Infinity, Math.max(value.min ?? -Infinity, result))
 }
+export function conditionUsesMetric(condition: CombatCondition | null, metric: string): boolean {
+  if (!condition || condition.type === 'UNKNOWN') return false
+  if (condition.type === 'COMPARE') return condition.metric === metric
+  return condition.conditions.some(child => conditionUsesMetric(child, metric))
+}
+
 /** Three-valued evaluation prevents missing inputs from silently selecting the opposite branch. */
 export function evaluateCombatCondition(condition: CombatCondition | null, metrics: Readonly<Record<string, CombatScalar | null | undefined>>): boolean | null {
   if (condition === null) return true

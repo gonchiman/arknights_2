@@ -35,7 +35,7 @@ export interface GuardActorContext {
 export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, structure: SkillStructure,
   initialErrors: string[] = [], actor?: GuardActorContext, skillActive = true): DamageCalculatorThreeOutput {
   const recipe = structure.guardRecipe!
-  const disablePenetration = input.disablePenetration === true
+  const disablePenetration = input.disablePenetration === true || input.excludeAttributeEffects === true
   const criticalChance = (modifiers: GuardPassiveModifiers) =>
     disablePenetration && modifiers.criticalDefenseIgnoreRatio !== undefined
       && modifiers.critScale === 1 && (modifiers.criticalAttackRatio ?? 0) === 0 ? 0 : modifiers.critChance
@@ -96,7 +96,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
   const kind = stage?.kind ?? 'NORMAL'
   const evaluatePassives = actor?.evaluatePassives ?? evaluateGuardPassives
   const passiveContext = { kind, skillIndex: skillActive ? recipe.skillIndex : 0, skillActive, stageId: stage?.id ?? '', stage,
-    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel }
+    phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel, excludeAttributeEffects: input.excludeAttributeEffects }
   const nativePassive = evaluatePassives(input.operator, conditions, passiveContext)
   let passive = nativePassive
   reasons.push(...passive.blockers, ...(stage?.unresolved ?? []))
@@ -329,9 +329,9 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
         const resistance = enemy?.resistance ?? (axisType === 'ARTS' ? axis : Number(conditions.enemyResistance ?? 0))
         // Attribute additions precede multiplicative reductions; penetration is applied afterwards.
         // https://prts.wiki/w/游戏数据基础#属性基本公式
-        const appliedDefense = Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio)
+        const appliedDefense = input.excludeAttributeEffects ? defense : Math.max(0, (defense - (modifiers.defenseReductionFixed ?? 0)) * (1 - modifiers.defenseReductionRatio)
           - (modifiers.defenseReductionFinalFixed ?? 0))
-        const appliedResistance = Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
+        const appliedResistance = input.excludeAttributeEffects ? resistance : Math.max(0, (resistance - (modifiers.resistanceReductionFixed ?? 0))
           * (1 - (modifiers.resistanceReductionRatio ?? 0))) * (1 - actionResistanceIgnoreRatio)
         const branches: ProbabilisticDamageBranch[] = [
           { id: 'NORMAL' as const, probability: 1 - chance, scale: 1, attackBonus: 0 },
@@ -365,7 +365,7 @@ export function buildGuardDamageOutput(input: DamageCalculatorThreeInput, struct
             ? calculateElementalDamageBreakdown(amount, action.damageKind!, axisType === 'ELEMENTAL' ? axis : Number(conditions.enemyElementalResistance ?? 0))
             : calculateDamageBreakdown(amount + (resolvedType === 'ARTS' ? artsAddition : 0), resolvedType, appliedDefense, appliedResistance,
               { ...penetration, minimumDamage })
-          const attributeScale = action.damageScaleWhenType?.damageType === resolvedType ? typedScale : 1
+          const attributeScale = !input.excludeAttributeEffects && action.damageScaleWhenType?.damageType === resolvedType ? typedScale : 1
           const uncappedDamage = mitigation.result * count * modifiers.damageScale * variant.damageScale * attributeScale
           const limitedDamage = damageCapPerTarget === null ? uncappedDamage : Math.min(uncappedDamage, damageCapPerTarget)
           // Only a single independent hit can have a damage cap.
