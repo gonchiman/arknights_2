@@ -1,0 +1,23 @@
+.skill-dps-combination-dialog {
+  width: min(var(--skill-dps-dialog-width, 420px), calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .16);
+}
+
+.skill-dps-combination-dialog::backdrop { background: rgba(0, 0, 0, .44); }
+.skill-dps-combination-dialog-content { display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100dvh - 26px); }
+.skill-dps-combination-dialog-header { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.skill-dps-combination-dialog-header .page-output-header { border: 0; }
+.skill-dps-combination-dialog-header h2 { margin: 0; font-size: 14px; font-weight: 500; }
+.skill-dps-combination-dialog-body { display: grid; gap: 12px; min-height: 0; padding: 12px; overflow: auto; overscroll-behavior: contain; }
+.skill-dps-combination-dialog-body:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.skill-dps-combination-dialog-body .skill-dps-statistics { gap: 6px 16px; padding: 0; border: 0; }
+.skill-dps-combination-dialog-body .skill-dps-statistics dd { font-size: inherit; }
