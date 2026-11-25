@@ -99,6 +99,8 @@ test('スルトS2の術耐性20無視の切り替えが属性変更・実際の�
   for (const mode of ['virtual', 'actual'] as const) {
     const on = evaluateDamageThreeSkillRankRow(entry, pairs, mode)
     const off = evaluateDamageThreeSkillRankRow(entry, pairs, mode, true)
+    assert.deepEqual(evaluateDamageThreeSkillRankRow(entry, pairs, mode, 'apply'), on)
+    assert.deepEqual(evaluateDamageThreeSkillRankRow(entry, pairs, mode, 'excludePenetration'), off)
     assert.deepEqual([...on.errors, ...off.errors], [])
     assert.ok(on.cells[0].arts! > 0)
     close(off.cells[0].arts, on.cells[0].arts! * (0.4 / 0.6))
@@ -323,16 +325,87 @@ test('無視オフはアイリーニS1の地上敵への確率防御無視を外
   assert.deepEqual(off.arts, on.arts)
 })
 
-test('無視オフは聖聆プラマニクスS3の術耐性10無視を外し、凍結の術耐性15低下を保つ', () => {
+test('聖聆プラマニクスS3の凍結中は、適用・無視のみ除外・属性限定効果を除外で術の軽減率が変わる', () => {
   const value = input('char_1046_sbell2', 3, 'attack', { 'guard.sbellTargetFrozen': true })
   const on = valid(value)
   const off = valid({ ...value, disablePenetration: true })
+  const neutral = valid({ ...value, excludeAttributeEffects: true })
   const base = on.arts[0].perAttack!.max
   const before = on.arts.find(row => row.rating === 'A+')!
   const after = off.arts.find(row => row.rating === 'A+')!
 
   close(before.perAttack!.max, base * (1 - (60 - 15 - 10) / 100))
   close(after.perAttack!.max, base * (1 - (60 - 15) / 100))
+  close(neutral.arts.find(row => row.rating === 'A+')!.perAttack!.max, base * 0.4)
+  assert.deepEqual(neutral.physical, on.physical)
+})
+
+test('ロゴスS1の術耐性低下と術の固定加算を外すと、敵防御と術耐性0で集計も横並びの表も同値になる', () => {
+  const entry = input('char_4133_logos', 1, 'attack').entry
+  const pairs = [
+    { resistance: 0, defense: 0, percentage: 100, rankCutoff: 2 },
+    { resistance: 40, defense: 300, percentage: 20, rankCutoff: 1 },
+  ]
+  for (const policy of ['apply', 'excludePenetration', 'excludeAttributeEffects'] as const) {
+    const result = evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', policy)
+    assert.deepEqual(result.errors, [])
+    const [zero, resisted] = result.cells
+    assert.ok(zero.physical !== null && zero.physical > 300)
+    const base = zero.physical
+    const neutral = policy === 'excludeAttributeEffects'
+    close(zero.arts, neutral ? base : base + 150)
+    close(resisted.physical, base - 300)
+    close(resisted.arts, neutral ? base * 0.6 : (base + 150) * 0.7)
+    const cells = evaluateSkillRankStatisticsStage(entry, pairs, policy)
+    assert.deepEqual(cells, result.cells)
+    assert.ok(cells)
+    const [summary] = summarizeSkillRankStatistics(pairs, [{ skill: entry.skill, cells }])
+    assert.deepEqual(summary.bySkill, { count: 1, physicalWins: 0, ties: neutral ? 1 : 0, artsWins: neutral ? 0 : 1 })
+  }
+})
+
+test('シーS2の低HPへの術限定1.3倍を外し、共通の積墨・スキルの攻撃力を維持する', () => {
+  const value = input('char_2015_dusk', 2, undefined, { 'guard.duskKillStacks': 15, 'guard.targetHpPercent': 50 })
+  const pairs = [{ defense: 0, resistance: 0, percentage: 100 }, { defense: 300, resistance: 40, percentage: 10 }]
+  const on = evaluateDamageThreeAttributeRankTable(value, pairs)
+  const neutral = evaluateDamageThreeAttributeRankTable({ ...value, excludeAttributeEffects: true }, pairs)
+  assert.deepEqual([...on.errors, ...neutral.errors], [])
+  const base = on.rows[0].physical
+  assert.ok(base !== null && base > 300)
+  close(on.rows[1].arts, base * 0.6 * 1.3)
+  close(neutral.rows[1].arts, base * 0.6)
+  close(neutral.rows[1].physical, base - 300)
+})
+
+test('物理・術それぞれに限定された素質倍率を外し、反対属性のダメージを保つ', () => {
+  const pairs = [{ defense: 0, resistance: 0, percentage: 100 }]
+  for (const [operatorId, skillIndex, boostedType, multiplier] of [
+    ['char_1502_crosly', 1, 'physical', 1.2],
+    ['char_1020_reed2', 3, 'arts', 1.3],
+  ] as const) {
+    const entry = input(operatorId, skillIndex).entry
+    const applied = evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', 'apply')
+    const neutral = evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', 'excludeAttributeEffects')
+    assert.deepEqual([...applied.errors, ...neutral.errors], [])
+    const baseline = applied.cells[0][boostedType === 'arts' ? 'physical' : 'arts']
+    assert.ok(baseline !== null && baseline > 0)
+    close(applied.cells[0][boostedType], baseline * multiplier)
+    close(neutral.cells[0].physical, baseline)
+    close(neutral.cells[0].arts, baseline)
+  }
+})
+
+test('プラマニクスS2の防御・術耐性低下を外しても、両属性共通の低HP脆弱は残る', () => {
+  const value = input('char_174_slbell', 2, undefined, { 'guard.targetHpPercent': 30 })
+  const pairs = [{ defense: 100, resistance: 80, percentage: 1 }]
+  const on = evaluateDamageThreeAttributeRankTable(value, pairs)
+  const neutral = evaluateDamageThreeAttributeRankTable({ ...value, excludeAttributeEffects: true }, pairs)
+  assert.deepEqual([...on.errors, ...neutral.errors], [])
+  const base = on.reference.output!.stats.attack
+  close(on.rows[0].physical, (base - 100 * 0.4) * 1.3)
+  close(neutral.rows[0].physical, (base - 100) * 1.3)
+  close(on.rows[0].arts, base * 0.44 * 1.3)
+  close(neutral.rows[0].arts, base * 0.2 * 1.3)
 })
 
 test('無視オフはEla S2の防御800無視を外し、会心確率と倍率を保つ', () => {

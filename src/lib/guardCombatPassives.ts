@@ -8,7 +8,7 @@ import type { GuardCalculationIssue, GuardConditions, GuardInput, GuardPassiveMo
 
 type Context = { kind: 'NORMAL' | 'NEXT_ATTACK' | 'SKILL_ACTION'; skillIndex: number; stageId: string;
   stage?: Pick<GuardStage, 'actions' | 'includesSkillActivation'>; phaseIndex?: number; operatorLevel?: number;
-  skillActive?: boolean; virtualMainAttackType?: 'PHYSICAL' | 'ARTS' }
+  skillActive?: boolean; virtualMainAttackType?: 'PHYSICAL' | 'ARTS'; excludeAttributeEffects?: boolean }
 
 export interface GuardPassiveCalculationConstraint extends GuardCalculationIssue {
   readonly talentIndex: number
@@ -222,7 +222,7 @@ function evaluateGuardPassiveDefinitions(operator: SkillRecord, conditions: Guar
     }
     const structure = structures.find(entry => entry.basicInfo.talentIndex === index)
     if (!structure) { block(source, '昇進2・潜在1の素質構造を取得できません。'); continue }
-    applyGuardTalentStructure(output, structure, metrics, registrationOnly)
+    applyGuardTalentStructure(output, structure, metrics, registrationOnly, context.excludeAttributeEffects)
   }
   if (![output.attackRatio, output.attackFlat, output.attackScale, output.attackSpeed, output.damageScale,
     output.defenseIgnoreRatio, output.attackDefenseIgnoreRatio ?? 0, output.criticalDefenseIgnoreRatio ?? 0,

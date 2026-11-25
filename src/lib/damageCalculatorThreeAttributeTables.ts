@@ -38,6 +38,7 @@ export interface DamageThreeAttributeTablesInput {
   operatorLevel?: number
   trust?: number
   disablePenetration?: boolean
+  excludeAttributeEffects?: boolean
   normalAttack?: boolean
 }
 
@@ -197,7 +198,8 @@ function createAttributeEvaluator(input: DamageThreeAttributeTablesInput, table:
   const settings: DamageThreeComparisonEvaluationOptions = {
     ...(input.operatorLevel === undefined ? {} : { operatorLevel: input.operatorLevel }),
     ...(input.trust === undefined ? {} : { trust: input.trust }),
-    ...(input.disablePenetration ? { disablePenetration: true } : {}),
+    disablePenetration: input.disablePenetration,
+    excludeAttributeEffects: input.excludeAttributeEffects,
     ...(input.normalAttack ? { normalAttack: true } : {}),
   }
   const reference = evaluateDamageThreeComparisonEntry(entry, { defense: 0, resistance: 0, enemyCount }, overrides, settings)

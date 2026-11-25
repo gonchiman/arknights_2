@@ -8,7 +8,7 @@ import { resolveGuardConditions } from './guardCombatValues.ts'
 
 export function evaluateExpandedPassives(operator: SkillRecord, conditions: GuardConditions,
   context: { kind: string; skillIndex: number; stage?: Pick<GuardStage, 'actions' | 'includesSkillActivation'>; phaseIndex?: number; operatorLevel?: number;
-    skillActive?: boolean; virtualMainAttackType?: 'PHYSICAL' | 'ARTS' },
+    skillActive?: boolean; virtualMainAttackType?: 'PHYSICAL' | 'ARTS'; excludeAttributeEffects?: boolean },
   registrationOnly = false): GuardPassiveModifiers {
   const output: GuardPassiveModifiers = { attackRatio: 0, attackFlat: 0, attackScale: 1, attackSpeed: 0,
     damageScale: 1, defenseIgnoreRatio: 0, defenseIgnoreFixed: 0, resistanceIgnoreFixed: 0,
@@ -44,7 +44,7 @@ export function evaluateExpandedPassives(operator: SkillRecord, conditions: Guar
   const affiliations = affiliation ? [affiliation.nationId, affiliation.groupId, affiliation.teamId] : []
   for (const structure of buildExpandedTalentStructures([operator], { phaseIndex, operatorLevel }, registrationOnly)) {
     for (const faction of structure.effects.flatMap(effect => effect.target.factionIds)) metrics[`source.faction.${faction}`] = affiliations.includes(faction)
-    applyGuardTalentStructure(output, structure, metrics, registrationOnly)
+    applyGuardTalentStructure(output, structure, metrics, registrationOnly, context.excludeAttributeEffects)
   }
   return output
 }

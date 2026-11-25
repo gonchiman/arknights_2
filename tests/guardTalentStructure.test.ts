@@ -65,6 +65,37 @@ function close(actual: number, expected: number) {
   assert.ok(Math.abs(actual - expected) <= Math.max(1, Math.abs(expected)) * 1e-10, `${actual} != ${expected}`)
 }
 
+test('属性限定効果の除外は、同じ条件で両属性に適用できる複合条件の倍率を保持する', () => {
+  const original = structure(record('char_010_chen'), 1)
+  const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!
+  const bonus: TalentStructureEffect = { ...template, item: 'DAMAGE_SCALE', operation: 'MULTIPLY', unit: 'MULTIPLIER', value: 1.5,
+    condition: { type: 'ANY', conditions: [
+      { type: 'COMPARE', metric: 'attack.damageType', comparison: 'EQ', value: 'PHYSICAL' },
+      { type: 'COMPARE', metric: 'targetBlocked', comparison: 'EQ', value: true },
+    ] },
+    timing: { type: 'CONTINUOUS', while: 'DEPLOYED' }, lifetime: { type: 'WHILE_SOURCE_ACTIVE' },
+    probability: { chance: 1, rollScope: 'APPLICATION' } }
+  for (const damageType of ['PHYSICAL', 'ARTS']) {
+    function multiplier(effect: TalentStructureEffect, targetBlocked: boolean, exclude: boolean) {
+      const output = emptyModifiers()
+      applyGuardTalentStructure(output, { ...original, effects: [effect] }, { actionKind: 'NORMAL',
+        'virtual.attackTypeComparison': true, 'attack.damageType': damageType, targetBlocked }, false, exclude)
+      assert.deepEqual(output.blockers, [])
+      return output.damageScale
+    }
+    assert.equal(multiplier(bonus, true, true), 1.5)
+    assert.equal(multiplier(bonus, false, true), 1)
+    assert.equal(multiplier(bonus, false, false), damageType === 'PHYSICAL' ? 1.5 : 1)
+    for (const [tag, required] of [['physical_damage', 'PHYSICAL'], ['arts_damage', 'ARTS']]) {
+      for (const side of ['ENEMY', 'SELF'] as const) {
+        const taggedBonus = { ...bonus, target: { ...bonus.target, side, tagIds: [tag] } }
+        assert.equal(multiplier(taggedBonus, true, true), 1)
+        assert.equal(multiplier(taggedBonus, true, false), damageType === required ? 1.5 : 1)
+      }
+    }
+  }
+})
+
 test('素質の命中上限は対象HPから解決し、複数上限は最小値、無効状態は拒否する', () => {
   const original = structure(record('char_010_chen'), 1)
   const template = original.effects.find(effect => effect.item === 'ATK_BUFF_RATIO')!

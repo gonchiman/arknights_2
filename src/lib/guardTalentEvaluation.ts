@@ -1,5 +1,5 @@
 import {
-  evaluateCombatCondition, resolveCombatNumericValue, formatCombatCondition, formatCombatTiming,
+  conditionUsesMetric, evaluateCombatCondition, resolveCombatNumericValue, formatCombatCondition, formatCombatTiming,
   formatCombatNumber, type CombatCondition, type CombatNumericValue, type CombatScalar,
 } from './combatEffectStructure.ts'
 import { formatTalentStructureEffectItem, formatTalentStructureEffectValue,
@@ -23,6 +23,26 @@ const damageItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
   'DAMAGE_OVER_TIME', 'ATTACK_INTERVAL_ADD', 'MINIMUM_DAMAGE_RATIO', 'DEFENSE_IGNORE_FIXED', 'RESISTANCE_REDUCTION_RATIO',
   'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'RESISTANCE_REDUCTION_FIXED',
 ])
+const attributeLimitedItems: ReadonlySet<TalentStructureEffect['item']> = new Set([
+  'DEFENSE_IGNORE_FIXED', 'DEFENSE_IGNORE_RATIO', 'RESISTANCE_IGNORE_FIXED', 'RESISTANCE_IGNORE_RATIO',
+  'DEFENSE_REDUCTION_FIXED', 'DEFENSE_REDUCTION_FINAL_FIXED', 'DEFENSE_REDUCTION_RATIO',
+  'RESISTANCE_REDUCTION_FIXED', 'RESISTANCE_REDUCTION_RATIO', 'ARTS_DAMAGE_FLAT_ADDITION',
+])
+
+function requiredDamageType(tag: string): 'ARTS' | 'PHYSICAL' | null {
+  if (tag === 'arts_damage') return 'ARTS'
+  if (tag === 'physical_damage') return 'PHYSICAL'
+  return null
+}
+
+function isAttributeLimited(effect: TalentStructureEffect, metrics: Metrics): boolean {
+  if (attributeLimitedItems.has(effect.item) || effect.target.tagIds.some(tag => requiredDamageType(tag) !== null)) return true
+  if (!conditionUsesMetric(effect.condition, 'attack.damageType')) return false
+  const appliesTo = (damageType: 'PHYSICAL' | 'ARTS') =>
+    evaluateCombatCondition(effect.condition, { ...metrics, 'attack.damageType': damageType })
+  return appliesTo('PHYSICAL') !== appliesTo('ARTS')
+}
+
 const operations: Readonly<Record<string, readonly [string, string]>> = {
   ELEMENTAL_BUILDUP: ['APPLY_ELEMENTAL_BUILDUP', 'MULTIPLIER'],
   ARTS_DAMAGE_FLAT_ADDITION: ['ADD_VALUE', 'POINT'],
@@ -114,10 +134,13 @@ function formatCurrentRecipientCondition(condition: CombatCondition | null): str
 }
 
 function matchesRecipient(effect: TalentStructureEffect, metrics: Metrics): boolean | null {
-  // Counterfactual attacks must re-evaluate arts-only enemy vulnerabilities as well as self buffs.
-  if (metrics['virtual.attackTypeComparison'] === true && effect.target.tagIds.includes('arts_damage')
-    && metrics['attack.damageType'] !== 'ARTS') return false
-  if (effect.target.side === 'ENEMY') return true
+  if (effect.target.side === 'ENEMY') {
+    if (metrics['virtual.attackTypeComparison'] !== true) return true
+    return effect.target.tagIds.every(tag => {
+      const required = requiredDamageType(tag)
+      return required === null || required === metrics['attack.damageType']
+    })
+  }
   if (effect.target.factionIds.length) {
     const matches = effect.target.factionIds.map(id => metrics[`source.faction.${id}`])
     if (!matches.includes(true)) return matches.includes(undefined) ? null : false
@@ -126,10 +149,11 @@ function matchesRecipient(effect: TalentStructureEffect, metrics: Metrics): bool
     if (tag.startsWith('profession:')) {
       if (metrics['source.profession'] === undefined) return null
       if (metrics['source.profession'] !== tag.slice('profession:'.length)) return false
-    } else if (tag === 'arts_damage') {
-      if (metrics['attack.damageType'] === undefined) return null
-      if (metrics['attack.damageType'] !== 'ARTS') return false
-    } else return null
+    } else {
+      const required = requiredDamageType(tag)
+      if (required === null || metrics['attack.damageType'] === undefined) return null
+      if (metrics['attack.damageType'] !== required) return false
+    }
   }
   return true
 }
@@ -157,7 +181,7 @@ function relevant(effect: TalentStructureEffect, metrics: Metrics): boolean {
  * No operator-specific numerical formula is interpreted here.
  */
 export function applyGuardTalentStructure(output: GuardPassiveModifiers, structure: TalentStructure,
-  metrics: Metrics, registrationOnly = false): void {
+  metrics: Metrics, registrationOnly = false, excludeAttributeEffects = false): void {
   const source = structure.basicInfo.talentName
   const addRow = (item: string, value: string, status: Evaluation['status'], reason = '',
     details: Partial<Pick<Evaluation, 'probability' | 'timing' | 'condition'>> = {}) => {
@@ -197,8 +221,12 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
         '選択した自身・攻撃は、この効果の対象条件に該当しません。')
       continue
     }
-    const active = evaluateCombatCondition(effect.condition, metrics)
-    if (active === null) { block(`効果「${effect.id}」の適用条件を確認できません。`); continue }
+    const conditionMet = evaluateCombatCondition(effect.condition, metrics)
+    if (conditionMet === null) { block(`効果「${effect.id}」の適用条件を確認できません。`); continue }
+    // A type-specific talent can feed the same multiplier as an unconditional talent.
+    // Suppress its contribution before those values are combined.
+    const excluded = excludeAttributeEffects && isAttributeLimited(effect, metrics)
+    const active = conditionMet && !excluded
     const details: Partial<Pick<Evaluation, 'probability' | 'timing' | 'condition'>> = {
       timing: formatCombatTiming(effect.timing),
       condition: formatCurrentRecipientCondition(effect.condition),
@@ -237,7 +265,7 @@ export function applyGuardTalentStructure(output: GuardPassiveModifiers, structu
     const value = numeric(effect.value, '値')
     if (value === null) continue
     const percent = (amount: number) => `${Math.round(amount * 100_000) / 1000}％`
-    const status = active ? 'APPLIED' : 'CONDITION_FALSE'
+    const status = excluded ? 'NOT_RELEVANT' : active ? 'APPLIED' : 'CONDITION_FALSE'
     switch (effect.item) {
       case 'ELEMENTAL_BUILDUP':
         if (value < 0 || effect.damageKind?.type !== 'ELEMENTAL_BUILDUP' || !Object.hasOwn(ELEMENT_LABELS, effect.damageKind.elementId)) {

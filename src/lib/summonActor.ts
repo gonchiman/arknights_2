@@ -83,7 +83,8 @@ export function buildSummonDamageOutput(input: DamageCalculatorThreeInput, struc
       throw new RangeError('召喚者のスキル攻撃力を確認できません。')
     const ownerStats = getOperatorStats(input.operator.operatorProfile, input.phaseIndex, input.operatorLevel, input.trust)
     const ownerPassive = evaluateGuardPassives(input.operator, selection.values, { kind: stage.kind,
-      skillIndex: recipe.skillIndex, stageId: stage.id, stage, phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel })
+      skillIndex: recipe.skillIndex, stageId: stage.id, stage, phaseIndex: input.phaseIndex, operatorLevel: input.operatorLevel,
+      excludeAttributeEffects: input.excludeAttributeEffects })
     errors.push(...ownerPassive.blockers)
     ownerAttackStat = calculateAttackPipeline(ownerStats.attack, { directAddition: ownerPassive.attackFlat,
       directMultiplierPercent: (ownerSkillBonus + ownerPassive.attackRatio) * 100,
