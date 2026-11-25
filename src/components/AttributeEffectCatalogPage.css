@@ -1,7 +1,7 @@
 .attribute-catalog h2 { margin: 0; font-size: 14px; }
 
 .attribute-catalog .skill-directory-filter-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 2fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 2fr);
 }
 .attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: auto; }
 
@@ -55,9 +55,8 @@
 .attribute-catalog-table :is(th, td):nth-child(4) { text-align: center; white-space: nowrap; }
 .attribute-catalog-table th:nth-child(6),
 .attribute-catalog-table .attribute-catalog-amount { text-align: right; white-space: nowrap; }
-.attribute-catalog-table td:last-child { max-width: 21rem; overflow-wrap: anywhere; }
+.attribute-catalog-table .attribute-catalog-condition { max-width: 21rem; overflow-wrap: anywhere; }
 
 @media (max-width: 560px) {
   .attribute-catalog .skill-directory-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .attribute-catalog .skill-directory-filter-grid label:has(input) { grid-column: 1 / -1; }
 }

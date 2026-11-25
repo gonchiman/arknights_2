@@ -78,7 +78,7 @@ export async function exportCoverageRevision(root, requestedRevision) {
   return { revision, directory }
 }
 
-function installTypeScriptResolver() {
+export function installTypeScriptResolver() {
   return registerHooks({ resolve(specifier, context, nextResolve) {
     try { return nextResolve(specifier, context) }
     catch (error) {

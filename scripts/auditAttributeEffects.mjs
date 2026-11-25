@@ -1,22 +1,8 @@
-import { readFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { loadOperatorAndSkillRecords } from '../src/lib/arknightsData.ts'
-import { buildAttributeEffectCatalog } from '../src/lib/attributeEffectCatalog.ts'
-import { LOCAL_GAME_DATA_RUNTIME_FILES } from '../src/lib/localGameDataContract.ts'
 import { getOperatorPassives } from '../src/lib/operatorProfile.ts'
 import { expandSkillDescription } from '../src/lib/skillJsonAnalysis.ts'
-import { readActiveLocalDataSnapshot } from './refreshLocalGameData.mjs'
+import { readLocalAttributeEffectCatalog } from './archiveAttributeEffects.mjs'
 
-const root = fileURLToPath(new URL('../', import.meta.url))
-const game = await readActiveLocalDataSnapshot(root)
-if (!game || !game.files.includes(LOCAL_GAME_DATA_RUNTIME_FILES.character)) {
-  throw new Error('日本版のローカルデータが必要です。開発サーバーでデータを更新してから再実行してください。')
-}
-const { operators, rows } = await loadOperatorAndSkillRecords({
-  readTable: async key => JSON.parse(await readFile(resolve(game.directory, LOCAL_GAME_DATA_RUNTIME_FILES[key]), 'utf8')),
-})
-const catalog = buildAttributeEffectCatalog(rows, operators)
+const { game, operators, rows, catalog } = await readLocalAttributeEffectCatalog()
 
 // A hit is a prompt for a human review. In particular, a negative DEF value can target the caster.
 const clues = [
