@@ -93,7 +93,7 @@ export function TdMapImage({ map, filenameParts, caption, imageDetails, onOpen, 
         ...(deployment?.placements.length ? [`味方${deployment.placements.length}人配置`] : [])]),
       image: <figure className="td-map-image">
         <ChartImageHeading title={`${map.code} ${map.name}`} conditions={caption} />
-        <TdDeploymentContext.Provider value={deployment && { placements: deployment.placements, editing: false, choosing: false, facing: false, selectedOperator: null, targeting: null }}>
+        <TdDeploymentContext.Provider value={deployment && { placements: deployment.placements, editing: false, facing: false, selectedOperator: null, targeting: null }}>
           {children}
         </TdDeploymentContext.Provider>
         {imageDetails}
@@ -101,7 +101,7 @@ export function TdMapImage({ map, filenameParts, caption, imageDetails, onOpen, 
     })
   }
   return <>
-    {buttonTarget && !deployment?.choosing && createPortal(
+    {buttonTarget && createPortal(
       <OutputImageSaveButton onClick={open} />,
       buttonTarget,
     )}

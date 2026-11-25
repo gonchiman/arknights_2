@@ -10,12 +10,11 @@ import { TdDeploymentPicker, TD_POSITION_LABEL } from './TdDeploymentPicker'
 import { useMapResource } from './useMapResource'
 import './TdDeploymentEditor.css'
 
-type Step = { mode: 'view' | 'idle' | 'search' }
+type Step = { mode: 'view' | 'idle' }
   | { mode: 'place' | 'edit' | 'move' | 'facing'; operator: TdDeployOperator }
 
 function panelHeading(step: Step) {
   switch (step.mode) {
-    case 'search': return '配置する味方を選択'
     case 'place': return `${step.operator.name}の配置先`
     case 'move': return `${step.operator.name}の移動先`
     case 'facing': return `${step.operator.name}の向き`
@@ -33,8 +32,8 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
   children: ReactNode
 }) {
   const [step, setStep] = useState<Step>({ mode: 'view' })
+  const [choosing, setChoosing] = useState(false)
   const editing = step.mode !== 'view'
-  const choosing = step.mode === 'search'
   const selectedOperator = 'operator' in step ? step.operator : null
   const targeting = step.mode === 'place' || step.mode === 'move' ? step.mode : null
   const placed = placements.find(p => p.operator.id === selectedOperator?.id)
@@ -68,17 +67,16 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
 
   function cancel() {
     switch (step.mode) {
-      case 'place': setStep({ mode: 'search' }); break
+      case 'place': setStep({ mode: 'idle' }); break
       case 'move':
       case 'facing': setStep({ mode: 'edit', operator: step.operator }); break
       case 'edit': setStep({ mode: 'idle' }); break
-      case 'search': setStep({ mode: 'idle' }); break
       case 'idle': finish(); break
     }
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (editing && event.key === 'Escape' && !event.defaultPrevented && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
+    if (editing && !choosing && event.key === 'Escape' && !event.defaultPrevented && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) {
       event.preventDefault()
       cancel()
     }
@@ -106,18 +104,18 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
     setStep({ mode: 'idle' })
   }
 
-  const add = <button type="button" className="button" data-add onClick={() => setStep({ mode: 'search' })}>＋ 味方を追加</button>
+  const add = <button type="button" className="button" data-add aria-haspopup="dialog" onClick={() => setChoosing(true)}>味方を選ぶ</button>
   const changeFacing = placed && <button type="button" data-face className="button secondary"
     onClick={() => selectOperator(placed.operator, 'facing')}>向きを変更</button>
   const visibleViewSwitch = !editing && viewSwitch
   const showCount = editing || placements.length > 0
-  return <TdDeploymentContext.Provider value={{ placements, selectedOperator, targeting, editing, choosing,
+  return <TdDeploymentContext.Provider value={{ placements, selectedOperator, targeting, editing,
     facing: step.mode === 'facing', actions: { selectOperator, selectDestination, setDirection } }}>
     <div className="td-deploy-editor" onKeyDown={onKeyDown}>
       {switchTarget && createPortal(
         <button type="button" className="td-deploy-switch" role="switch" ref={toggle}
           aria-checked={editing} aria-controls={editing ? controlsId : undefined}
-          onClick={() => editing ? finish() : setStep({ mode: placements.length ? 'idle' : 'search' })}>
+          onClick={() => editing ? finish() : setStep({ mode: 'idle' })}>
           配置編集<span className="td-deploy-switch-track" aria-hidden="true" />
         </button>, switchTarget)}
       {(visibleViewSwitch || showCount) && <div className="td-terrain-tools">
@@ -127,24 +125,20 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
           {detail.deployLimit !== null && <span>配置枠 {detail.deployLimit}</span>}
         </div>}
       </div>}
-      <div className={`td-deploy-workspace${editing && !choosing ? ' is-editing' : ''}`}>
-        <div ref={board} className="td-deploy-map" hidden={choosing}>{children}</div>
+      <div className={`td-deploy-workspace${editing ? ' is-editing' : ''}`}>
+        <div ref={board} className="td-deploy-map">{children}</div>
         {editing && <aside id={controlsId} className="td-deploy-console" ref={panel} aria-label="オペレーター配置">
-          <PageOutputHeader segments={choosing ? ['地形', 'オペレーター配置', panelHeading(step)] : ['地形', 'オペレーター配置']}
-            actions={choosing && <button type="button" className="button secondary" onClick={cancel}>盤面に戻る</button>}>
+          <PageOutputHeader segments={['地形', 'オペレーター配置']}>
             <h3 aria-live="polite">{panelHeading(step)}</h3>
           </PageOutputHeader>
           <div className="td-deploy-console-body">
-            {(choosing || step.mode === 'place') && !roster.error &&
-              <TdDeploymentPicker active={choosing} operators={availableOperators}
-                onSelect={operator => setStep({ mode: 'place', operator })} />}
-            {step.mode === 'search' && roster.error && <div role="alert">{roster.error} <button type="button" className="button secondary" onClick={roster.retry}>再読み込み</button></div>}
             {targeting && selectedOperator && <>
               <p className="td-deploy-position">{canPlace ? `${TD_POSITION_LABEL[selectedOperator.position]}の「＋」を選択` : '配置できる空きマスがありません'}</p>
               <div className="td-deploy-actions">
-                {targeting === 'move' && changeFacing}
+                {targeting === 'move' ? changeFacing :
+                  <button type="button" className="button secondary" aria-haspopup="dialog" onClick={() => setChoosing(true)}>選び直す</button>}
                 <button type="button" data-cancel className="button secondary" onClick={cancel}>
-                  {targeting === 'move' ? '移動を取り消す' : '選び直す'}
+                  {targeting === 'move' ? '移動を取り消す' : '配置を取り消す'}
                 </button>
               </div>
             </>}
@@ -165,6 +159,12 @@ export function TdDeploymentEditor({ detail, placements, onChange, switchTarget,
           </div>
         </aside>}
       </div>
+      {(choosing || step.mode === 'place') &&
+        <TdDeploymentPicker active={choosing} operators={availableOperators} error={roster.error} onRetry={roster.retry}
+          onClose={() => setChoosing(false)} onSelect={operator => {
+            setChoosing(false)
+            setStep({ mode: 'place', operator })
+          }} />}
     </div>
   </TdDeploymentContext.Provider>
 }
