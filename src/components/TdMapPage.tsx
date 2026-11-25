@@ -81,6 +81,7 @@ function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }
   const detail = resource.data
   const [routeEnemyId, setRouteEnemyId] = useState<string | null>(null)
   const [terrainView, setTerrainView] = useState<TerrainView>('route')
+  const [editSwitchTarget, setEditSwitchTarget] = useState<HTMLSpanElement | null>(null)
   const [saveButtonTarget, setSaveButtonTarget] = useState<HTMLSpanElement | null>(null)
   const hasTimeline = map.code === 'TD-8'
   const showTimeline = hasTimeline && terrainView === 'timeline'
@@ -99,10 +100,14 @@ function StageOutput({ map, index, tab, setTab, placements, onPlacementsChange }
     {detail ? <>
       <MapBattleFacts map={map} detail={detail} />
       <PageOutputTabs {...tabProps} tabs={TABS} label="マップ情報" onChange={setTab}
-        actions={tab === 'terrain' && <span ref={setSaveButtonTarget} />}
+        actions={tab === 'terrain' && <>
+          <span ref={setEditSwitchTarget} />
+          <span ref={setSaveButtonTarget} />
+        </>}
         format={tab === 'terrain' && showTimeline ? viewLabel(TERRAIN_VIEWS, terrainView) : undefined} />
       <AnalysisTabPanel {...tabProps} tab="terrain">
         <TdDeploymentEditor detail={detail} placements={placements} onChange={onPlacementsChange}
+          switchTarget={editSwitchTarget}
           viewSwitch={hasTimeline && <PageViewSwitch views={TERRAIN_VIEWS} selected={terrainView}
             onChange={setTerrainView} label="地形の表示形式" />}>
           <div hidden={showTimeline}>

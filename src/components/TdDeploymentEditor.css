@@ -55,6 +55,49 @@
 
 .td-deploy-position { margin: 0; }
 
+.td-deploy-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.td-deploy-switch-track {
+  display: flex;
+  align-items: center;
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.td-deploy-switch-track::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.td-deploy-switch[aria-checked="true"] .td-deploy-switch-track {
+  justify-content: flex-end;
+  border-color: var(--text);
+  background: var(--text);
+}
+
+.td-deploy-switch[aria-checked="true"] .td-deploy-switch-track::after { background: var(--surface); }
+
 @container td-placement (min-width: 600px) {
   .td-deploy-workspace.is-editing {
     grid-template-columns: minmax(0, 1fr) clamp(205px, 32cqi, 280px);
@@ -62,6 +105,9 @@
 }
 
 @media (pointer: coarse) {
-  .td-deploy-console-body .button,
-  .td-terrain-tools > .button { min-height: 44px; }
+  .td-deploy-console-body .button { min-height: 44px; }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .td-deploy-switch { min-height: 44px; }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { formatTdCell } from '../lib/tdCoordinates'
 import { canPlaceTdOperatorAt, placeTdOperator, TD_DIRECTIONS, type TdDirection, type TdPlacedOperator } from '../lib/tdDeployment'
 import { loadTdDeploymentRoster, type TdDeployOperator } from '../lib/tdDeploymentRoster'
@@ -23,10 +24,11 @@ function panelHeading(step: Step) {
   }
 }
 
-export function TdDeploymentEditor({ detail, placements, onChange, viewSwitch, children }: {
+export function TdDeploymentEditor({ detail, placements, onChange, switchTarget, viewSwitch, children }: {
   detail: MapDetail
   placements: readonly TdPlacedOperator[]
   onChange: (placements: readonly TdPlacedOperator[]) => void
+  switchTarget: HTMLElement | null
   viewSwitch?: ReactNode
   children: ReactNode
 }) {
@@ -104,20 +106,24 @@ export function TdDeploymentEditor({ detail, placements, onChange, viewSwitch, c
   const add = <button type="button" className="button" data-add onClick={() => setStep({ mode: 'search' })}>＋ 味方を追加</button>
   const changeFacing = placed && <button type="button" data-face className="button secondary"
     onClick={() => selectOperator(placed.operator, 'facing')}>向きを変更</button>
+  const visibleViewSwitch = !editing && viewSwitch
+  const showCount = editing || placements.length > 0
   return <TdDeploymentContext.Provider value={{ placements, selectedOperator, targeting, editing,
     facing: step.mode === 'facing', actions: { selectOperator, selectDestination, setDirection } }}>
     <div className="td-deploy-editor" onKeyDown={onKeyDown}>
-      <div className="td-terrain-tools">
-        {!editing && viewSwitch}
-        <button type="button" className="button secondary" ref={toggle} aria-controls={editing ? controlsId : undefined}
-          aria-expanded={editing} onClick={() => editing ? finish() : setStep({ mode: 'search' })}>
-          {editing ? '編集を終了' : '配置を編集'}
-        </button>
-        {(editing || placements.length > 0) && <div className="td-deploy-count" role="status">
+      {switchTarget && createPortal(
+        <button type="button" className="td-deploy-switch" role="switch" ref={toggle}
+          aria-checked={editing} aria-controls={editing ? controlsId : undefined}
+          onClick={() => editing ? finish() : setStep({ mode: 'search' })}>
+          配置編集<span className="td-deploy-switch-track" aria-hidden="true" />
+        </button>, switchTarget)}
+      {(visibleViewSwitch || showCount) && <div className="td-terrain-tools">
+        {visibleViewSwitch}
+        {showCount && <div className="td-deploy-count" role="status">
           <span>配置中 {placements.length}人</span>
           {detail.deployLimit !== null && <span>配置枠 {detail.deployLimit}</span>}
         </div>}
-      </div>
+      </div>}
       <div className={`td-deploy-workspace${editing ? ' is-editing' : ''}`}>
         <div ref={board} className="td-deploy-map">{children}</div>
         {editing && <aside id={controlsId} className="td-deploy-console" ref={panel} aria-label="オペレーター配置">
