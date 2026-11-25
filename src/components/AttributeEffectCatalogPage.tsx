@@ -150,17 +150,20 @@ export function AttributeEffectCatalogPage({ rows, operators, loading }: { rows:
       </div>
     </AnalysisTabPanel>
     <AnalysisTabPanel {...tabs} tab="changes">
-      {previous ? <div className="attribute-catalog-results">
-        <div className="attribute-catalog-summary" role="status">
-          {previous.version} → {selectedLabel}　追加 {changes.filter(item => item.kind === 'added').length}件
-          ・変更 {changes.filter(item => item.kind === 'changed').length}件
-          ・削除 {changes.filter(item => item.kind === 'removed').length}件
-        </div>
-        <CatalogTable showChanges entries={changes.flatMap(({ kind, row, previous: before }) => {
-          if (kind === 'changed') return [{ row: before, label: '変更前' }, { row, label: '変更後' }]
-          return [{ row, label: kind === 'added' ? '追加' : '削除' }]
-        })} onSource={setSourceDetail} />
-      </div> : <p className="attribute-catalog-summary" role="status">{release.version} は初版です。</p>}
+      <div className="attribute-catalog-results">
+        {!isLive && <p className="attribute-catalog-release-summary">{release.summary}</p>}
+        {previous && <>
+          <div className="attribute-catalog-summary" role="status">
+            {previous.version} → {selectedLabel}　追加 {changes.filter(item => item.kind === 'added').length}件
+            ・変更 {changes.filter(item => item.kind === 'changed').length}件
+            ・削除 {changes.filter(item => item.kind === 'removed').length}件
+          </div>
+          <CatalogTable showChanges entries={changes.flatMap(({ kind, row, previous: before }) => {
+            if (kind === 'changed') return [{ row: before, label: '変更前' }, { row, label: '変更後' }]
+            return [{ row, label: kind === 'added' ? '追加' : '削除' }]
+          })} onSource={setSourceDetail} />
+        </>}
+      </div>
     </AnalysisTabPanel>
     <p className="attribute-catalog-baseline">最大昇進・潜在1・モジュールなし・スキル最大ランク</p>
     {sourceDetail && <GoldenglowDetailModal title={`${sourceDetail.operatorName} · ${sourceDetail.name}`}

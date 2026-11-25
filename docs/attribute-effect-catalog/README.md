@@ -6,6 +6,6 @@
 
 1. 使用する日本版データを開発サーバーで用意し、`npm run audit:attribute-effects` で登録件数と未掲載候補を確認する。
 2. 一覧の抽出に使うコードをコミットし、次の版番号を指定する。たとえば `npm run archive:attribute-effects -- v3` は現在の `HEAD` とローカルゲームデータを使い、[保存フォルダ](../../src/data/attribute-effect-catalog/) に `v3.json` を新規作成する。過去のコードで集計する場合は、版番号の後にコミットを渡す。
-3. [版一覧](../../src/lib/attributeEffectCatalogVersions.ts) に新しいJSONをインポートし、`ATTRIBUTE_EFFECT_CATALOG_VERSIONS` の先頭に加える。ページで各版の件数と前版との差分を確認し、JSONと版一覧を一緒にコミットする。
+3. [版一覧](../../src/lib/attributeEffectCatalogVersions.ts) に新しいJSONをインポートし、その版の変更内容を一文にまとめて `readVersion` に渡し、版一覧の先頭に加える。「前版との差分」タブで概要と変更件数を確認し、JSONと版一覧を一緒にコミットする。
 
 各JSONに全行、抽出コードのコミット、日本版ゲームデータのリビジョンを保存する。既存版への再出力はエラーになる。掲載内容の訂正は次の版に記録する。
