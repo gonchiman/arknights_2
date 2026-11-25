@@ -1,0 +1,44 @@
+.skill-dps-coefficient-chart {
+  display: grid;
+  grid-template-columns: minmax(0, 26fr) minmax(0, 64fr) minmax(8ch, max-content);
+  column-gap: 12px;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.skill-dps-coefficient-chart figcaption { grid-column: 2; padding-bottom: 7px; text-align: center; font-weight: 500; }
+.skill-dps-coefficient-label { grid-column: 1; align-self: center; overflow-wrap: anywhere; }
+.skill-dps-coefficient-value { grid-column: 3; align-self: center; text-align: right; white-space: nowrap; }
+
+.skill-dps-coefficient-lane {
+  position: relative;
+  grid-column: 2;
+  min-height: 38px;
+  border-inline: 1px solid var(--border);
+  background: linear-gradient(var(--border), var(--border)) 25% 0 / 1px 100% no-repeat,
+    linear-gradient(var(--border), var(--border)) 75% 0 / 1px 100% no-repeat;
+}
+
+.skill-dps-coefficient-lane::after { position: absolute; inset: 0 auto 0 50%; width: 1px; background: var(--border-strong); content: ''; }
+.skill-dps-coefficient-bar { position: absolute; top: 50%; height: 16px; transform: translateY(-50%); background: var(--link); }
+
+.skill-dps-coefficient-ticks {
+  position: relative;
+  grid-column: 2;
+  min-height: 21px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.skill-dps-coefficient-ticks span { position: absolute; top: 4px; transform: translateX(-50%); white-space: nowrap; }
+.skill-dps-coefficient-ticks span:first-child { transform: none; }
+.skill-dps-coefficient-ticks span:last-child { transform: translateX(-100%); }
+
+@media (max-width: 520px) {
+  .skill-dps-coefficient-chart { grid-template-columns: minmax(0, 31fr) minmax(0, 51fr) minmax(8ch, max-content); column-gap: 6px; }
+  .skill-dps-coefficient-lane { background: none; }
+  .skill-dps-coefficient-ticks span:nth-child(even) { display: none; }
+}

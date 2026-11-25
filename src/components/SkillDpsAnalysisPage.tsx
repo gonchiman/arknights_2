@@ -86,6 +86,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const axisSelect = useRef<HTMLSelectElement>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [view, setView] = useState<TableChartView>('chart')
+  const [regressionView, setRegressionView] = useState<TableChartView>('table')
   const [combinationView, setCombinationView] = useState<TableChartView>('table')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
   const [includeUptime, setIncludeUptime] = useState(true)
@@ -128,7 +129,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const status = loading ? '読み込み中…' : busy ? '計算中…' : pending ? '未反映' : dataset ? '計算済み' : ''
   const detailFormat = detailMode === 'indicator'
     ? [viewLabel(axes, axis), viewLabel(VIEWS, view)]
-    : [detailMode === 'combinations' ? viewLabel(TABLE_CHART_VIEWS, combinationView) : '表']
+    : [viewLabel(TABLE_CHART_VIEWS, detailMode === 'multiple' ? regressionView : combinationView)]
 
   function changeDraft<Key extends keyof DraftConfig>(key: Key, value: DraftConfig[Key]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -254,7 +255,8 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
         <PageViewSwitch views={DETAIL_MODES} selected={detailMode} onChange={changeDetailMode} label="分析方法" />
         {openedModelModes.multiple && <div hidden={detailMode !== 'multiple'} aria-busy={busy}>
           <SkillDpsMultipleRegression key={regressionRequest?.version ?? 0} dataset={dataset} metric={metric}
-            includeUptime={includeUptime} initialSelection={regressionRequest?.selection} sectionRef={regressionSection} />
+            includeUptime={includeUptime} view={regressionView} onViewChange={setRegressionView}
+            initialSelection={regressionRequest?.selection} sectionRef={regressionSection} />
         </div>}
         {openedModelModes.combinations && <div hidden={detailMode !== 'combinations'} aria-busy={busy}>
           <SkillDpsCombinationEvaluation dataset={dataset} metric={metric} includeUptime={includeUptime}
