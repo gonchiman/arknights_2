@@ -2,6 +2,7 @@ import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, getAdvantageChartAxisTitle, getAd
 import { DAMAGE_DISTRIBUTION_AXIS_TITLE, DAMAGE_SERIES, damageBinLabel, describeDamageBin, getDamageThreeDistributionHistogram } from '../lib/damageThreeDistributionChart'
 import type { AdvantageUnit, SkillRankStatistics } from '../lib/damageThreeSkillRankStatistics'
 import { formatAdvantagePercentage, type SkillRankStatisticsProps } from './DamageThreeSkillRankStatisticsTable'
+import { DAMAGE_THREE_STATISTIC_STYLE } from './DamageThreeStatisticsImageLegend'
 import './DamageThreeSkillRankStatisticsChart.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -14,7 +15,7 @@ function DamageHistogram({ rows, resistance }: Pick<SkillRankStatisticsProps, 'r
   }
 
   const { row, axis } = histogram
-  return <figure className="dc3-stat-chart dc3-histogram" aria-label="主攻撃1回のダメージ分布">
+  return <figure className="dc3-stat-chart dc3-histogram" aria-label="主攻撃1回のダメージ分布" style={DAMAGE_THREE_STATISTIC_STYLE}>
     <figcaption className="dc3-stat-chart-caption">
       <ul className="dc3-stat-chart-legend" aria-label="凡例">
         {DAMAGE_SERIES.map(({ series, label }) => <li key={series}><i data-series={series} aria-hidden="true" />{label}</li>)}
@@ -61,7 +62,7 @@ function AdvantageBar({ row, unit }: { row: SkillRankStatistics; unit: Advantage
 
 export default function DamageThreeSkillRankStatisticsChart({ rows, view, advantageUnit, resistance }: SkillRankStatisticsProps & { resistance: number }) {
   if (view === 'distribution') return <DamageHistogram rows={rows} resistance={resistance} />
-  return <figure className="dc3-stat-chart" aria-label="術耐性別の属性別の優勢率">
+  return <figure className="dc3-stat-chart" aria-label="術耐性別の属性別の優勢率" style={DAMAGE_THREE_STATISTIC_STYLE}>
     <figcaption className="dc3-stat-chart-caption">
       <strong>{ADVANTAGE_LEGEND}</strong>
       <ul className="dc3-stat-chart-legend" aria-label={ADVANTAGE_LEGEND}>

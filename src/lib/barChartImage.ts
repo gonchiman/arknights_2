@@ -49,7 +49,7 @@ export function getBarChartArchiveFilename(snapshot: BarChartImageSnapshot,
   const highlight = getBarChartHighlightFilenamePart(first, variants[0]?.snapshot.settings ?? settings, 'zip')
   const commonHighlight = highlight && variants.every(({ snapshot: variant }) =>
     getBarChartHighlightFilenamePart(variant.document, variant.settings, 'zip') === highlight)
-  const display = mirrored ? [
+  const display = first.layout === 'stacked-percent' ? [] : mirrored ? [
     band === 'value' && '数値帯', band === 'cumulative' && '累積割合帯', band === 'rank' && '階級割合帯',
   ] : [
     settings.values && '数値表示', settings.axisBand && '階級帯',

@@ -15,12 +15,23 @@ import { EnemyAggregationSelector } from './EnemyAggregationSelector'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyDataContent } from './EnemyPageShared'
 import { PageLayout, PageOutputHeader } from './PageLayout'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
+import { PageViewSwitch } from './PageViewSwitch'
+import { useBarChartDc3Advantage } from './useBarChartDc3Advantage'
+import { ADVANTAGE_POLICIES, ADVANTAGE_UNITS } from '../lib/damageThreeAdvantageChart'
+import type { SkillRecord } from '../types/skill'
+import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { BarChartFigure } from './BarChartPlot'
 import { BarChartImageDialog, createBarChartImageSnapshot, type BarChartImageSnapshot } from './BarChartImageDialog'
 import './EnemyAnalysis.css'
 import './BarChartWorkbenchPage.css'
 
-export function BarChartWorkbenchPage() {
+export function BarChartWorkbenchPage({ skills, skillsLoading, skillsError, requestSkills }: {
+  skills: readonly SkillRecord[]
+  skillsLoading: boolean
+  skillsError: string | null
+  requestSkills: () => void
+}) {
   const aggregation = useEnemyAggregation({ defaultToLatest: true })
   const [sourceId, setSourceId] = useState<BarChartProviderId>('enemy-stat-histogram')
   const [statKey, setStatKey] = useState<EnemyStatKey>('magicResistance')
@@ -28,6 +39,9 @@ export function BarChartWorkbenchPage() {
   const [rightStatKey, setRightStatKey] = useState<EnemyRatingStat>('magicResistance')
   const isRatingComparison = sourceId === 'enemy-stat-rating-comparison'
   const isRankStatistics = sourceId === 'enemy-rank-band-statistics'
+  const isAdvantage = sourceId === 'dc3-attribute-advantage'
+  const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
+  const [advantagePolicy, setAdvantagePolicy] = useState<typeof ADVANTAGE_POLICIES[number][0]>('excludeAttributeEffects')
   const isComparison = isRatingComparison || isRankStatistics
   const [rankBandStep, setRankBandStep] = useState<5 | 10 | 20>(10)
   const [rankBandMetric, setRankBandMetric] = useState<keyof EnemyRankBandStatValues>('standardDeviation')
@@ -41,11 +55,17 @@ export function BarChartWorkbenchPage() {
   const [highlightTarget, setHighlightTarget] = useState<BarChartHighlightTarget>('both')
   const [snapshot, setSnapshot] = useState<BarChartImageSnapshot | null>(null)
   const { data, version, loading, error } = aggregation
+  const advantage = useBarChartDc3Advantage(isAdvantage && !skillsLoading && !skillsError, skills, data, scope, advantagePolicy)
+  const context = useMemo(() => data && version ? {
+    data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric,
+    advantageRows: advantage.rows ?? undefined, advantageUnit, advantagePolicy,
+  } : null, [data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric,
+    advantage.rows, advantageUnit, advantagePolicy])
   const result = useMemo(() => {
-    if (!data || !version || loading || error) return null
-    try { return { document: createBarChartFromProvider(sourceId, { data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric }), error: null } }
+    if (!context || loading || error || (isAdvantage && !context.advantageRows)) return null
+    try { return { document: createBarChartFromProvider(sourceId, context), error: null } }
     catch (cause) { return { document: null, error: cause instanceof Error ? cause.message : 'データを作成できませんでした。' } }
-  }, [sourceId, data, version, loading, error, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric])
+  }, [sourceId, context, loading, error, isAdvantage])
   const document = result?.document
   const comparisonSelection = document?.layout === 'mirrored' ? getBarChartComparisonSelection(document, settings) : null
   const hasHighlights = Boolean(settings.selectedRanks?.length
@@ -59,10 +79,8 @@ export function BarChartWorkbenchPage() {
   }
 
   function openImage() {
-    if (!document || !data || !version) return
-    const variants = createBarChartProviderVariants(sourceId, {
-      data, version, scope, statKey, histogramBinning, leftStatKey, rightStatKey, rankBandStep, rankBandMetric,
-    })
+    if (!document || !context) return
+    const variants = createBarChartProviderVariants(sourceId, context)
     setSnapshot(createBarChartImageSnapshot(document, settings, variants))
   }
 
@@ -70,10 +88,22 @@ export function BarChartWorkbenchPage() {
     <section className="bar-chart-workbench-data" aria-label="グラフに渡すデータ">
       <div className="bar-chart-data-selectors">
         <label className="bar-chart-source bar-chart-provider">データ
-          <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => setSourceId(event.target.value as BarChartProviderId)}>
+          <select aria-label="グラフに渡すデータ" value={sourceId} onChange={event => {
+            const id = event.target.value as BarChartProviderId
+            if (id === 'dc3-attribute-advantage') requestSkills()
+            setSourceId(id)
+          }}>
             {BAR_CHART_PROVIDERS.map(source => <option key={source.id} value={source.id}>{source.label}</option>)}
           </select>
         </label>
+        {isAdvantage && <>
+          <div className="bar-chart-source"><span>集計単位</span>
+            <PageViewSwitch label="集計単位" views={ADVANTAGE_UNITS} selected={advantageUnit} onChange={setAdvantageUnit} />
+          </div>
+          <div className="bar-chart-source"><span>属性限定効果</span>
+            <PageViewSwitch label="属性限定効果" views={ADVANTAGE_POLICIES} selected={advantagePolicy} onChange={setAdvantagePolicy} />
+          </div>
+        </>}
         {sourceId === 'enemy-stat-histogram' && <label className="bar-chart-source">ステータス
           <select aria-label="ステータス" value={statKey} onChange={event => setStatKey(event.target.value as EnemyStatKey)}>
             {ENEMY_STAT_METRICS.map(metric => <option key={metric.key} value={metric.key}>{metric.label}</option>)}
@@ -111,16 +141,21 @@ export function BarChartWorkbenchPage() {
 
   return <PageLayout page="bar-chart-workbench" className="enemy-analysis-route bar-chart-workbench" settings={dataSettings}>
     <EnemyDataContent loading={loading} error={error} onRetry={aggregation.retry}>
+      {isAdvantage && skillsError && <div className="enemy-load-state" role="alert">
+        <strong>スキルを読み込めませんでした</strong><span>{skillsError}</span>
+        <button type="button" className="button secondary" onClick={requestSkills}>再読み込み</button>
+      </div>}
+      {isAdvantage && !skillsError && !advantage.rows && <p role="status">
+        {skillsLoading ? 'スキルを読み込んでいます…' : advantage.error ?? '主攻撃のダメージを集計中…'}
+      </p>}
       {result?.error && <p role="status">{result.error}</p>}
       {document && <>
-        <PageOutputHeader segments={[document.title]}>
-          <button type="button" className="button secondary" aria-haspopup="dialog" onClick={openImage}>画像を保存</button>
-        </PageOutputHeader>
+        <PageOutputHeader segments={[document.title]} actions={<OutputImageSaveButton onClick={openImage} />} />
         {presentation && <dl className="bar-chart-auto-values" aria-label="自動設定" aria-live="polite">
           <div><dt>描画方式</dt><dd>{presentation.type}</dd></div>
           <div><dt>棒幅</dt><dd>{presentation.width}{presentation.limit && <span className="bar-chart-width-limit">{presentation.limit}</span>}</dd></div>
-          <div><dt>{isComparison ? '棒の長さ' : '横軸'}</dt><dd>{document.xAxisTitle}</dd></div>
-          <div><dt>{isComparison ? '並び' : '縦軸'}</dt><dd>{document.yAxisTitle}</dd></div>
+          <div><dt>{isComparison || isAdvantage ? '棒の長さ' : '横軸'}</dt><dd>{document.xAxisTitle}</dd></div>
+          <div><dt>{isComparison || isAdvantage ? '並び' : '縦軸'}</dt><dd>{document.yAxisTitle}</dd></div>
           {document.layout === 'mirrored' && <>
             <div><dt>系列数</dt><dd>{document.series?.length}</dd></div>
             <div><dt>目盛り</dt><dd>左右共通・{getBarChartComparisonAxis(document).minimum}〜{getBarChartComparisonAxis(document).maximum}{document.semantics.comparisonValue === 'value' ? document.semantics.xUnit ?? '' : '%'}</dd></div>
@@ -142,7 +177,7 @@ export function BarChartWorkbenchPage() {
               {mode === 'value' ? document.semantics.xLabel : mode === 'cumulative' ? '累積割合' : mode === 'rank' ? '階級割合' : 'なし'}
             </label>)}
           </fieldset>
-        </div> : <div className="bar-chart-workbench-options" role="group" aria-label="共通の表示設定">
+        </div> : !isAdvantage && <div className="bar-chart-workbench-options" role="group" aria-label="共通の表示設定">
           <span>表示</span>
           <label><input type="checkbox" checked={settings.values} onChange={event => update('values', event.target.checked)} />数値</label>
           <label><input type="checkbox" checked={settings.axisBand} onChange={event => update('axisBand', event.target.checked)} />横軸の帯</label>

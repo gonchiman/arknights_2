@@ -79,6 +79,50 @@ function group(markup, marker) {
 const inputOf = document => Object.fromEntries(['xKind', 'bins', 'filenameParts', 'fractionDigits', 'capabilities', 'semantics', 'source']
   .map(key => [key, document[key]]))
 
+test('100%積み上げ横棒は実票の割合、同点、対象なし、選択を画面とPNGで共有する', () => {
+  const stack = {
+    legendTitle: '判定', columns: ['条件', '有効数'],
+    series: [{ id: 'a', label: '甲', color: '#387590' }, { id: 'tie', label: '同じ', color: '#b6b8bb' },
+      { id: 'b', label: '乙', color: '#a85b2e' }],
+    rows: [{ labels: ['0', '2'], total: 2, values: [0, 2, 0] },
+      { labels: ['10', '2'], total: 2, values: [.5, 0, 1.5] },
+      { labels: ['20', '0'], total: 0, values: null }],
+  }
+  const document = createBarChartDocument({
+    layout: 'stacked-percent', xKind: 'point', stack,
+    source: { ...frequency.source, population: null }, semantics: { kind: 'composition', subject: '判定別の割合', xLabel: '得票率', yLabel: '条件' },
+    bins: stack.rows.map((row, i) => ({ id: String(i), label: row.labels[0], point: i * 10, value: null })),
+    capabilities: { percentages: false, cumulative: false }, filenameParts: ['判定別'], fractionDigits: 1,
+  })
+  const display = { ...settings, selectedRanks: ['2'] }
+  const size = { width: 928, height: getBarChartNaturalHeight(document, display) }
+  const screen = render(Plot, { document, settings: display, ...size, onToggleHighlight() {} })
+  const frame = imageFrame(createSnapshot(document, display))
+  const image = renderToStaticMarkup(frame.children(size))
+  const segments = markup => rectangles(markup).filter(tag => tag.class === 'bar-chart-stack-bar')
+  const parts = segments(screen)
+  assert.deepEqual(parts.map(part => part['data-bar-chart-series']), ['tie', 'a', 'b'])
+  assert.deepEqual(parts.map(part => part.fill), ['#b6b8bb', '#387590', '#a85b2e'])
+  assert.equal(Number(parts[1].width), Number(parts[0].width) / 4)
+  assert.equal(Number(parts[1].x) + Number(parts[1].width), Number(parts[2].x))
+  assert.deepEqual(parts, segments(image))
+  for (const markup of [screen, image]) {
+    const bands = rectangles(markup).filter(tag => ['chart-strip-fill', 'bar-chart-selected-cell'].includes(tag.class))
+    assert.equal(bands.length, stack.rows.length * stack.columns.length)
+    assert.equal(bands.filter(tag => tag['data-bar-chart-selected'] === '2').length, 1)
+    assert.match(markup, /class="bar-chart-guide is-zero"/)
+    assert.deepEqual([...markup.matchAll(/class="bar-chart-tick"[^>]*>(\d+%)<\/text>/g)].map(match => match[1]),
+      ['0%', '25%', '50%', '75%', '100%'])
+  }
+  assert.equal(rectangles(screen).filter(tag => tag.role === 'button').length, 3)
+  assert.equal(rectangles(screen).find(tag => tag['aria-pressed'] === 'true')['data-bar-chart-hit'], '2')
+  assert.doesNotMatch(image, /data-bar-chart-hit|tabindex|role="button"/)
+  assert.match(image, /data-bar-chart-selected="2"/)
+  assert.match(image, />対象なし<\/text>/)
+  for (const item of stack.series) assert.ok(renderToStaticMarkup(frame.legend).includes(item.color))
+  finite(screen)
+})
+
 test('7ステータスと対応値が同じ共通Plotを画面と画像に使い、タイトル・数値・階級・元データを保持する', () => {
   for (const document of [...distributions, ...ratingDistributions, correspondence]) {
     const original = JSON.stringify(document)

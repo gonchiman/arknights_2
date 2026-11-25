@@ -1,6 +1,6 @@
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, getAdvantageChartBar } from '../lib/damageThreeAdvantageChart'
 import type { AdvantageUnit, SkillRankStatistics } from '../lib/damageThreeSkillRankStatistics'
-import { DamageThreeStatisticsImageLegend } from './DamageThreeStatisticsImageLegend'
+import { DAMAGE_THREE_STATISTIC_STYLE, DamageThreeStatisticsImageLegend } from './DamageThreeStatisticsImageLegend'
 import './DamageThreeSkillRankStatisticsChart.css'
 
 export { getAdvantageChartAxisTitle } from '../lib/damageThreeAdvantageChart'
@@ -33,7 +33,7 @@ export function DamageThreeAdvantageChartImage({ rows, advantageUnit, width, hei
 
   return <svg className="dc3-stat-image-series" width={width} height={height}
     viewBox={`0 0 ${width} ${height}`} role="img" aria-label="術耐性別の属性別の優勢率"
-    fontSize="11" fill="#555" style={{ fontVariantNumeric: 'tabular-nums' }}>
+    fontSize="11" fill="#555" style={DAMAGE_THREE_STATISTIC_STYLE}>
     <g textAnchor="end" fontWeight="700">
       <text x={resistanceX} y="21">術耐性</text>
       <text x={defenseX} y="21">対応防御力</text>

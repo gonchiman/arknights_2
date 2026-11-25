@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { getBarChartSelectedLabel, type BarChartDisplaySettings, type BarChartDocument, type BarChartHighlightTarget } from '../lib/barChartDocument'
 import { getBarChartBarWidth, getBarChartItemKind } from '../lib/barChartPresentation'
-import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, getBarChartNaturalHeight } from '../lib/barChartLayout'
+import { BAR_CHART_BAND_HEIGHT, BAR_CHART_BAND_GAP, BAR_CHART_PERCENT_TICKS, getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { createZeroBasedValueAxis } from '../lib/chartValueAxis'
 import { placeGroupedBarValueLabels } from '../lib/groupedBarValueLabels'
 import { avoidHistogramCumulativeLine, formatHistogramPercentage } from '../lib/histogramPercentageLabels'
@@ -10,6 +10,7 @@ import { getStatMetricColor, STAT_METRIC_BAR_OPACITY, STAT_CUMULATIVE_COLOR, STA
 import { ChartStripCell } from './ChartStripCell'
 import { StatRankStrip } from './StatRankStrip'
 import { BarChartComparisonPlot } from './BarChartComparisonPlot'
+import { BarChartStackedPlot, BarChartStackLegend } from './BarChartStackedPlot'
 import { BarChartHighlightTargets } from './BarChartHighlightTargets'
 import { estimatedBarChartTextWidth as estimatedWidth, useBarChartTextWidths as useTextWidths } from './useBarChartTextWidths'
 import './BarChartPlot.css'
@@ -46,6 +47,9 @@ function percentage(share: number | null | undefined): string {
 /** The page and PNG share the drawing; only the page passes a selection action. */
 export function BarChartPlot(props: BarChartPlotProps) {
   const plotProps = props.imageMode ? { ...props, onToggleHighlight: undefined } : props
+  if (props.document.layout === 'stacked-percent' && props.document.stack) {
+    return <BarChartStackedPlot {...plotProps} stack={props.document.stack} />
+  }
   return props.document.layout === 'mirrored'
     ? <BarChartComparisonPlot {...plotProps} />
     : <VerticalBarChartPlot {...plotProps} />
@@ -142,7 +146,7 @@ function VerticalBarChartPlot({ document: data, settings, width, height, imageMo
         <polyline {...INK} className="bar-chart-cumulative" points={cumulativePoints.map(point => `${point.x},${point.y}`).join(' ')} />
         {cumulativePoints.map((point, index) => <circle {...INK} className="bar-chart-cumulative-point" key={index} cx={point.x} cy={point.y} r="2.6" />)}
         <line className="bar-chart-guide is-zero" x1={plotWidth} x2={plotWidth} y1="0" y2={plotHeight} />
-        {[0, 25, 50, 75, 100].map(value => <text {...INK} className="bar-chart-tick" key={value}
+        {BAR_CHART_PERCENT_TICKS.map(value => <text {...INK} className="bar-chart-tick" key={value}
           x={plotWidth + 8} y={plotHeight * (1 - value / 100) + 4}>{value}%</text>)}
       </g>}
       {placement.labels.filter(label => label.shifted).map(label => <line {...INK} className="bar-chart-value-connector"
@@ -232,10 +236,13 @@ export function BarChartFigure({ document: data, settings, onToggleHighlight }: 
   // Keep supplied range lines horizontal instead of shrinking the natural data area.
   const sidePadding = secondaryLabels.length ? Math.max(62, ...axis.ticks.map(tick => estimatedWidth(number.format(tick)) + 34))
     + (settings.cumulative && data.capabilities.cumulative ? 70 : 14) : 90
-  const plotWidth = data.layout === 'mirrored' ? Math.max(MINIMUM_WIDTH, width)
+  const plotWidth = data.layout ? Math.max(MINIMUM_WIDTH, width)
     : Math.max(MINIMUM_WIDTH, width, sidePadding + data.bins.length * slot)
-  return <figure className={`bar-chart-figure${data.layout === 'mirrored' ? ' is-comparison' : ''}`} aria-label={data.title}>
-    <figcaption className="bar-chart-heading"><span aria-hidden="true" /><strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span></figcaption>
+  return <figure className={`bar-chart-figure${data.layout === 'mirrored' ? ' is-comparison' : data.stack ? ' is-stacked' : ''}`} aria-label={data.title}>
+    <figcaption className="bar-chart-heading">
+      {data.stack ? <div className="chart-image-frame-legends"><BarChartStackLegend stack={data.stack} /></div> : <span aria-hidden="true" />}
+      <strong>{data.title}</strong><span className="bar-chart-conditions">{data.conditions}</span>
+    </figcaption>
     <div className="bar-chart-scroll" ref={ref}>
       <BarChartPlot document={data} settings={settings} width={plotWidth} height={getBarChartNaturalHeight(data, settings)}
         onToggleHighlight={onToggleHighlight} />

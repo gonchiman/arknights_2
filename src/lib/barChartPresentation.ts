@@ -36,9 +36,10 @@ export function getBarChartBarWidth(kind: BarChartDocument['xKind'], slotWidth: 
 export function getBarChartPresentationLabels(kind: BarChartDocument['xKind'], layout?: BarChartDocument['layout']) {
   const presentation = getBarChartPresentation(kind, layout)
   const percentage = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 }).format(presentation.widthRatio * 100)
+  const orientation = layout === 'mirrored' ? '左右の横棒' : layout === 'stacked-percent' ? '100%積み上げ横棒' : ''
   return {
-    type: layout === 'mirrored' ? `左右の横棒・${presentation.label}` : presentation.label,
-    width: layout === 'mirrored' ? `1項目の高さの${percentage}%` : `1項目幅の${percentage}%`,
+    type: orientation ? `${orientation}・${presentation.label}` : presentation.label,
+    width: orientation ? `1項目の高さの${percentage}%` : `1項目幅の${percentage}%`,
     limit: presentation.maximumWidth === null ? null : `上限${presentation.maximumWidth}px（PNG拡大前）`,
   }
 }

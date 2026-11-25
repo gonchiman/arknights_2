@@ -1,5 +1,5 @@
 import { DAMAGE_SERIES, damageBinLabel, describeDamageBin, type DamageThreeDistributionHistogram } from '../lib/damageThreeDistributionChart'
-import { DamageThreeStatisticsImageLegend } from './DamageThreeStatisticsImageLegend'
+import { DAMAGE_THREE_STATISTIC_STYLE, DamageThreeStatisticsImageLegend } from './DamageThreeStatisticsImageLegend'
 import './DamageThreeSkillRankStatisticsChart.css'
 
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
@@ -24,7 +24,7 @@ export function DamageThreeDistributionChartImage({ histogram, width, height }: 
   const groupWidth = 2 * barWidth + 2
   return <svg className="dc3-stat-image-series" width={width} height={height}
     viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`術耐性 ${row.resistance}のヒストグラム`}
-    fontSize="11" fill="#555" style={{ fontVariantNumeric: 'tabular-nums' }}>
+    fontSize="11" fill="#555" style={DAMAGE_THREE_STATISTIC_STYLE}>
     <text x="0" y="12" fontWeight="700" fontSize="12" fill="#444">段階数</text>
     {axis.ticks.map(tick => {
       const y = bottom - tick / axis.maximum * plotHeight

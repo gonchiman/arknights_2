@@ -10,7 +10,7 @@ import {
 } from '../lib/barChartLayout'
 import { formatHistogramPercentage } from '../lib/histogramPercentageLabels'
 import { getStatMetricColor, STAT_METRIC_BAR_OPACITY } from '../lib/statMetricColors'
-import { ChartStripCell } from './ChartStripCell'
+import { ChartStripRowCell } from './ChartStripCell'
 import { BarChartHighlightTargets } from './BarChartHighlightTargets'
 import type { BarChartPlotProps } from './BarChartPlot'
 import { useBarChartTextWidths } from './useBarChartTextWidths'
@@ -106,8 +106,8 @@ export function BarChartComparisonPlot({ document: data, settings, width, height
           </g>
         })}
         {band !== 'none' && <g data-bar-chart-comparison-band={band} role="group" aria-label={`${item.label} ${bandTitle}${bandUnit ? `（${bandUnit}）` : ''}`}>
-          {item.bins.map((bin, index) => <ChartStripCell key={bin.id} left={labelX - column / 2 + 2} width={column - 4}
-            top={top + index * step + 1.5} height={Math.max(0, step - 3)} labelY={top + (index + .5) * step + 4}
+          {item.bins.map((bin, index) => <ChartStripRowCell key={bin.id} left={labelX - column / 2 + 2} width={column - 4}
+            top={top + index * step} height={step}
             label={formatBand(bin)}
             labelClassName={`chart-strip-label${sideSelection.has(bin.id) ? ' bar-chart-selected-label' : ''}`}
             fillAttributes={{ 'data-bar-chart-comparison-value': bin.id }} />)}
@@ -118,9 +118,8 @@ export function BarChartComparisonPlot({ document: data, settings, width, height
       const leftSelected = selection.left.has(bin.id)
       const rightSelected = selection.right.has(bin.id)
       const selectedSide = leftSelected ? (rightSelected ? 'both' : 'left') : rightSelected ? 'right' : undefined
-      return <ChartStripCell key={bin.id} left={middle - categoryWidth / 2} width={categoryWidth}
-        top={top + index * step + 1.5} height={Math.max(0, step - 3)} label={bin.label}
-        labelY={top + (index + .5) * step + 4}
+      return <ChartStripRowCell key={bin.id} left={middle - categoryWidth / 2} width={categoryWidth}
+        top={top + index * step} height={step} label={bin.label}
         labelClassName={`chart-strip-label${selectedSide ? ' bar-chart-selected-label' : ''}`}
         fillClassName={selectedSide ? 'bar-chart-selected-cell' : undefined}
         fillAttributes={{ 'data-bar-chart-comparison-category': bin.id,

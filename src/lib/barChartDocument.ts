@@ -15,7 +15,7 @@ export interface BarChartDisplaySettings {
   cumulativeBand?: boolean
   rankBand?: boolean
   comparisonBand?: 'cumulative' | 'rank' | 'value' | 'none'
-  /** Stable bin IDs for a vertical chart or the shared selection of both comparison series. */
+  /** Stable bin IDs for single bars, stacked rows, or both sides of a comparison. */
   selectedRanks?: readonly string[]
   comparisonSelection?: BarChartComparisonSelection
 }
@@ -52,7 +52,7 @@ export interface BarChartBin {
 export type BarChartItemKind = 'interval' | 'point' | 'category'
 
 export interface BarChartSemantics {
-  readonly kind: 'histogram' | 'correspondence' | 'comparison'
+  readonly kind: 'histogram' | 'correspondence' | 'comparison' | 'composition'
   readonly subject: string
   /** Numeric statistics use their signed values, rather than a frequency percentage. */
   readonly comparisonValue?: 'share' | 'value'
@@ -86,6 +86,19 @@ export interface BarChartSeries {
   readonly population: BarChartPopulation
 }
 
+/** Series order defines the left-to-right order of every 100% bar. */
+export interface BarChartStack {
+  readonly legendTitle: string
+  readonly columns: readonly string[]
+  readonly series: readonly { readonly id: string; readonly label: string; readonly color: string }[]
+  readonly rows: readonly {
+    readonly labels: readonly string[]
+    readonly total: number
+    /** Raw weights in series order. A zero-total row has no defined composition. */
+    readonly values: readonly number[] | null
+  }[]
+}
+
 export interface BarChartSource {
   readonly providerId: string
   readonly aggregationVersion: {
@@ -99,7 +112,7 @@ export interface BarChartSource {
   readonly countMode: 'TYPES' | 'MAPS' | 'SPAWNS'
   readonly countLabel: string
   readonly countUnit: string
-  /** Mirrored comparisons have per-series populations and no shared denominator. */
+  /** Null when denominators are stored per series (mirrored) or per row (stacked). */
   readonly population: BarChartPopulation | null
   readonly coverage: {
     readonly mapCount: number
@@ -111,7 +124,7 @@ export interface BarChartSource {
     readonly expectedMapCount?: number
   }
   readonly coverageLabel: string
-  readonly parameters: readonly { readonly label: string; readonly value: string }[]
+  readonly parameters: readonly { readonly label: string; readonly value: string; readonly caption?: string }[]
 }
 
 /** Plain data only: this contract contains no formatter, JSX, DOM reference, or live state. */
@@ -122,9 +135,10 @@ export interface BarChartDocument {
   readonly xAxisTitle: string
   readonly yAxisTitle: string
   readonly xKind: BarChartItemKind
-  readonly layout?: 'mirrored'
+  readonly layout?: 'mirrored' | 'stacked-percent'
   readonly series?: readonly [BarChartSeries, BarChartSeries]
-  /** In mirrored layout these are aligned categories only, with value:null. */
+  readonly stack?: BarChartStack
+  /** In multi-series layouts these identify the rows, with value:null. */
   readonly bins: readonly BarChartBin[]
   /** Source-projected fractions of the plot width; rendering never derives rating boundaries. */
   readonly rankBands?: readonly StatRankBand[]
@@ -147,7 +161,8 @@ export function getBarChartLabels(semantics: BarChartSemantics, xKind: BarChartD
   const yLabel = `${semantics.kind === 'correspondence' ? '対応する' : ''}${semantics.yLabel}`
   const xDetails = [xQualifier, semantics.xUnit].filter(Boolean).join('・')
   return {
-    title: semantics.kind === 'comparison' ? `${semantics.subject}の${semantics.comparisonLabel ?? '評価別分布'}`
+    title: semantics.kind === 'composition' ? semantics.subject
+      : semantics.kind === 'comparison' ? `${semantics.subject}の${semantics.comparisonLabel ?? '評価別分布'}`
       : semantics.kind === 'histogram' ? `${semantics.subject}のヒストグラム`
       : `${semantics.yLabel}と${semantics.xLabel}の対応（${semantics.xLabel}別）`,
     xAxisTitle: `${semantics.xLabel}${xDetails ? `（${xDetails}）` : ''}`,
@@ -165,20 +180,21 @@ export function getBarChartConditions(source: BarChartSource, series?: readonly 
     && first?.basis === 'paired-stats' && series.every(item => item.population.basis === 'paired-stats'
       && item.population.total === first.total && item.population.valid === first.valid && item.population.missing === first.missing)
   const population = source.population ?? (paired ? first : null)
+  const composition = semantics?.kind === 'composition'
   return [
     source.aggregationVersion.label || `集計版 ${source.aggregationVersion.id}`,
     source.scopeLabel,
-    source.countLabel + (population ? ` ${formatCount(population.valid)}${source.countUnit}` : ''),
+    composition ? '' : source.countLabel + (population ? ` ${formatCount(population.valid)}${source.countUnit}` : ''),
     population && population.missing > 0 ? `値なし ${formatCount(population.missing)}${source.countUnit}を除外` : '',
     source.population?.basis === 'paired-stats' ? '防御力・術耐性の両方が有効' : '',
     ...(paired ? [] : series ?? []).map(item => `${item.id === 'left' ? '左' : '右'} ${item.label} ${formatCount(item.population.valid)}${source.countUnit}`
       + (item.population.missing > 0 ? `（値なし ${formatCount(item.population.missing)}${source.countUnit}）` : '')),
-    source.coverageLabel,
-    ...source.parameters.map(({ label, value }) => `${label} ${value}`),
+    composition ? '' : source.coverageLabel,
+    ...source.parameters.map(({ label, value, caption }) => caption ?? `${label} ${value}`),
   ].filter(Boolean).join(' · ')
 }
 
-type DocumentInput = Pick<BarChartDocument, 'layout' | 'series' | 'xKind' | 'bins' | 'rankBands' | 'secondaryAxisBand' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
+type DocumentInput = Pick<BarChartDocument, 'layout' | 'series' | 'stack' | 'xKind' | 'bins' | 'rankBands' | 'secondaryAxisBand' | 'filenameParts' | 'fractionDigits' | 'capabilities' | 'semantics' | 'source'>
 
 function validPopulation(population: BarChartPopulation) {
   return population && ['single-stat', 'paired-stats'].includes(population.basis)
@@ -194,6 +210,27 @@ function invalidInterval(interval: BarChartInterval | undefined): boolean {
     || (interval.start === null && interval.includesMinimum)
     || (interval.end === null && interval.includesMaximum)
     || (interval.isOverflow !== (interval.end === null))))
+}
+
+function validStack(stack: BarChartStack | undefined, binCount: number): boolean {
+  const hasText = (value: unknown): value is string => typeof value === 'string' && Boolean(value.trim())
+  if (!stack || !hasText(stack.legendTitle) || !Array.isArray(stack.columns) || !stack.columns.length
+    || !stack.columns.every(hasText) || !Array.isArray(stack.series) || !stack.series.length
+    || stack.series.some(item => !item || !hasText(item.id) || !hasText(item.label) || !hasText(item.color))
+    || new Set(stack.series.map(item => item.id)).size !== stack.series.length
+    || !Array.isArray(stack.rows) || stack.rows.length !== binCount) return false
+
+  return stack.rows.every(row => {
+    if (!row) return false
+    const { labels, total, values } = row
+    if (!Array.isArray(labels) || labels.length !== stack.columns.length || !labels.every(hasText)
+      || !Number.isFinite(total) || total < 0) return false
+    if (total === 0) return values === null
+    if (!Array.isArray(values) || values.length !== stack.series.length
+      || values.some(value => !Number.isFinite(value) || value < 0)) return false
+    // A skill's vote can be split across outcomes, so allow floating-point roundoff.
+    return Math.abs(values.reduce((sum, value) => sum + value, 0) - total) <= total * 1e-10
+  })
 }
 
 /** Freeze a detached JSON snapshot so later source edits cannot change a preview or export. */
@@ -215,8 +252,20 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
     || (input.source.population !== null && !validPopulation(input.source.population))) {
     throw new Error('棒グラフの集計値を確認できませんでした。')
   }
-  if (input.layout !== undefined && input.layout !== 'mirrored') throw new Error('棒グラフの配置を確認できませんでした。')
-  if (input.layout === 'mirrored') {
+  if (input.layout !== undefined && input.layout !== 'mirrored' && input.layout !== 'stacked-percent') throw new Error('棒グラフの配置を確認できませんでした。')
+  if (input.layout === 'stacked-percent') {
+    if (input.semantics.kind !== 'composition' || input.xKind !== 'point'
+      || (input.semantics.itemKind !== undefined && input.semantics.itemKind !== input.xKind)
+      || input.source.population !== null || input.series !== undefined
+      || input.capabilities.percentages || input.capabilities.cumulative || input.capabilities.rankBands
+      || input.rankBands !== undefined || input.secondaryAxisBand !== undefined
+      || input.bins.some(bin => bin.value !== null || bin.share !== undefined || bin.cumulativeShare !== undefined)
+      || !validStack(input.stack, input.bins.length)) {
+      throw new Error('棒グラフの積み上げ系列を確認できませんでした。')
+    }
+  } else if (input.stack !== undefined || input.semantics.kind === 'composition') {
+    throw new Error('棒グラフの積み上げ系列を確認できませんでした。')
+  } else if (input.layout === 'mirrored') {
     if (input.xKind !== 'category' || input.semantics.kind !== 'comparison' || input.source.population !== null
       || !Array.isArray(input.series) || input.series.length !== 2
       || input.bins.some(bin => bin.value !== null || bin.point !== undefined || bin.interval !== undefined)
@@ -290,6 +339,9 @@ export function createBarChartDocument(input: DocumentInput): BarChartDocument {
 
 export function getBarChartFilename(document: BarChartDocument, settings: BarChartDisplaySettings, aspectRatio?: number): string {
   const highlight = getBarChartHighlightFilenamePart(document, settings, 'png')
+  if (document.layout === 'stacked-percent') {
+    return withChartImageAspect(createChartImageFilename(document.title, [...document.filenameParts, '幅1920px', highlight]), aspectRatio)
+  }
   if (document.layout === 'mirrored') {
     const band = getBarChartComparisonBand(settings, document)
     return withChartImageAspect(createChartImageFilename(document.title, [

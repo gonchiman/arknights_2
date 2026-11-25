@@ -25,6 +25,39 @@ const metrics = ['min', 'max', 'width', 'mean', 'standardDeviation', 'variance']
 const variantsFor = extra => createBarChartProviderVariants(id, { ...context, ...extra })
 const settings = { values: true, axisBand: true, percent: false, cumulative: false, comparisonBand: 'value' }
 
+test('DC3優勢率は有効な1スキル1票の端数・段階別の得票・対象なしを区別して保存する', () => {
+  const id = 'dc3-attribute-advantage'
+  const advantageRows = [
+    { resistance: 0, defense: 0, count: 3, physicalWins: 0, ties: 3, artsWins: 0,
+      bySkill: { count: 2, physicalWins: 0, ties: 2, artsWins: 0 } },
+    { resistance: 60, defense: 1200, count: 3, physicalWins: 1, ties: 0, artsWins: 2,
+      bySkill: { count: 2, physicalWins: 0.5, ties: 0, artsWins: 1.5 } },
+    { resistance: 100, defense: null, count: 0, physicalWins: 0, ties: 0, artsWins: 0,
+      bySkill: { count: 0, physicalWins: 0, ties: 0, artsWins: 0 } },
+  ]
+  const selected = { ...context, advantageRows, advantagePolicy: 'apply', scope: 'main' }
+  const variants = createBarChartProviderVariants(id, selected)
+  assert.deepEqual(variants.map(item => item.key), ['skill', 'stage'])
+  const [skill, stage] = variants.map(item => item.document)
+  assert.deepEqual(skill, createBarChartFromProvider(id, selected))
+  assert.deepEqual(stage, createBarChartFromProvider(id, { ...selected, advantageUnit: 'stage' }))
+  assert.equal(skill.stack.legendTitle, 'ダメージが高い属性')
+  assert.deepEqual(skill.stack.series.map(series => series.label), ['物理', '同じ', '術'])
+  assert.deepEqual(skill.stack.columns, ['術耐性', '対応防御力', '有効スキル数'])
+  assert.equal(stage.stack.columns[2], '有効段階数')
+  assert.deepEqual(skill.stack.rows.map(row => row.values), [[0, 2, 0], [0.5, 0, 1.5], null])
+  assert.deepEqual(stage.stack.rows.map(row => row.values), [[0, 3, 0], [1, 0, 2], null])
+  assert.deepEqual(skill.stack.rows[1].labels, ['60', '1,200', '2'])
+  assert.deepEqual(skill.stack.rows[2], { labels: ['100', '—', '0'], total: 0, values: null })
+  assert.notEqual(getBarChartFilename(skill, settings, 16 / 9), getBarChartFilename(stage, settings, 16 / 9))
+  assert.equal(skill.conditions, '集計版 v12 · メインストーリー · スキル単位 · 属性限定効果を適用 · 通常攻撃型')
+  assert.match(createBarChartFromProvider(id, { ...context, advantageRows }).conditions, /属性限定効果.*除外/)
+  assert.throws(() => createBarChartFromProvider(id, { ...context, advantageRows: [] }), /対応させる出現データがありません/)
+  assert.throws(() => createBarChartProviderVariants(id, { ...context, advantageRows: [advantageRows[2]] }), /該当するスキルはありません/)
+  advantageRows[0].bySkill.ties = 0
+  assert.equal(skill.stack.rows[0].values[1], 2)
+})
+
 test('順位帯統計の6つの出力候補は現在の順位帯幅と単体出力を保持し、保存名を区別する', () => {
   for (const rankBandStep of [5, 10, 20]) {
     const variants = variantsFor({ rankBandStep })
