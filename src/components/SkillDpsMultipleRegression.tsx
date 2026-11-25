@@ -4,6 +4,7 @@ import {
   analyzeSkillDpsMultipleRegression, DEFAULT_SKILL_DPS_REGRESSION_PREDICTORS,
   SKILL_DPS_REGRESSION_PREDICTORS, type SkillDpsRegressionPredictor,
 } from '../lib/skillDpsMultipleRegression'
+import { SkillDpsVifCell } from './SkillDpsVifCell'
 import './SkillDpsMultipleRegression.css'
 
 const COUNT = new Intl.NumberFormat('ja-JP')
@@ -11,8 +12,6 @@ const PERCENTAGE = new Intl.NumberFormat('ja-JP', {
   style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1,
 })
 const COEFFICIENT = new Intl.NumberFormat('ja-JP', { signDisplay: 'exceptZero', maximumFractionDigits: 3 })
-const VIF = new Intl.NumberFormat('ja-JP', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const VIF_WARNING_THRESHOLD = 5
 
 export function SkillDpsMultipleRegression({ dataset, metric }: {
   dataset: SkillDpsAnalysisDataset
@@ -66,20 +65,12 @@ export function SkillDpsMultipleRegression({ dataset, metric }: {
           <thead><tr>
             <th scope="col">説明変数</th><th scope="col">係数</th><th scope="col">標準化係数</th><th scope="col">VIF</th>
           </tr></thead>
-          <tbody>{applied.map((predictor, index) => {
-            const vif = fit.varianceInflationFactors[index]
-            const formattedVif = VIF.format(vif)
-            const vifWarning = vif >= VIF_WARNING_THRESHOLD
-            return <tr key={predictor}>
-              <th scope="row">{SKILL_DPS_ANALYSIS_X_LABELS[predictor]}</th>
-              <td>{COEFFICIENT.format(fit.coefficients[index])}</td>
-              <td>{COEFFICIENT.format(fit.standardizedCoefficients[index])}</td>
-              <td className={vifWarning ? 'skill-dps-vif-warning' : undefined}
-                aria-label={vifWarning ? `${formattedVif}、要確認` : undefined}>
-                {vifWarning && <span aria-hidden="true">! </span>}{formattedVif}
-              </td>
-            </tr>
-          })}</tbody>
+          <tbody>{applied.map((predictor, index) => <tr key={predictor}>
+            <th scope="row">{SKILL_DPS_ANALYSIS_X_LABELS[predictor]}</th>
+            <td>{COEFFICIENT.format(fit.coefficients[index])}</td>
+            <td>{COEFFICIENT.format(fit.standardizedCoefficients[index])}</td>
+            <SkillDpsVifCell value={fit.varianceInflationFactors[index]} />
+          </tr>)}</tbody>
         </table>
       </div>
     </div>}

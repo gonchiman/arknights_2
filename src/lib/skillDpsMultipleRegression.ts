@@ -24,6 +24,8 @@ export interface SkillDpsCombinationModel {
   predictors: readonly SkillDpsRegressionPredictor[]
   adjustedRSquared: number
   maxVif: number
+  /** Uses the same complete rows and order as predictors. */
+  varianceInflationFactors: readonly number[]
 }
 
 export interface SkillDpsCombinationEvaluation {
@@ -79,6 +81,7 @@ export function evaluateSkillDpsPredictorCombinations(
         predictors: columns.map(index => candidates[index]),
         adjustedRSquared: fit.adjustedRSquared,
         maxVif: Math.max(...fit.varianceInflationFactors),
+        varianceInflationFactors: fit.varianceInflationFactors,
       })
     } catch (error) {
       failedCount++

@@ -11,10 +11,25 @@
 .skill-dps-page .skill-dps-combination-table .skill-sort-button > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .skill-dps-page .skill-dps-combination-table .skill-sort-indicator { flex-shrink: 0; }
 .skill-dps-page .skill-dps-combination-table td:last-child { white-space: normal; overflow-wrap: anywhere; }
+.skill-dps-vif-detail-trigger {
+  min-height: 28px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.skill-dps-vif-warning .skill-dps-vif-detail-trigger { color: inherit; }
 .skill-dps-combination-pages { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 480px) {
   .skill-dps-page .skill-dps-combination-table :is(th, td),
   .skill-dps-page .skill-dps-combination-table thead th:not([aria-sort]),
   .skill-dps-page .skill-dps-combination-table .skill-sort-button { padding-inline: 5px; }
+}
+
+@media (pointer: coarse) {
+  .skill-dps-vif-detail-trigger { min-height: 44px; }
 }
