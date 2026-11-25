@@ -1,0 +1,27 @@
+.skill-dps-combination-vif-dialog {
+  width: min(420px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .16);
+}
+
+.skill-dps-combination-vif-dialog::backdrop { background: rgba(0, 0, 0, .44); }
+.skill-dps-combination-vif-content { display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100dvh - 26px); }
+.skill-dps-combination-vif-header { padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface-soft); }
+.skill-dps-combination-vif-header .page-output-header { border: 0; }
+.skill-dps-combination-vif-header h2 { margin: 0; font-size: 14px; font-weight: 500; }
+.skill-dps-combination-vif-body { display: grid; gap: 12px; min-height: 0; padding: 12px; overflow: auto; overscroll-behavior: contain; }
+.skill-dps-combination-vif-body:focus-visible { outline: 2px solid var(--text); outline-offset: -3px; }
+.skill-dps-combination-vif-body .skill-dps-statistics { gap: 6px 16px; padding: 0; border: 0; }
+.skill-dps-combination-vif-body .skill-dps-statistics dd { font-size: inherit; }
+.skill-dps-page .skill-dps-table.skill-dps-combination-vif-table { min-width: 0; table-layout: fixed; }
+.skill-dps-page .skill-dps-combination-vif-table thead th { padding: 7px 8px; }
+.skill-dps-page .skill-dps-combination-vif-table th:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.skill-dps-page .skill-dps-combination-vif-table td { white-space: normal; overflow-wrap: anywhere; }

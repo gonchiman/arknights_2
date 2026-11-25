@@ -100,20 +100,24 @@ test('組み合わせを比較するときは全候補と選択中のDPSが揃�
   const data = dataset([...complete, directOnly, combinedOnly, missingCandidate])
 
   for (const [metric, additional] of [['direct', directOnly], ['combined', combinedOnly]] as const) {
-    const fixed = analyzeSkillDpsMultipleRegression(dataset([...complete, additional]), predictors, metric)
+    const fixedData = dataset([...complete, additional])
     const unfixed = analyzeSkillDpsMultipleRegression(data, predictors, metric)
     const result = evaluateSkillDpsPredictorCombinations(data, candidates, metric)
     assert.equal(result.error, null)
     assert.equal(result.failedCount, 0)
-    assert.equal(result.observationCount, fixed.observationCount)
     assert.equal(result.observationCount, 6)
     assert.equal(unfixed.observationCount, 7)
     assert.deepEqual(result.models.map(model => model.predictors), [
       ['duration', 'spCost'], ['duration', 'attack'], ['spCost', 'attack'], ['duration', 'spCost', 'attack'],
     ])
-    assert.ok(fixed.fit)
-    close(result.models[0].adjustedRSquared, fixed.fit.adjustedRSquared)
-    close(result.models[0].maxVif, Math.max(...fixed.fit.varianceInflationFactors))
+    for (const model of result.models) {
+      const fixed = analyzeSkillDpsMultipleRegression(fixedData, model.predictors, metric)
+      assert.equal(result.observationCount, fixed.observationCount)
+      assert.ok(fixed.fit)
+      close(model.adjustedRSquared, fixed.fit.adjustedRSquared)
+      assert.deepEqual(model.varianceInflationFactors, fixed.fit.varianceInflationFactors)
+      assert.equal(model.maxVif, Math.max(...model.varianceInflationFactors))
+    }
   }
 })
 
