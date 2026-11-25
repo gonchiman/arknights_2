@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react'
 let server, Page, Table, rows
 const render = (Component, props) => renderToStaticMarkup(createElement(Component, props))
 const text = markup => markup.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-const INDICATORS = ['持続時間', '必要SP', '必要SP−初期SP', '配置コスト', '初期SP率', '理論稼働率', '最大対象数', '攻撃力', '攻撃間隔']
+const DEFAULT_INDICATORS = ['持続時間', '必要SP', '必要SP−初期SP', '配置コスト', '初期SP率', '最大対象数', '攻撃力', '攻撃間隔']
 
 function overviewRows(markup) {
   const table = markup.match(/<table\b[^>]*class="[^"]*\bskill-dps-overview-table\b[^"]*"[^>]*>([\s\S]*?)<\/table>/)
@@ -50,7 +50,7 @@ before(async () => {
 
 after(async () => { await server?.close() })
 
-test('initial overview exposes two result tabs and all nine indicators as detail actions', () => {
+test('initial overview exposes two result tabs and excludes theoretical uptime by default', () => {
   const markup = render(Page, { rows, loading: false })
   assert.doesNotMatch(markup, /<h1\b/)
   assert.match(markup, /aria-label="スキルDPS分析 \/ 分析一覧 \/ 表の場所をコピー"/)
@@ -70,8 +70,8 @@ test('initial overview exposes two result tabs and all nine indicators as detail
   assert.match(detail, /aria-pressed="false"[^>]*>重回帰<\/button>/)
   assert.match(detail, /aria-pressed="false"[^>]*>組み合わせ評価<\/button>/)
   const overview = overviewRows(markup)
-  assert.equal(overview.length, 9)
-  for (const label of INDICATORS) {
+  assert.equal(overview.length, DEFAULT_INDICATORS.length)
+  for (const label of DEFAULT_INDICATORS) {
     const row = overview.find(candidate => [...candidate.matchAll(/<button\b[^>]*>([\s\S]*?)<\/button>/g)]
       .some(button => text(button[1]) === label))
     assert.ok(row, `${label} opens its detailed analysis`)
@@ -101,6 +101,10 @@ test('shared conditions start collapsed while the DPS selector remains outside t
   const dps = labels.filter(match => text(match[1]).startsWith('DPS') && match[1].includes('<select'))
   assert.equal(dps.length, 1)
   assert.match(dps[0][1], /<option value="direct" selected="">直接DPS<\/option>/)
+  const uptime = labels.find(match => text(match[1]) === '理論稼働率を含める')
+  assert.ok(uptime)
+  assert.match(uptime[1], /type="checkbox"/)
+  assert.doesNotMatch(uptime[1], /\bchecked\b/)
   const formEnd = markup.indexOf('</form>', controlled.index)
   assert.ok(dps[0].index < controlled.index || dps[0].index > formEnd, 'DPS remains visible when conditions are collapsed')
 })
@@ -118,7 +122,7 @@ test('the target-group breakdown has its own initially closed native disclosure'
 test('empty overview retains all indicators without mounting an unusable plot export', () => {
   const markup = render(Page, { rows: [], loading: false })
   const overview = overviewRows(markup)
-  assert.equal(overview.length, 9)
+  assert.equal(overview.length, DEFAULT_INDICATORS.length)
   for (const row of overview) assert.match(row, /<td>0<\/td>/)
   assert.doesNotMatch(markup, />画像を保存<\/button>|<svg\b[^>]*class="(?:skill-dps-chart-svg|skill-dps-target-svg)"|NaN|Infinity/)
 })

@@ -89,7 +89,7 @@ export function SkillDpsAnalysisPage({ rows, loading, error }: Props) {
   const [regressionView, setRegressionView] = useState<TableChartView>('table')
   const [combinationView, setCombinationView] = useState<TableChartView>('table')
   const [metric, setMetric] = useState<SkillDpsAnalysisMetric>('direct')
-  const [includeUptime, setIncludeUptime] = useState(true)
+  const [includeUptime, setIncludeUptime] = useState(false)
   const axes = includeUptime ? SKILL_DPS_ANALYSIS_AXES : AXES_WITHOUT_UPTIME
   const [showFit, setShowFit] = useState(true)
   const [imageSnapshot, setImageSnapshot] = useState<SkillDpsChartImageSnapshot | null>(null)
