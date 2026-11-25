@@ -87,20 +87,17 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
     const { placements, editing, facing, targeting, selectedOperator, actions } = deployment
     if (!editing && !placements.length) return null
     const columns = detail.grid[0].length
+    const cellStates = new Map<string, 'ally' | 'candidate'>()
     const markers = placements.map(({ row, col, operator, direction }) => {
+      cellStates.set(`${row}-${col}`, 'ally')
       const label = markerLabel(operator)
-      const length = Array.from(label).length
-      const width = Math.min(24, length * 9 + 2)
-      const height = 13
-      const tipOffset = (direction === 'up' || direction === 'down' ? height : width) / 2
       return <g key={operator.id} className="td-ally-mark" transform={`translate(${col * 32 + 16} ${row * 32 + 16})`}>
         <title>{`${operator.name}（${formatTdCell(columns, row, col)}・${TD_DIRECTIONS[direction].label}向き）`}</title>
         {editing && (facing || targeting === 'move') && selectedOperator?.id === operator.id &&
-          <rect className={facing ? 'td-facing-origin' : 'td-move-origin'} x="-15" y="-15" width="30" height="30" />}
-        <rect x={-width / 2} y={-height / 2} width={width} height={height} rx="1.6" />
-        <path d="M-0.3 -2.5L2.5 0L-0.3 2.5Z" transform={`rotate(${markerAngle[direction]}) translate(${tipOffset} 0)`} />
-        <text textAnchor="middle" dominantBaseline="central"
-          textLength={length > 2 ? width - 2 : undefined} lengthAdjust="spacingAndGlyphs">{label}</text>
+          <rect className="td-ally-origin" x="-14" y="-14" width="28" height="28" />}
+        <path d="M10.9 -2.8L14.8 0L10.9 2.8Z" transform={`rotate(${markerAngle[direction]})`} />
+        <text y="1.5" textAnchor="middle" dominantBaseline="central"
+          textLength={Array.from(label).length > 1 ? 20.5 : undefined} lengthAdjust="spacingAndGlyphs">{label}</text>
       </g>
     })
     const legend = placements.map(({ operator, row, col, direction }) => {
@@ -112,10 +109,12 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
         : <span key={operator.id}>{content}</span>
     })
     const terrain = <>{children}{markers}</>
-    const boardLegend = <>{routeLegend}{legend}</>
+    const boardLegend = <>{routeLegend}{legend}
+      {targeting && <span><b className="td-candidate-key" aria-hidden="true">＋</b>{targeting === 'place' ? '配置先候補' : '移動先候補'}</span>}
+    </>
     if (facing) {
       const placed = placements.find(unit => unit.operator.id === selectedOperator?.id)
-      return { terrain, legend: boardLegend, targets: actions && placed &&
+      return { terrain, cellStates, legend: boardLegend, targets: actions && placed &&
         <FacingPad detail={detail} placed={placed} onTurn={actions.setDirection} /> }
     }
     const selectableCells = editing && targeting
@@ -123,6 +122,9 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
         selectedOperator && canPlaceTdOperatorAt(detail, placements, selectedOperator, row, col)
           ? [{ row, col, operator: selectedOperator }] : []))
       : placements
+    if (targeting) {
+      for (const { row, col } of selectableCells) cellStates.set(`${row}-${col}`, 'candidate')
+    }
     const targets = actions && <div className="td-placement-cells" role="group" aria-label="オペレーター配置マス"
       style={{ gridTemplateColumns: `repeat(${detail.grid[0].length}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${detail.grid.length}, minmax(0, 1fr))` }}>
       {selectableCells.map(({ row, col, operator }) => {
@@ -132,16 +134,15 @@ export function TdDeploymentBoard({ detail, routeLegend, boardOverlay, children,
           aria-label={`${formatTdCell(columns, row, col)}：${operator.name}${action}`}
           style={{ gridRow: row + 1, gridColumn: col + 1 }}
           onClick={() => targeting ? actions.selectDestination(row, col) : actions.selectOperator(operator, 'move')}
-          onKeyDown={event => navigateCells(event, row, col, detail)}>
-          {targeting && <span aria-hidden="true">＋</span>}
-        </button>
+          onKeyDown={event => navigateCells(event, row, col, detail)} />
       })}
     </div>
-    return { terrain, legend: boardLegend, targets }
+    return { terrain, cellStates, legend: boardLegend, targets }
   }, [deployment, detail, children, routeLegend])
   const selectedPlacement = deployment?.placements.find(unit => unit.operator.id === deployment.selectedOperator?.id)
   const enemyOverlay = deployment?.editing && boardOverlay ? <div inert>{boardOverlay}</div> : boardOverlay
-  return <MapBoard {...props} detail={detail} showShogiCoordinates highlightedCell={selectedPlacement ?? props.highlightedCell}
+  return <MapBoard {...props} detail={detail} appearance="td" cellStates={layers?.cellStates}
+    showShogiCoordinates highlightedCell={selectedPlacement ?? props.highlightedCell}
     routeLegend={layers?.legend ?? routeLegend}
     boardOverlay={layers?.targets ? <>{layers.targets}{enemyOverlay}</> : enemyOverlay}>
     {layers?.terrain ?? children}

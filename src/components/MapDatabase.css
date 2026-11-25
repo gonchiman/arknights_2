@@ -151,6 +151,32 @@
 .map-board-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .map-board-legend i { width: 10px; height: 10px; background: var(--map-tile-fill); }
 .map-board-legend i.map-tile-blocked { background: repeating-linear-gradient(135deg, var(--map-tile-fill) 0 9px, var(--map-blocked-line) 9px 10px); }
+.map-board-figure[data-appearance="td"] {
+  --td-entrance-color: #ac6358;
+  --td-ally-color: #205b4f;
+  --td-candidate-border: #5a806a;
+  --td-candidate-fill: #deeee3;
+  --td-candidate-text: #2a5b45;
+  background: var(--surface);
+}
+.map-board-figure[data-appearance="td"] .map-tile-ground { --map-tile-fill: #e1e4e0; }
+.map-board-figure[data-appearance="td"] .map-tile-high { --map-tile-fill: #aeb8b0; }
+.map-board-figure[data-appearance="td"] .map-tile-blocked { --map-tile-fill: #f0f1ef; }
+.map-board-figure[data-appearance="td"] .map-tile-special { --map-tile-fill: #ccd8cf; }
+.map-board-figure[data-appearance="td"] .map-tile-start { --map-tile-fill: var(--td-entrance-color); }
+.map-board-figure[data-appearance="td"] .map-tile-end { --map-tile-fill: #48758b; }
+.map-board-figure[data-appearance="td"] .map-board-ranks { min-width: 18px; }
+.map-board-figure[data-appearance="td"] .map-board-legend { gap: 5px 12px; margin-top: 10px; }
+.map-board-figure[data-appearance="td"] .map-board-legend i.map-tile-blocked { background: var(--map-tile-fill); }
+.map-board-figure[data-appearance="td"] .map-tile text { text-anchor: middle; dominant-baseline: central; }
+.map-tile[data-cell-state="candidate"] .td-tile-surface { fill: var(--td-candidate-fill); stroke: var(--td-candidate-border); stroke-width: .75; }
+.map-tile[data-cell-state="ally"] .td-tile-surface { fill: var(--td-ally-color); }
+.map-board .td-entrance-badge rect { fill: var(--td-entrance-color); }
+.map-board .td-entrance-badge text { fill: #fff; font-family: inherit; font-size: 8px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.map-tile .td-tile-plus { fill: var(--td-candidate-text); font-size: 12px; }
+.map-tile-special .td-tile-symbol { fill: var(--text-soft); }
+.map-tile[data-cell-state] .td-tile-symbol { font-size: 8px; }
+.map-tile[data-cell-state="ally"] .td-tile-symbol { fill: #fff; }
 .map-battle-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 16px 0 22px; }
 .map-battle-facts > div { display: flex; align-items: baseline; gap: 8px; }
 .map-battle-facts dt { color: var(--text-muted); font-size: 11px; }

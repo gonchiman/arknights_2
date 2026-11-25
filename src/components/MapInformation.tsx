@@ -147,9 +147,12 @@ function tileKind(tile: MapTile | undefined): TileKind {
 interface MapBoardProps {
   detail: MapDetail
   name: string
+  appearance?: 'td'
+  cellStates?: ReadonlyMap<string, 'candidate' | 'ally'>
   markedEntrance?: { row: number; col: number }
   showEntranceLabels?: boolean
   routeDescription?: string
+  routeLinks?: ReactNode
   routeLegend?: ReactNode
   boardOverlay?: ReactNode
   showShogiCoordinates?: boolean
@@ -157,10 +160,31 @@ interface MapBoardProps {
   children?: ReactNode
 }
 
-function boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children }: MapBoardProps, blockedPatternId: string) {
+const TD_TILE_SYMBOLS: Partial<Record<TileKind, string>> = { start: '入', end: '拠', hole: '穴', special: '◇' }
+
+function TdTileMarks({ kind, entrance, state, badgeMark }: {
+  kind: TileKind
+  entrance?: string
+  state?: 'candidate' | 'ally'
+  badgeMark?: ReactNode
+}) {
+  const badge = kind !== 'start' ? entrance : undefined
+  const symbol = kind === 'start' && entrance ? entrance : TD_TILE_SYMBOLS[kind]
+  const cornerSymbol = !!symbol && !!state
+  const cornerPlus = !!badge || !!symbol
+  return <>
+    <rect className="td-tile-surface" x=".5" y=".5" width="31" height="31" />
+    {symbol && <text className="td-tile-symbol" x={cornerSymbol ? (badge ? 25 : 6) : 16} y={cornerSymbol ? 6.5 : 16.5}>{symbol}</text>}
+    {badgeMark}
+    {state === 'candidate' && <text className="td-tile-plus" x={cornerPlus ? 24 : 16} y={cornerPlus ? 24 : 16.5}>＋</text>}
+  </>
+}
+
+function boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }: MapBoardProps, blockedPatternId: string) {
   if (!detail.grid[0]?.length) return null
   const rows = detail.grid.length
   const columns = detail.grid[0].length
+  const td = appearance === 'td'
   const cellLabel = (row: number, col: number) => showShogiCoordinates
     ? formatTdCell(columns, row, col)
     : `上から${row + 1}行、左から${col + 1}列`
@@ -169,26 +193,41 @@ function boardContents({ detail, name, markedEntrance, showEntranceLabels, route
   const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
   const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
   const kinds = new Set(detail.grid.flat().map((index) => tileKind(detail.tiles[index])))
+  let routeEntranceBadge: ReactNode
   const terrain = (
     <svg className="map-board" viewBox={`0 0 ${columns * 32} ${rows * 32}`} role="img" aria-label={`${name}のマップ配置、${rows}行${columns}列`}>
       <desc>{[showShogiCoordinates && '右から筋、上から段', ...entrances.map(entrance => `出現口${entrance.label}：${cellLabel(rows - 1 - entrance.row, entrance.col)}`), routeDescription].filter(Boolean).join('。')}</desc>
-      <defs>
+      {!td && <defs>
         <pattern id={blockedPatternId} className="map-tile-blocked map-blocked-pattern" width="6.4" height="6.4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="6.4" height="6.4" />
           <path d="M3.2 0V6.4" strokeWidth="0.65" />
         </pattern>
-      </defs>
+      </defs>}
       {detail.grid.flatMap((row, y) => row.map((index, x) => {
         const kind = tileKind(detail.tiles[index])
-        const entrance = entranceByTile.get(`${y}-${x}`)
+        const key = `${y}-${x}`
+        const entrance = entranceByTile.get(key)
+        const state = cellStates?.get(key)
+        const badgeWidth = entrance ? 4 + entrance.label.length * 6 : 0
+        const badge = td && entrance && kind !== 'start' && <g className="td-entrance-badge">
+          <rect x="1.5" y="1.5" width={badgeWidth} height="10" rx="1" />
+          <text x={1.5 + badgeWidth / 2} y="6.8">{entrance.label}</text>
+        </g>
+        const liftBadge = badge && markedEntrance && routeLinks
+        if (liftBadge) routeEntranceBadge = <g transform={`translate(${x * 32} ${y * 32})`}>{badge}</g>
         const label = entrance?.label ?? (kind === 'start' ? 'IN' : kind === 'end' ? 'BASE' : kind === 'hole' ? '穴' : kind === 'special' ? '◇' : '')
-        return <g key={`${y}-${x}`} className={`map-tile map-tile-${kind}${entrance ? ' map-tile-entrance' : ''}`}>
+        return <g key={key} className={`map-tile map-tile-${kind}${entrance ? ' map-tile-entrance' : ''}`}
+          transform={td ? `translate(${x * 32} ${y * 32})` : undefined} data-cell-state={state}>
           {entrance && <title>{`出現口${entrance.label}（${cellLabel(y, x)}）`}</title>}
-          <rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />
-          {entrance && kind !== 'start' && <circle className="map-entrance-marker" cx={x * 32 + 16} cy={y * 32 + 16} r="11" />}
-          {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
+          {td ? <TdTileMarks kind={kind} entrance={entrance?.label} state={state} badgeMark={!liftBadge && badge} /> : <>
+            <rect x={x * 32 + 1} y={y * 32 + 1} width="30" height="30" style={kind === 'blocked' ? { fill: `url(#${blockedPatternId})` } : undefined} />
+            {entrance && kind !== 'start' && <circle className="map-entrance-marker" cx={x * 32 + 16} cy={y * 32 + 16} r="11" />}
+            {label && <text x={x * 32 + 16} y={y * 32 + 17} textAnchor="middle" dominantBaseline="middle">{label}</text>}
+          </>}
         </g>
       }))}
+      {routeLinks}
+      {routeEntranceBadge}
       {children}
     </svg>
   )
@@ -198,17 +237,17 @@ function boardContents({ detail, name, markedEntrance, showEntranceLabels, route
   return { terrain, legend }
 }
 
-export function MapBoard({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, boardOverlay, showShogiCoordinates, highlightedCell, children }: MapBoardProps) {
+export function MapBoard({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, boardOverlay, showShogiCoordinates, highlightedCell, children }: MapBoardProps) {
   const blockedPatternId = useId()
   // Moving markers can update many times per second over the same terrain.
-  const board = useMemo(() => boardContents({ detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children }, blockedPatternId),
-    [detail, name, markedEntrance, showEntranceLabels, routeDescription, routeLegend, showShogiCoordinates, children, blockedPatternId])
+  const board = useMemo(() => boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }, blockedPatternId),
+    [detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children, blockedPatternId])
   if (!board) return <p className="map-empty">マス配置のデータがありません</p>
   const terrain = boardOverlay == null ? board.terrain : <div className="map-board-layers">
     {board.terrain}
     <div className="map-board-overlay">{boardOverlay}</div>
   </div>
-  return <figure className="map-board-figure">
+  return <figure className="map-board-figure" data-appearance={appearance}>
     {showShogiCoordinates ? <div className="map-board-axes">
       <div className="map-board-files" aria-hidden="true">
         {detail.grid[0].map((_, col) => <span key={col} data-active={col === highlightedCell?.col || undefined}>{tdFile(detail.grid[0].length, col)}</span>)}
