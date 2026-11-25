@@ -9,7 +9,7 @@
 .skill-dps-page .skill-dps-cross-validation-table thead th { padding: 7px 8px; white-space: normal; }
 .skill-dps-page .skill-dps-cross-validation-table th:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .skill-dps-page .skill-dps-cross-validation-table td { white-space: normal; overflow-wrap: anywhere; }
-.skill-dps-cross-validation-table thead span { display: inline-block; }
+.skill-dps-cross-validation-unit { display: inline-block; }
 
 @media (max-width: 460px) {
   .skill-dps-cross-validation-number { width: 24%; }
