@@ -151,18 +151,21 @@ export function AttributeEffectCatalogPage({ rows, operators, loading }: { rows:
     </AnalysisTabPanel>
     <AnalysisTabPanel {...tabs} tab="changes">
       <div className="attribute-catalog-results">
-        {!isLive && <p className="attribute-catalog-release-summary">{release.summary}</p>}
-        {previous && <>
-          <div className="attribute-catalog-summary" role="status">
-            {previous.version} → {selectedLabel}　追加 {changes.filter(item => item.kind === 'added').length}件
-            ・変更 {changes.filter(item => item.kind === 'changed').length}件
-            ・削除 {changes.filter(item => item.kind === 'removed').length}件
+        <header className="attribute-catalog-release-header">
+          <div className="attribute-catalog-release-heading">
+            <h2>{previous && `${previous.version} → `}{selectedLabel} の更新内容</h2>
+            {previous && <span className="attribute-catalog-summary" role="status">
+              {canReset && '絞り込み後　'}追加 {changes.filter(item => item.kind === 'added').length}件
+              ・変更 {changes.filter(item => item.kind === 'changed').length}件
+              ・削除 {changes.filter(item => item.kind === 'removed').length}件
+            </span>}
           </div>
-          <CatalogTable showChanges entries={changes.flatMap(({ kind, row, previous: before }) => {
-            if (kind === 'changed') return [{ row: before, label: '変更前' }, { row, label: '変更後' }]
-            return [{ row, label: kind === 'added' ? '追加' : '削除' }]
-          })} onSource={setSourceDetail} />
-        </>}
+          {!isLive && <p className="attribute-catalog-release-summary">{release.summary}</p>}
+        </header>
+        {previous && <CatalogTable showChanges entries={changes.flatMap(({ kind, row, previous: before }) => {
+          if (kind === 'changed') return [{ row: before, label: '変更前' }, { row, label: '変更後' }]
+          return [{ row, label: kind === 'added' ? '追加' : '削除' }]
+        })} onSource={setSourceDetail} />}
       </div>
     </AnalysisTabPanel>
     <p className="attribute-catalog-baseline">最大昇進・潜在1・モジュールなし・スキル最大ランク</p>
