@@ -1,4 +1,5 @@
 import { fitMultipleLinearRegression, type MultipleLinearRegressionResult } from './multipleLinearRegression.ts'
+import { getSkillDpsPredictorColumnSets } from './skillDpsRegressionSubsets.ts'
 import {
   getSkillDpsAnalysisAxisValue, SKILL_DPS_ANALYSIS_AXES,
   type SkillDpsAnalysisAxis, type SkillDpsAnalysisDataset, type SkillDpsAnalysisMetric,
@@ -66,12 +67,7 @@ export function evaluateSkillDpsPredictorCombinations(
   let failedCount = 0
   let firstError: string | null = null
 
-  // There are at most eight supported candidates. Every subset projects
-  // columns from the same complete rows without changing which skills enter.
-  for (let mask = 1; mask < 2 ** candidates.length; mask++) {
-    const columns = candidates.flatMap((_, index) => mask & (1 << index) ? [index] : [])
-    if (columns.length < 2) continue
-
+  for (const columns of getSkillDpsPredictorColumnSets(candidates.length)) {
     try {
       const fit = fitMultipleLinearRegression(
         predictorValues.map(row => columns.map(index => row[index])),
@@ -93,12 +89,12 @@ export function evaluateSkillDpsPredictorCombinations(
   return { models, observationCount: dpsValues.length, failedCount, error: models.length ? null : firstError }
 }
 
-function prepareRegressionCohort(
+export function prepareRegressionCohort(
   dataset: SkillDpsAnalysisDataset,
   predictors: readonly SkillDpsRegressionPredictor[],
   metric: SkillDpsAnalysisMetric,
   cohortCandidates: readonly SkillDpsRegressionPredictor[] = predictors,
-): { error: string } | { error: null; labels: string[]; predictorValues: number[][]; dpsValues: number[] } {
+): { error: string } | { error: null; labels: string[]; predictorValues: number[][]; dpsValues: number[]; operatorIds: string[] } {
   if (predictors.length < 2 || new Set(predictors).size !== predictors.length) {
     return { error: '異なる説明変数を2つ以上選んでください。' }
   }
@@ -119,6 +115,7 @@ function prepareRegressionCohort(
 
   const predictorValues: number[][] = []
   const dpsValues: number[] = []
+  const operatorIds: string[] = []
   for (const observation of dataset.observations) {
     const dps = metric === 'direct' ? observation.directDps : observation.combinedDps
     if (dps === null || !Number.isFinite(dps)) continue
@@ -126,10 +123,11 @@ function prepareRegressionCohort(
     if (!values.every((value): value is number => typeof value === 'number')) continue
     predictorValues.push(columns.map(index => values[index]))
     dpsValues.push(dps)
+    operatorIds.push(observation.skill.operatorId)
   }
   if (!dpsValues.length) {
     return { error: 'DPSと選んだ説明変数がすべて揃うスキルがありません。' }
   }
 
-  return { predictorValues, dpsValues, labels, error: null }
+  return { predictorValues, dpsValues, labels, operatorIds, error: null }
 }

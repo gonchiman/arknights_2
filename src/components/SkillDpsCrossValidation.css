@@ -1,0 +1,17 @@
+.skill-dps-cross-validation-dialog { --skill-dps-dialog-width: 570px; }
+.skill-dps-cross-validation-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.skill-dps-cross-validation-conditions { color: var(--text-muted); font-size: 12px; }
+.skill-dps-cross-validation-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-variant-numeric: tabular-nums; }
+.skill-dps-cross-validation-progress { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-variant-numeric: tabular-nums; }
+.skill-dps-cross-validation-progress progress { width: min(160px, 100%); }
+.skill-dps-page .skill-dps-table.skill-dps-cross-validation-table { min-width: 0; table-layout: fixed; }
+.skill-dps-cross-validation-number { width: 20%; }
+.skill-dps-page .skill-dps-cross-validation-table thead th { padding: 7px 8px; white-space: normal; }
+.skill-dps-page .skill-dps-cross-validation-table th:first-child { text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.skill-dps-page .skill-dps-cross-validation-table td { white-space: normal; overflow-wrap: anywhere; }
+.skill-dps-cross-validation-table thead span { display: inline-block; }
+
+@media (max-width: 460px) {
+  .skill-dps-cross-validation-number { width: 24%; }
+  .skill-dps-page .skill-dps-cross-validation-table :is(th, td) { padding-inline: 5px; }
+}

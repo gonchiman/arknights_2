@@ -7,6 +7,7 @@ import {
 import { PageViewSwitch, TABLE_CHART_VIEWS, type TableChartView } from './PageViewSwitch'
 import { SkillDpsCombinationChart } from './SkillDpsCombinationChart'
 import { SkillDpsCombinationVifDialog } from './SkillDpsCombinationVifDialog'
+import { SkillDpsCrossValidation } from './SkillDpsCrossValidation'
 import { SkillDpsVifCell } from './SkillDpsVifCell'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
 import './SkillDpsCombinationEvaluation.css'
@@ -148,6 +149,8 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
         </label>
         <PageViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange}
           label="組み合わせ評価の表示形式" />
+        <SkillDpsCrossValidation dataset={dataset} candidates={appliedCandidates} metric={metric}
+          observationCount={evaluation.observationCount} disabled={evaluation.models.length === 0} />
       </div>
     </div>
     {view === 'chart'
