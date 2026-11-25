@@ -1,25 +1,83 @@
-.td-deploy-picker, .td-deploy-search-results {
+.td-deploy-picker {
   display: grid;
-  gap: 6px;
   min-width: 0;
+  gap: 10px;
 }
-.td-deploy-search-results {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
+
+.td-deploy-picker[hidden] { display: none; }
+
+.td-deploy-picker h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
 }
-.td-deploy-search-results .button {
+
+.td-deploy-filter-panel { border: 1px solid var(--border); }
+
+.td-deploy-filter-panel .page-output-header {
+  padding-inline: 10px;
+  background: var(--surface-soft);
+}
+
+.td-deploy-filter-panel .filters { border-bottom: 0; }
+.td-deploy-filter-panel .initial-filter-label { font-size: 12px; }
+.td-deploy-filter-panel .initial-button { font-size: 12px; }
+
+.td-deploy-results {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.td-deploy-results-heading,
+.td-deploy-pages {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
+}
+
+.td-deploy-results-heading { justify-content: space-between; }
+.td-deploy-results-heading span {
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.td-deploy-search-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.td-deploy-search-results .button {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
   min-width: 0;
+  min-height: 54px;
   text-align: start;
   overflow-wrap: anywhere;
 }
+
+.td-deploy-search-results strong { font-size: 13px; }
 .td-deploy-search-results .button span {
-  flex-shrink: 0;
   color: var(--text-soft);
+  font-size: 12px;
   font-weight: 400;
 }
-@media (pointer: coarse) {
-  .td-deploy-picker button { min-height: 44px; }
+
+.td-deploy-pages { justify-content: flex-end; }
+
+@container td-placement (max-width: 560px) {
+  .td-deploy-search-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container td-placement (max-width: 350px) {
+  .td-deploy-search-results { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .td-deploy-picker :is(.initial-button, .filter-reset-button, .search, .td-deploy-pages button) { min-height: 44px; }
+  .td-deploy-picker .search { font-size: 16px; }
 }

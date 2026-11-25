@@ -1,4 +1,6 @@
 import { gameDataClient } from './gameDataClient.ts'
+import { getOperatorInitial, parseOperatorRarity } from './operatorFilters.ts'
+import type { OperatorInitial } from '../types/skill.ts'
 
 export type TdDeployOperator = {
   id: string
@@ -7,7 +9,14 @@ export type TdDeployOperator = {
   shortName?: string
 }
 
-type LabeledOperator = TdDeployOperator & { shortName: string }
+type RosterOperator = TdDeployOperator & {
+  rarity: number
+  profession: string
+  subProfessionId: string
+  subProfessionName: string
+}
+
+export type TdDeploymentRosterEntry = RosterOperator & { shortName: string; nameInitial: OperatorInitial }
 
 // Reserve familiar labels before assigning the rest of the roster.
 const preferredLabels = new Map([
@@ -26,7 +35,7 @@ function* nameLabels(name: string) {
   for (let i = 1; i < letters.length - 1; i++) yield letters[i] + letters[i + 1]
 }
 
-function labelRoster(operators: readonly TdDeployOperator[]): LabeledOperator[] {
+function labelRoster(operators: readonly RosterOperator[]): TdDeploymentRosterEntry[] {
   const labels = new Map(preferredLabels)
   const used = new Set(labels.values())
   // Short names have fewer possible pairs. Use an ID tie-breaker so input order is immaterial.
@@ -42,35 +51,49 @@ function labelRoster(operators: readonly TdDeployOperator[]): LabeledOperator[] 
     used.add(label)
     labels.set(op.id, label)
   }
-  return operators.map(op => ({ ...op, shortName: labels.get(op.id)! }))
+  return operators.map(op => ({ ...op, shortName: labels.get(op.id)!, nameInitial: getOperatorInitial(op.name) }))
 }
 
 type Character = {
   name?: string
+  rarity?: number | string
   position?: string
   displayNumber?: string | null
+  profession?: string
   subProfessionId?: string
 }
+
+type SubProfessions = Record<string, { subProfessionName?: string }>
 
 function isPosition(value: unknown): value is TdDeployOperator['position'] {
   return value === 'MELEE' || value === 'RANGED' || value === 'ALL'
 }
 
-export function buildTdDeploymentRoster(characters: Record<string, Character>): LabeledOperator[] {
-  const operators: TdDeployOperator[] = []
+export function buildTdDeploymentRoster(characters: Record<string, Character>, subProfessions: SubProfessions = {}): TdDeploymentRosterEntry[] {
+  const operators: RosterOperator[] = []
   for (const [id, character] of Object.entries(characters)) {
     // A display number identifies playable operators, including those without skills.
     if (!character.displayNumber || !character.name || !isPosition(character.position)) continue
     // Hookmasters and Push Strokers can also use ranged tiles through their base trait.
-    const both = character.subProfessionId === 'hookmaster' || character.subProfessionId === 'pusher'
-    operators.push({ id, name: character.name, position: both ? 'ALL' : character.position })
+    const subProfessionId = character.subProfessionId ?? ''
+    const both = subProfessionId === 'hookmaster' || subProfessionId === 'pusher'
+    operators.push({
+      id, name: character.name, position: both ? 'ALL' : character.position,
+      rarity: parseOperatorRarity(character.rarity),
+      profession: character.profession ?? '', subProfessionId,
+      subProfessionName: subProfessions[subProfessionId]?.subProfessionName ?? subProfessionId,
+    })
   }
   return labelRoster(operators.sort((a, b) => a.name.localeCompare(b.name, 'ja') || a.id.localeCompare(b.id)))
 }
 
-async function readRoster(): Promise<LabeledOperator[]> {
+async function readRoster(): Promise<TdDeploymentRosterEntry[]> {
   if ((await gameDataClient.getSource()).mode === 'local') {
-    return buildTdDeploymentRoster(await gameDataClient.readTable<Record<string, Character>>('character'))
+    const [characters, uniequip] = await Promise.all([
+      gameDataClient.readTable<Record<string, Character>>('character'),
+      gameDataClient.readTable<{ subProfDict?: SubProfessions }>('uniequip'),
+    ])
+    return buildTdDeploymentRoster(characters, uniequip.subProfDict)
   }
   const base = import.meta.env?.BASE_URL ?? '/'
   const response = await fetch(base.replace(/\/?$/, '/') + 'data/maps/td-deployment-roster.json')
@@ -81,14 +104,21 @@ async function readRoster(): Promise<LabeledOperator[]> {
   const operators = roster.map(operator => {
     if (!operator || typeof operator.id !== 'string' || typeof operator.name !== 'string' ||
         !isPosition(operator.position)) throw new Error(invalid)
-    return { id: operator.id, name: operator.name, position: operator.position }
+    // Older bundled lists can still be searched by name during an app update.
+    const subProfessionId = typeof operator.subProfessionId === 'string' ? operator.subProfessionId : ''
+    return {
+      id: operator.id, name: operator.name, position: operator.position,
+      rarity: Number.isInteger(operator.rarity) ? operator.rarity : 0,
+      profession: typeof operator.profession === 'string' ? operator.profession : '',
+      subProfessionId, subProfessionName: typeof operator.subProfessionName === 'string' ? operator.subProfessionName : subProfessionId,
+    }
   })
   return labelRoster(operators)
 }
 
-let request: Promise<LabeledOperator[]> | null = null
+let request: Promise<TdDeploymentRosterEntry[]> | null = null
 
-export async function loadTdDeploymentRoster(): Promise<LabeledOperator[]> {
+export async function loadTdDeploymentRoster(): Promise<TdDeploymentRosterEntry[]> {
   request ??= readRoster().catch((error: unknown) => {
     request = null
     throw error

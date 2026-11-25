@@ -63,6 +63,12 @@ export function getProfessionColor(profession: string): ProfessionColor | undefi
   return PROFESSION_COLORS[profession as ProfessionId]
 }
 
+export function parseOperatorRarity(value: number | string | undefined): number {
+  if (typeof value === 'number') return value + 1
+  const match = value?.match(/TIER_(\d+)/)
+  return match ? Number(match[1]) : 0
+}
+
 export function getOperatorInitial(name: string): OperatorInitial {
   const first = name.normalize('NFKC').match(/[\p{L}\p{N}]/u)?.[0]
   if (!first) return 'OTHER'
