@@ -86,11 +86,29 @@ function close(actual: number | null, expected: number) {
   assert.ok(actual !== null && Math.abs(actual - expected) <= 1e-7 * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`)
 }
 
-test('術耐性別の要約には1攻撃単位の段階を使い、主攻撃を属性変更した表と同じ値を返す', () => {
-  const pairs = [{ resistance: 60, defense: 1200, percentage: 4, rankCutoff: 1 }]
-  const mountain = input('char_264_f12yin', 2).entry
-  assert.deepEqual(evaluateSkillRankStatisticsStage(mountain, pairs), evaluateDamageThreeSkillRankRow(mountain, pairs, 'virtual').cells)
-  assert.equal(evaluateSkillRankStatisticsStage(input('char_010_chen', 2).entry, pairs), null)
+test('優勢率は4出力型それぞれで主攻撃の属性変更表と同じダメージを集計する', () => {
+  const pairs = [
+    { resistance: 60, defense: 1200, percentage: 4, rankCutoff: 1 },
+    { resistance: 100, defense: null, percentage: 0, rankCutoff: 0 },
+  ]
+  const samples = [
+    ['NORMAL', input('char_264_f12yin', 2).entry],
+    ['NEXT_ATTACK', input('char_350_surtr', 1).entry],
+    ['COUNTER', input('char_293_thorns', 2).entry],
+    ['SKILL_ACTION', input('char_010_chen', 2).entry],
+  ] as const
+  const stages = samples.map(([kind, entry]) => {
+    assert.equal(entry.kind, kind)
+    const cells = evaluateSkillRankStatisticsStage(entry, pairs, 'excludeAttributeEffects')
+    assert.ok(cells && cells[0].physical !== null && cells[0].arts !== null, kind)
+    assert.deepEqual(cells, evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', 'excludeAttributeEffects').cells)
+    return { skill: entry.skill, cells }
+  })
+  const [valid, missing] = summarizeSkillRankStatistics(pairs, stages)
+  assert.equal(valid.count, 4)
+  assert.equal(valid.bySkill.count, 4)
+  assert.equal(valid.physicalWins + valid.ties + valid.artsWins, 4)
+  assert.equal(missing.count, 0)
 })
 
 test('スルトS2の術耐性20無視の切り替えが属性変更・実際の内訳・術耐性別の統計に反映される', () => {

@@ -102,7 +102,7 @@ test('分布画像の条件とファイル名は選択中の術耐性と絞り�
   }
   const snapshot = createStatisticsImage(options)
   assert.ok(snapshot)
-  for (const label of ['術耐性 60', 'メインストーリー', '属性限定効果を適用', '元の攻撃属性 術', '★6', '検索「スルト」']) {
+  for (const label of ['術耐性 60', 'メインストーリー', '通常攻撃型', '属性限定効果を適用', '元の攻撃属性 術', '★6', '検索「スルト」']) {
     assert.ok(snapshot.conditions.includes(label), label)
     assert.ok(snapshot.filenameParts.includes(label), label)
   }
@@ -114,6 +114,20 @@ test('分布画像の条件とファイル名は選択中の術耐性と絞り�
   assert.ok(zero.conditions.includes('対応防御力 0'))
   assert.ok(zero.conditions.includes('有効段階数 20'))
   assert.equal(createStatisticsImage({ ...options, resistance: 100 }), null)
+})
+
+test('優勢率の保存画像とファイル名で選択した出力型を識別できる', () => {
+  const outputKinds = { ALL: '全出力型', NORMAL: '通常攻撃型', NEXT_ATTACK: '次の通常攻撃型', COUNTER: '反撃型', SKILL_ACTION: 'スキル動作型' }
+  for (const [kind, label] of Object.entries(outputKinds)) {
+    const snapshot = createStatisticsImage({
+      rows: [sample], view: 'advantage', advantageUnit: 'skill', resistance: 60,
+      aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
+      filters: { kind, profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' },
+    })
+    for (const parts of [snapshot.conditions, snapshot.filenameParts]) {
+      assert.deepEqual(parts.filter(part => Object.values(outputKinds).includes(part)), [label])
+    }
+  }
 })
 
 test('属性別の優勢率は段階数に対する割合に換算し、同値を独立した区分にする', () => {

@@ -26,7 +26,7 @@ export function createDamageThreeStatisticsChartImage({
   const source = [`集計版 ${aggregationVersion}`, scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体']
   const settings = [
     comparisonPolicy === 'apply' ? '属性限定効果を適用' : '属性限定効果を除外',
-    DAMAGE_THREE_OUTPUT_KIND_LABELS.NORMAL,
+    filters.kind === 'ALL' ? '全出力型' : DAMAGE_THREE_OUTPUT_KIND_LABELS[filters.kind],
   ]
   if (filters.profession !== 'ALL') settings.push(getProfessionLabel(filters.profession))
   if (filters.rarity !== 'ALL') settings.push(`★${filters.rarity}`)

@@ -102,17 +102,18 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     OPERATOR_ORDER.compare(left.skill.operatorName, right.skill.operatorName)
     || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
   const statsActive = mode === 'statistics'
+  const distributionActive = statsActive && statisticView === 'distribution'
   const activeFilters = useMemo<DamageThreeSkillFilterValues>(() =>
-    statsActive ? { ...filters, kind: 'NORMAL' } : filters, [filters, statsActive])
+    distributionActive ? { ...filters, kind: 'NORMAL' } : filters, [filters, distributionActive])
   const professionOptions = useMemo(() => getDamageThreeProfessionOptions(entries), [entries])
   const candidates = useMemo(() => filterDamageThreeSkillEntries(entries, activeFilters), [entries, activeFilters])
   const matching = useOriginalDamageTypeFilter(candidates, filters.damageType)
   const filtered = matching ?? EMPTY_ENTRIES
   const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
-  const canReset = filters.kind !== 'ALL' || filters.query !== '' || filters.profession !== 'ALL'
+  const canReset = (!distributionActive && filters.kind !== 'ALL') || filters.query !== '' || filters.profession !== 'ALL'
     || filters.rarity !== 'ALL' || filters.damageType !== 'ALL'
   const canShowDifference = mode === 'virtual' && layout === 'columns'
-  const commonUnit = statsActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
+  const commonUnit = distributionActive ? '主攻撃1回' : commonValue(filtered, entry => UNIT[entry.kind])
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
@@ -133,7 +134,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const pageEntries = useMemo(() => sortedEntries?.slice(start, start + PAGE_SIZE) ?? [], [sortedEntries, start])
   const tabs = { idPrefix: tabId, activeTab: mode }
   function changeFilters(next: DamageThreeSkillFilterValues) {
-    setFilters(statsActive ? { ...next, kind: filters.kind } : next)
+    setFilters(distributionActive ? { ...next, kind: filters.kind } : next)
     setPage(0)
   }
   function changeSort(key: MatrixSortKey, resistance?: number) {
@@ -159,8 +160,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
   </>}>
     <DamageThreeSkillFilters filters={activeFilters} professionOptions={professionOptions} onChange={changeFilters}
-      allowAllKinds lockKind={statsActive} damageTypeLabel="元の攻撃属性" canReset={canReset}
-      onReset={() => { setFilters(DEFAULT_FILTERS); setPage(0) }} />
+      allowAllKinds lockKind={distributionActive} damageTypeLabel="元の攻撃属性" canReset={canReset}
+      onReset={() => changeFilters(DEFAULT_FILTERS)} />
     <section className="dc3-matrix-comparison-settings" aria-label={COMPARISON_CONDITIONS}>
       <PageOutputHeader segments={[COMPARISON_CONDITIONS]}><h2>{COMPARISON_CONDITIONS}</h2></PageOutputHeader>
       <div className="dc3-matrix-option-group dc3-matrix-comparison-policy">
@@ -195,7 +196,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           : loading && !rows.length ? <p role="status">スキルを読み込んでいます…</p>
           : !rows.length ? <p role="alert">オペレーターデータを取得できません。</p>
           : matching === null ? <p role="status">元の攻撃属性で絞り込み中…</p>
-          : !filtered.length ? <p role="status">該当するスキルはありません。</p>
+          : !statsActive && !filtered.length ? <p role="status">該当するスキルはありません。</p>
           : <>
             <div className="dc3-matrix-display-options">
               {!statsActive && <ResistanceSelector pairs={distribution.resistanceThresholds}
@@ -232,7 +233,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                   value={histogramResistance} onChange={setHistogramResistance} />}
             </div>
             {statsActive ? (
-              !statistics ? <p role="status">主攻撃のダメージを集計中…</p>
+              !filtered.length ? <p role="status">該当するスキルはありません。</p>
+                : !statistics ? <p role="status">主攻撃のダメージを集計中…</p>
                 : statisticFormat === 'chart'
                   ? <DamageThreeSkillRankStatisticsChart rows={statistics} view={statisticView}
                       advantageUnit={advantageUnit} resistance={histogramResistance} />
