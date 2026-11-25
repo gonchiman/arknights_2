@@ -16,10 +16,12 @@ const PERCENTAGE = new Intl.NumberFormat('ja-JP', {
 const PAGE_SIZE = 8
 type SortKey = 'adjusted' | 'vif'
 const predictorLabel = (predictor: SkillDpsRegressionPredictor) => SKILL_DPS_REGRESSION_PREDICTORS.find(([key]) => key === predictor)![1]
+const PREDICTORS_WITHOUT_UPTIME = SKILL_DPS_REGRESSION_PREDICTORS.filter(([key]) => key !== 'uptime')
 
-export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegression }: {
+export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, onOpenRegression }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
+  includeUptime: boolean
   onOpenRegression: (predictors: readonly SkillDpsRegressionPredictor[], cohortCandidates: readonly SkillDpsRegressionPredictor[]) => void
 }) {
   const statusId = useId()
@@ -33,19 +35,23 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegressio
   const [applied, setApplied] = useState<readonly SkillDpsRegressionPredictor[]>(() => SKILL_DPS_REGRESSION_PREDICTORS.map(([key]) => key))
   const [itemCount, setItemCount] = useState(0)
   const [sort, setSort] = useState<TableSort<SortKey>>({ key: 'adjusted', direction: 'desc' })
-  const evaluation = useMemo(() => evaluateSkillDpsPredictorCombinations(dataset, applied, metric), [dataset, applied, metric])
+  const candidateOptions = includeUptime ? SKILL_DPS_REGRESSION_PREDICTORS : PREDICTORS_WITHOUT_UPTIME
+  const appliedCandidates = useMemo(() => includeUptime ? applied : applied.filter(key => key !== 'uptime'), [applied, includeUptime])
+  const draftCandidates = includeUptime ? draft : draft.filter(key => key !== 'uptime')
+  const evaluation = useMemo(() => evaluateSkillDpsPredictorCombinations(dataset, appliedCandidates, metric), [dataset, appliedCandidates, metric])
   // Keep the current page only while its evaluated population remains the same.
   const [pagination, setPagination] = useState({ evaluation, page: 0 })
-  const pending = draft.join() !== applied.join()
-  const canEvaluate = draft.length >= 2
+  const pending = draftCandidates.join() !== appliedCandidates.join()
+  const canEvaluate = draftCandidates.length >= 2
+  const activeItemCount = itemCount <= appliedCandidates.length ? itemCount : 0
   const filteredModels = useMemo(() => evaluation.models
-    .filter(model => itemCount === 0 || model.predictors.length === itemCount)
+    .filter(model => activeItemCount === 0 || model.predictors.length === activeItemCount)
     .sort((left, right) => {
       const first = sort.key === 'adjusted' ? left.adjustedRSquared : left.maxVif
       const second = sort.key === 'adjusted' ? right.adjustedRSquared : right.maxVif
       return (sort.direction === 'asc' ? first - second : second - first)
         || right.adjustedRSquared - left.adjustedRSquared || left.maxVif - right.maxVif
-    }), [evaluation, itemCount, sort])
+    }), [evaluation, activeItemCount, sort])
   const pageCount = Math.max(1, Math.ceil(filteredModels.length / PAGE_SIZE))
   const page = Math.min(pagination.evaluation === evaluation ? pagination.page : 0, pageCount - 1)
   const start = page * PAGE_SIZE
@@ -59,8 +65,9 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegressio
   function evaluate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!canEvaluate || !pending) return
-    setApplied([...draft])
-    if (itemCount > draft.length) setItemCount(0)
+    setDraft(draftCandidates)
+    setApplied(draftCandidates)
+    if (itemCount > draftCandidates.length) setItemCount(0)
   }
 
   function changeSort(key: SortKey) {
@@ -82,7 +89,7 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegressio
     <form className="skill-dps-regression-form" onSubmit={evaluate}>
       <fieldset className="skill-dps-regression-predictors">
         <legend>候補の説明変数</legend>
-        <div>{SKILL_DPS_REGRESSION_PREDICTORS.map(([key, label]) => <label key={key}>
+        <div>{candidateOptions.map(([key, label]) => <label key={key}>
           <input type="checkbox" value={key} checked={draft.includes(key)} onChange={() => toggleCandidate(key)} />
           <span>{label}</span>
         </label>)}</div>
@@ -102,9 +109,9 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegressio
         {evaluation.failedCount > 0 && <div><dt>計算不可</dt><dd>{COUNT.format(evaluation.failedCount)}通り</dd></div>}
       </dl>
       <label className="skill-dps-inline-label">項目数
-        <select value={itemCount} onChange={event => { setItemCount(Number(event.target.value)); setPagination({ evaluation, page: 0 }) }}>
+        <select value={activeItemCount} onChange={event => { setItemCount(Number(event.target.value)); setPagination({ evaluation, page: 0 }) }}>
           <option value={0}>すべて</option>
-          {Array.from({ length: Math.max(0, applied.length - 1) }, (_, index) => index + 2)
+          {Array.from({ length: Math.max(0, appliedCandidates.length - 1) }, (_, index) => index + 2)
             .map(count => <option key={count} value={count}>{count}項目</option>)}
         </select>
       </label>
@@ -122,7 +129,7 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, onOpenRegressio
           const modelLabel = model.predictors.map(predictorLabel).join('・')
           return <tr key={model.predictors.join(',')}>
             <th scope="row"><button type="button" className="skill-dps-table-action"
-              onClick={() => onOpenRegression(model.predictors, applied)}>{modelLabel}</button></th>
+              onClick={() => onOpenRegression(model.predictors, appliedCandidates)}>{modelLabel}</button></th>
             <td>{model.predictors.length}</td>
             <td>{PERCENTAGE.format(model.adjustedRSquared)}</td>
             <SkillDpsVifCell value={model.maxVif} detail={{ modelLabel,

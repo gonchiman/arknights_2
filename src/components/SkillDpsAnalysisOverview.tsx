@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  analyzeSkillDps, SKILL_DPS_ANALYSIS_AXES,
+  analyzeSkillDps, type SKILL_DPS_ANALYSIS_AXES,
   type SkillDpsAnalysisAxis, type SkillDpsAnalysisDataset, type SkillDpsAnalysisMetric,
 } from '../lib/skillDpsAnalysis'
 import { buildSkillDpsTargetGroups } from '../lib/skillDpsTargetGroups'
@@ -21,15 +21,16 @@ const DPS = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
 type SortKey = typeof SORTABLE_COLUMNS[number][0]
 
-export function SkillDpsAnalysisOverview({ dataset, metric, onSelectAxis }: {
+export function SkillDpsAnalysisOverview({ dataset, metric, axes, onSelectAxis }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
+  axes: readonly (typeof SKILL_DPS_ANALYSIS_AXES)[number][]
   onSelectAxis: (axis: SkillDpsAnalysisAxis) => void
 }) {
   const [sort, setSort] = useState<TableSort<SortKey> | null>(null)
   const { rows, groups } = useMemo(() => {
     const targetAnalysis = analyzeSkillDps(dataset, 'maxTargets', metric)
-    const rows = SKILL_DPS_ANALYSIS_AXES.map(([axis, label]) => {
+    const rows = axes.map(([axis, label]) => {
       const analysis = axis === 'maxTargets' ? targetAnalysis : analyzeSkillDps(dataset, axis, metric)
       return {
         axis, label, count: analysis.observations.length,
@@ -40,7 +41,7 @@ export function SkillDpsAnalysisOverview({ dataset, metric, onSelectAxis }: {
       targetAnalysis.observations.map(({ id, x, y }) => ({ id, targetCount: x, y })),
     )
     return { rows, groups }
-  }, [dataset, metric])
+  }, [dataset, metric, axes])
 
   function changeSort(key: SortKey) {
     setSort(current => ({ key, direction: current?.key === key && current.direction === 'desc' ? 'asc' : 'desc' }))
