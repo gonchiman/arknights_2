@@ -1,0 +1,25 @@
+.td-deploy-picker, .td-deploy-search-results {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.td-deploy-search-results {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr));
+}
+.td-deploy-search-results .button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.td-deploy-search-results .button span {
+  flex-shrink: 0;
+  color: var(--text-soft);
+  font-weight: 400;
+}
+@media (pointer: coarse) {
+  .td-deploy-picker button { min-height: 44px; }
+}

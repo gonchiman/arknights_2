@@ -5,6 +5,7 @@ import { createChartImageFilename } from '../lib/chartImageFilename'
 import type { MapSummary } from '../types/map'
 import { ChartImageHeading } from './ChartImageFrame'
 import { ChartImageSaveDialog } from './ChartImageSaveDialog'
+import { TdDeploymentContext, useTdDeployment } from './TdDeploymentContext'
 import './ElementLocationCopyButton.css'
 import './TdMapImage.css'
 
@@ -83,14 +84,18 @@ export function TdMapImage({ map, filenameParts, caption, imageDetails, onOpen, 
   children: ReactNode
 }) {
   const buttonTarget = useContext(TdMapSaveButtonTarget)
+  const deployment = useTdDeployment()
   const [snapshot, setSnapshot] = useState<MapSnapshot | null>(null)
   function open() {
     onOpen?.()
     setSnapshot({
-      filename: createChartImageFilename(map.code, [map.name, ...filenameParts]),
+      filename: createChartImageFilename(map.code, [map.name, ...filenameParts,
+        ...(deployment?.placements.length ? [`味方${deployment.placements.length}人配置`] : [])]),
       image: <figure className="td-map-image">
         <ChartImageHeading title={`${map.code} ${map.name}`} conditions={caption} />
-        {children}
+        <TdDeploymentContext.Provider value={deployment && { placements: deployment.placements, editing: false, facing: false, selectedOperator: null, targeting: null }}>
+          {children}
+        </TdDeploymentContext.Provider>
         {imageDetails}
       </figure>,
     })

@@ -1,7 +1,8 @@
 import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react'
 import { buildTdEnemyTimeline, getTdEnemyPositions } from '../lib/tdEnemyTimeline'
 import type { MapDetail, MapIndex, MapSummary } from '../types/map'
-import { MapBoard } from './MapInformation'
+import { TdDeploymentBoard } from './TdDeploymentBoard'
+import { useTdDeployment } from './TdDeploymentContext'
 import { TdMapImage } from './TdMapImage'
 import './TdEnemyTimelinePanel.css'
 
@@ -79,6 +80,7 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   map: MapSummary; detail: MapDetail; index: MapIndex; active: boolean
 }) {
   const sliderId = useId()
+  const editing = useTdDeployment()?.editing ?? false
   const timeline = useMemo(() => buildTdEnemyTimeline(detail, index), [detail, index])
   const kinds = useMemo(() => new Map(detail.enemies.map(({ id }, i) => {
     const name = index.enemies[id]?.name ?? id
@@ -91,10 +93,10 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
   const [selectedCell, setSelectedCell] = useState<string | null>(null)
   const duration = timeline?.duration ?? 0
   const displayedSecond = Math.floor(seconds)
-  const playing = startTime !== null && active
+  const playing = startTime !== null && active && !editing
   useEffect(() => {
     if (startTime === null) return
-    if (!active || document.hidden) {
+    if (!active || editing || document.hidden) {
       setStartTime(null)
       return
     }
@@ -116,7 +118,7 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
       window.cancelAnimationFrame(frame)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [active, duration, startTime])
+  }, [active, editing, duration, startTime])
 
   if (!timeline) return <p className="map-empty" role="status">このマップは敵の位置を推定できません。</p>
   const { fragmentStarts, spawns } = timeline
@@ -157,47 +159,49 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         <output htmlFor={sliderId} aria-live="off">{displayedSecond} 秒</output></div>
       {currentFragment >= 0 && <span>区間{currentFragment + 1}の開始から {Math.floor(seconds - fragmentStarts[currentFragment])} 秒</span>}
     </div>
-    <div className="td-time-transport">
-      <button type="button" className="button secondary" disabled={duration === 0}
-        onClick={togglePlayback}>{playing ? '一時停止' : '再生'}</button>
-      <div className="td-time-seek">
-        <button type="button" className="button secondary" aria-label="1秒戻す"
-          disabled={displayedSecond === 0} onClick={() => seek(displayedSecond - 1)}>−1秒</button>
-        <div className="td-time-range">
-          <input id={sliderId} type="range" min={0} max={duration} step={1} value={displayedSecond}
-            aria-valuetext={`${displayedSecond}秒`} onChange={event => seek(event.currentTarget.valueAsNumber)} />
-          <div className="td-time-fragment-ticks" aria-hidden="true">
-            {fragmentStarts.map((start, i) => <span key={i} style={{ left: `${duration ? 100 * start / duration : 0}%` }} />)}
+    <div className="td-time-controls" hidden={editing}>
+      <div className="td-time-transport">
+        <button type="button" className="button secondary" disabled={duration === 0}
+          onClick={togglePlayback}>{playing ? '一時停止' : '再生'}</button>
+        <div className="td-time-seek">
+          <button type="button" className="button secondary" aria-label="1秒戻す"
+            disabled={displayedSecond === 0} onClick={() => seek(displayedSecond - 1)}>−1秒</button>
+          <div className="td-time-range">
+            <input id={sliderId} type="range" min={0} max={duration} step={1} value={displayedSecond}
+              aria-valuetext={`${displayedSecond}秒`} onChange={event => seek(event.currentTarget.valueAsNumber)} />
+            <div className="td-time-fragment-ticks" aria-hidden="true">
+              {fragmentStarts.map((start, i) => <span key={i} style={{ left: `${duration ? 100 * start / duration : 0}%` }} />)}
+            </div>
+            <div className="td-time-limits" aria-hidden="true"><span>0 秒</span><span>{duration} 秒</span></div>
           </div>
-          <div className="td-time-limits" aria-hidden="true"><span>0 秒</span><span>{duration} 秒</span></div>
+          <button type="button" className="button secondary" aria-label="1秒進める"
+            disabled={displayedSecond === duration} onClick={() => seek(displayedSecond + 1)}>＋1秒</button>
         </div>
-        <button type="button" className="button secondary" aria-label="1秒進める"
-          disabled={displayedSecond === duration} onClick={() => seek(displayedSecond + 1)}>＋1秒</button>
       </div>
-    </div>
-    <div className="map-wave-fragments td-time-fragments" role="group" aria-label="区間の先頭に移動">
-      {fragmentStarts.map((start, i) => <button key={i} type="button" aria-pressed={currentFragment === i}
-        onClick={() => seek(start)}>
-        <span>区間{i + 1}</span><small>{start.toLocaleString('ja-JP')} 秒</small>
-      </button>)}
-    </div>
-    <div className="td-time-progress">
-      <div className="td-time-heading">
-        <span>出現済み <strong>{spawnedCount} / {spawns.length}体</strong></span>
-        <span>未出現 <strong>{spawns.length - spawnedCount}体</strong></span>
+      <div className="map-wave-fragments td-time-fragments" role="group" aria-label="区間の先頭に移動">
+        {fragmentStarts.map((start, i) => <button key={i} type="button" aria-pressed={currentFragment === i}
+          onClick={() => seek(start)}>
+          <span>区間{i + 1}</span><small>{start.toLocaleString('ja-JP')} 秒</small>
+        </button>)}
       </div>
-      <progress aria-label="敵の出現進捗" value={spawnedCount} max={spawns.length}
-        aria-valuetext={`全${spawns.length}体のうち${spawnedCount}体が出現済み`} />
-    </div>
-    <div className="td-time-heading"><span>表示する敵</span>
-      <button type="button" className="button secondary" disabled={excluded.size === 0}
-        onClick={() => { setExcluded(new Set()); setSelectedCell(null) }}>全種を表示</button></div>
-    <div className="td-time-filters" role="group" aria-label="表示する敵">
-      {[...kinds].map(([id, kind]) => <label key={id}>
-        <input type="checkbox" checked={!excluded.has(id)} onChange={() => toggleEnemy(id)} />
-        <span className="td-time-key" style={{ background: kind.color }} aria-hidden="true">{kind.letter}</span>
-        {kind.name}
-      </label>)}
+      <div className="td-time-progress">
+        <div className="td-time-heading">
+          <span>出現済み <strong>{spawnedCount} / {spawns.length}体</strong></span>
+          <span>未出現 <strong>{spawns.length - spawnedCount}体</strong></span>
+        </div>
+        <progress aria-label="敵の出現進捗" value={spawnedCount} max={spawns.length}
+          aria-valuetext={`全${spawns.length}体のうち${spawnedCount}体が出現済み`} />
+      </div>
+      <div className="td-time-heading"><span>表示する敵</span>
+        <button type="button" className="button secondary" disabled={excluded.size === 0}
+          onClick={() => { setExcluded(new Set()); setSelectedCell(null) }}>全種を表示</button></div>
+      <div className="td-time-filters" role="group" aria-label="表示する敵">
+        {[...kinds].map(([id, kind]) => <label key={id}>
+          <input type="checkbox" checked={!excluded.has(id)} onChange={() => toggleEnemy(id)} />
+          <span className="td-time-key" style={{ background: kind.color }} aria-hidden="true">{kind.letter}</span>
+          {kind.name}
+        </label>)}
+      </div>
     </div>
     <TdMapImage map={map} filenameParts={['時間別の位置', `${displayedSecond}秒`, selectionName]}
       caption={`マップ開始から ${displayedSecond} 秒${currentFragment >= 0 ? ` · 区間${currentFragment + 1}` : ''}`}
@@ -211,7 +215,7 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
         {selectedDetail && <div>{selectedDetail}</div>}
         <div>推定位置 · ブロック・減速・撃破なし</div>
       </div>}>
-      <MapBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false} boardOverlay={
+      <TdDeploymentBoard detail={detail} name={`${map.code} 時間別の位置`} showEntranceLabels={false} boardOverlay={
         [...cells].map(([key, cell]) => <CellMarker key={key} cell={cell} rows={rows} columns={columns} kinds={kinds}
           expanded={key === selectedCell} onSelect={() => {
             setStartTime(null)
@@ -219,11 +223,11 @@ export function TdEnemyTimelinePanel({ map, detail, index, active }: {
           }} />)
       } />
     </TdMapImage>
-    <div className="td-time-footer"><strong aria-live={playing ? 'off' : 'polite'}>
+    {!editing && <div className="td-time-footer"><strong aria-live={playing ? 'off' : 'polite'}>
       {excluded.size === kinds.size ? '表示する敵が未選択' : <>
         地図上 {moving + waiting}体　移動 {moving}・待機 {waiting}{hidden > 0 && `　消失中 ${hidden}`}
       </>}
-    </strong><span>推定位置 · ブロック・減速・撃破なし</span></div>
-    {selectedDetail && <p className="td-time-detail" role="status">{selectedDetail}</p>}
+    </strong><span>推定位置 · ブロック・減速・撃破なし</span></div>}
+    {!editing && selectedDetail && <p className="td-time-detail" role="status">{selectedDetail}</p>}
   </div>
 }
