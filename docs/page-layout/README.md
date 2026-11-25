@@ -20,10 +20,14 @@
 
 ## 画像保存ボタン
 
-マップ・表・グラフなどの結果に画像保存ボタンを追加するとき、またはその見た目や配置を見直すときは、「TDマップ詳細」の地形タブを基準にする。
+グラフやテーブルを新しく作るとき、または作り直すときは、原則としてPNG保存を実装案に含め、画面表示と同時に実装する。既存ページにグラフや表をタブや表示形式として追加する場合も同様とする。画面表示のみという指定がある場合は、その指定を優先する。
+
+表とグラフを切り替える場合は、どちらの形式からも、表示中の条件でその結果を保存できるようにする。[グラフ画像出力の仕様](../chart-image/README.md)または[テーブル画像出力の仕様](../../instructions/shared/table-image.md)に従い、各形式でプレビューと実際に保存したPNGの内容が画面の結果と一致することを確認する。
+
+マップ・表・グラフの保存ボタンは「TDマップ詳細」の地形タブを配置の基準とする。
 
 - 結果が1つなら見出し行、タブで切り替える場合はタブ行の右端に、左から「画像を保存」「アドレスコピー」の順に並べる。[PageOutputHeader・PageOutputTabs](../../src/components/PageLayout.tsx) の `actions` に保存ボタンを渡す。タブや表示形式によって保存対象が変わる場合は表示中の結果に結び付け、保存できる表示でだけボタンを出す。
-- 通常時は、受け皿に向かう下矢印だけを表示する。[共通のアイコンボタンスタイル](../../src/components/ElementLocationCopyButton.css) の `output-icon-button` と `output-icon-face` を使い、コピーと大きさ・色・ホバー・フォーカス表示をそろえる。狭い画面やタッチ操作では共通スタイルが押せる範囲を広げる。
+- 保存ダイアログを開くボタンには [OutputImageSaveButton](../../src/components/OutputImageSaveButton.tsx) を使う。通常時は受け皿に向かう下矢印だけを表示する。[共通スタイル](../../src/components/ElementLocationCopyButton.css)でアドレスコピーと大きさ・色・ホバー・フォーカス表示をそろえ、狭い画面やタッチ操作では押せる範囲を広げる。
 - ボタンの読み上げ名は「画像を保存」とし、保存ダイアログを開く場合は `aria-haspopup="dialog"` を付ける。[TDマップの保存ボタン](../../src/components/TdMapImage.tsx) と[タブへの配置](../../src/components/TdMapPage.tsx)を実装例とする。
 
 ![TDマップの地形タブ行。右端に画像保存とアドレスコピーが並ぶ](examples/td-map-output-actions.png)
@@ -32,15 +36,16 @@
 
 ## 最小の使用例
 
-次は登録したルート名を `sample-results`、表示名を「集計結果」とした場合の例。コンポーネントは `src/components/` に置く想定。引数 `result` にページ固有の出力を渡すと、右端のボタンは `〈集計結果〉` をコピーする。
+次は登録したルート名を `sample-results`、表示名を「集計結果」とした場合の例。コンポーネントは `src/components/` に置く想定。ページ固有の結果と、その結果の保存ダイアログを開く関数を渡す。右端のボタンは `〈集計結果〉` をコピーする。
 
 ```tsx
 import type { ReactNode } from 'react'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
 import { PageLayout, PageOutputHeader } from './PageLayout'
 
-export function SampleResultsPage({ result }: { result: ReactNode }) {
+export function SampleResultsPage({ result, openImageSave }: { result: ReactNode; openImageSave: () => void }) {
   return <PageLayout page="sample-results">
-    <PageOutputHeader />
+    <PageOutputHeader actions={<OutputImageSaveButton onClick={openImageSave} />} />
     {result}
   </PageLayout>
 }
