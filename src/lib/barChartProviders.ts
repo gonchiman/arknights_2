@@ -16,9 +16,16 @@ import { formatHistogramRatingRangeLines } from './histogramRatingRangeStrip.ts'
 import type { EnemyRatingStat } from './enemyStatRatings.ts'
 import { buildStandardizedEnemyRankBandStatistics, type EnemyRankBandStatValues } from './enemyRankBandStatistics.ts'
 import { ENEMY_RANK_BAND_STATISTIC_LABELS } from './enemyRankBandStatisticsDisplay.ts'
+import {
+  ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, ADVANTAGE_POLICIES, ADVANTAGE_UNITS, DAMAGE_THREE_STATISTIC_COLORS,
+  getAdvantageChartAxisTitle, getAdvantageChartBar, getAdvantageEmptyMessage,
+} from './damageThreeAdvantageChart.ts'
+import type { AdvantageUnit, SkillRankStatistics } from './damageThreeSkillRankStatistics.ts'
 
 export type BarChartProviderId = 'enemy-stat-histogram' | 'enemy-defense-resistance' | 'enemy-stat-rating-comparison'
-  | 'enemy-rank-band-statistics'
+  | 'enemy-rank-band-statistics' | 'dc3-attribute-advantage'
+
+export type BarChartAdvantagePolicy = typeof ADVANTAGE_POLICIES[number][0]
 
 export interface BarChartProviderContext {
   readonly data: EnemyAggregationData
@@ -31,6 +38,9 @@ export interface BarChartProviderContext {
   readonly rightStatKey?: EnemyRatingStat
   readonly rankBandStep?: 5 | 10 | 20
   readonly rankBandMetric?: keyof EnemyRankBandStatValues
+  readonly advantageRows?: readonly SkillRankStatistics[]
+  readonly advantageUnit?: AdvantageUnit
+  readonly advantagePolicy?: BarChartAdvantagePolicy
 }
 
 export interface BarChartProvider {
@@ -48,7 +58,7 @@ export interface BarChartProviderVariant {
   readonly document: BarChartDocument
 }
 
-function scopeData(context: BarChartProviderContext, countMode: EnemyHistogramCountMode) {
+export function getBarChartScopeData(context: Pick<BarChartProviderContext, 'data' | 'scope'>, countMode: EnemyHistogramCountMode) {
   if (context.scope !== 'main') return context.data
   const scoped = getEnemyMainStoryScope(context.data)
   if (countMode === 'SPAWNS' && !scoped.spawnCountsAvailable) {
@@ -95,7 +105,7 @@ function histogramInput(context: BarChartProviderContext) {
 function createEnemyStatHistogram(context: BarChartProviderContext): BarChartDocument {
   const { statKey, metric, binning } = histogramInput(context)
   const countMode = context.countMode ?? 'SPAWNS'
-  const scoped = scopeData(context, countMode)
+  const scoped = getBarChartScopeData(context, countMode)
   const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats[statKey], countMode, scoped.counts)
   const statistics = calculateWeightedHistogram(observations, {
     scale: metric.defaultScale, minimumLinearBinWidth: metric.minimumLinearBinWidth,
@@ -161,7 +171,7 @@ function createDefenseResistance(context: BarChartProviderContext): BarChartDocu
   if (context.countMode !== undefined && context.countMode !== 'SPAWNS') {
     throw new Error('防御力と術耐性の対応は出現回数で集計します。')
   }
-  const scoped = scopeData(context, 'SPAWNS')
+  const scoped = getBarChartScopeData(context, 'SPAWNS')
   const result = buildEnemyDefenseResistanceBands(scoped.rows, scoped.counts)
   const allObservations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats.magicResistance, 'SPAWNS', scoped.counts)
   const total = allObservations.reduce((sum, { weight }) => sum + (Number.isFinite(weight) && weight > 0 ? weight : 0), 0)
@@ -252,7 +262,7 @@ function prepareEnemyRankBandStatistics(context: BarChartProviderContext) {
   if (context.countMode !== undefined && context.countMode !== 'SPAWNS') {
     throw new Error('順位帯の統計は出現回数で集計します。')
   }
-  const scoped = scopeData(context, 'SPAWNS')
+  const scoped = getBarChartScopeData(context, 'SPAWNS')
   const step = context.rankBandStep ?? 10
   const result = buildStandardizedEnemyRankBandStatistics(scoped.rows, scoped.counts, step)
   const observations = buildEnemyHistogramObservations(scoped.rows, enemy => enemy.stats.defense, 'SPAWNS', scoped.counts)
@@ -304,6 +314,49 @@ function createEnemyRankBandStatisticsVariants(context: BarChartProviderContext)
       document: rankBandStatisticsDocument(context, key, prepared) })))
 }
 
+function createDc3Advantage(context: BarChartProviderContext): BarChartDocument {
+  const { advantageRows: rows, advantageUnit = 'skill', advantagePolicy = 'excludeAttributeEffects' } = context
+  const counts = context.scope === 'main' ? context.data.mainStoryCounts : context.data.counts
+  if (!counts) throw new Error('この集計版ではメインストーリーの出現回数を利用できません。')
+  const unitLabel = ADVANTAGE_UNITS.find(([key]) => key === advantageUnit)?.[1]
+  const policyLabel = ADVANTAGE_POLICIES.find(([key]) => key === advantagePolicy)?.[1]
+  if (!rows || !unitLabel || !policyLabel) throw new Error('属性別の優勢率の集計条件を確認できませんでした。')
+  const emptyMessage = getAdvantageEmptyMessage(rows)
+  if (emptyMessage) throw new Error(emptyMessage)
+  const policyCaption = `属性限定効果を${policyLabel}`
+  const skillType = '通常攻撃型'
+  const source = sourceMetadata(context, 'dc3-attribute-advantage', 'SPAWNS', counts, null, [
+    { label: '集計単位', value: unitLabel, caption: unitLabel },
+    { label: '属性限定効果', value: policyLabel, caption: policyCaption },
+    { label: '対象', value: skillType, caption: skillType },
+  ])
+  return createBarChartDocument({
+    layout: 'stacked-percent', xKind: 'point', fractionDigits: 1,
+    bins: rows.map(({ resistance }) => ({
+      id: `dc3-res-${resistance}`, label: number(resistance), point: resistance, value: null,
+    })),
+    stack: {
+      legendTitle: ADVANTAGE_LEGEND,
+      columns: ['術耐性', '対応防御力', advantageUnit === 'skill' ? '有効スキル数' : '有効段階数'],
+      series: ADVANTAGE_OUTCOMES.map(({ series, label }) => ({ id: series, label, color: DAMAGE_THREE_STATISTIC_COLORS[series] })),
+      rows: rows.map(row => {
+        const bar = getAdvantageChartBar(row, advantageUnit)
+        const total = bar?.count ?? 0
+        return { labels: [number(row.resistance), row.defense === null ? '—' : number(row.defense), number(total)],
+          total, values: bar ? bar.segments.map(segment => segment.count) : null }
+      }),
+    },
+    semantics: { kind: 'composition', subject: '属性別の優勢率', xLabel: getAdvantageChartAxisTitle(advantageUnit), yLabel: '術耐性' },
+    source, filenameParts: [`集計${context.version.id}`, source.scopeLabel, unitLabel, policyCaption, skillType],
+    capabilities: { percentages: false, cumulative: false, rankBands: false },
+  })
+}
+
+function createDc3AdvantageVariants(context: BarChartProviderContext): readonly BarChartProviderVariant[] {
+  return Object.freeze(ADVANTAGE_UNITS.map(([key, label]) => Object.freeze({ key, label,
+    document: createDc3Advantage({ ...context, advantageUnit: key }) })))
+}
+
 /** Providers consume their own calculated snapshot; they never inspect another page's state. */
 export const BAR_CHART_PROVIDERS: readonly BarChartProvider[] = Object.freeze([
   Object.freeze({ id: 'enemy-stat-histogram', label: '敵のステータス分布', variantLabel: 'ステータス',
@@ -314,6 +367,8 @@ export const BAR_CHART_PROVIDERS: readonly BarChartProvider[] = Object.freeze([
     createDocument: createEnemyStatRatingComparison, createVariants: createEnemyStatRatingComparisonVariants }),
   Object.freeze({ id: 'enemy-rank-band-statistics', label: '防御力・術耐性の順位帯統計', variantLabel: '統計量', createDocument: createEnemyRankBandStatistics,
     createVariants: createEnemyRankBandStatisticsVariants }),
+  Object.freeze({ id: 'dc3-attribute-advantage', label: 'DC3 属性別の優勢率', variantLabel: '集計単位',
+    createDocument: createDc3Advantage, createVariants: createDc3AdvantageVariants }),
 ])
 
 export function createBarChartFromProvider(id: BarChartProviderId, context: BarChartProviderContext): BarChartDocument {

@@ -37,3 +37,9 @@ export function ChartStripCell({ left, width, top, label, leftInset = 0, rightIn
       transform={labelRotation ? `rotate(${labelRotation} ${center} ${labelY})` : undefined}>{label}</text>}
   </>
 }
+
+/** A horizontal chart's information bands share the row center and a 3px vertical gutter. */
+export function ChartStripRowCell({ top, height, ...cell }: ChartStripCellProps & { height: number }) {
+  return <ChartStripCell {...cell} top={top + 1.5} height={Math.max(0, height - 3)}
+    labelY={top + height / 2 + 4} />
+}

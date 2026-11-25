@@ -453,7 +453,12 @@ export default function App() {
           </Suspense>
         ) : displayedRoute.view === 'bar-chart-workbench' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">棒グラフ作成を読み込み中…</p>}>
-            <BarChartWorkbenchPage />
+            <BarChartWorkbenchPage skills={classifiedRows} skillsLoading={loading} skillsError={error}
+              requestSkills={() => {
+                if (skillDataRequestStarted.current && !error) return
+                skillDataRequestStarted.current = true
+                void load()
+              }} />
           </Suspense>
         ) : displayedRoute.view === 'enemy-defense-resistance-formula' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">防御力・術耐性の対応式を読み込み中…</p>}>

@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode, type SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
+import { ADVANTAGE_POLICIES, ADVANTAGE_UNITS, NO_CORRESPONDENCE_DATA } from '../lib/damageThreeAdvantageChart'
 import { filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues } from '../lib/damageThreeSkillFilters'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
@@ -31,10 +32,8 @@ import './DamageThreeSkillAttributeMatrixPage.css'
 const MODES = [['virtual', '主攻撃の属性変更'], ['actual', '実際のダメージ内訳'], ['statistics', '術耐性別の統計']] as const
 type Mode = typeof MODES[number][0]
 const ATTRIBUTE_LAYOUTS = [['columns', '横並び'], ['rows', '上下']] as const
-const ADVANTAGE_UNITS = [['skill', 'スキル単位'], ['stage', '段階単位']] as const
 const COMPARISON_CONDITIONS = '比較条件'
 const ATTRIBUTE_EFFECTS_LABEL = '属性変更・統計の属性限定効果'
-const ATTRIBUTE_EFFECTS = [['excludeAttributeEffects', '除外'], ['apply', '適用']] as const
 type AttributeLayout = typeof ATTRIBUTE_LAYOUTS[number][0]
 const PAGE_SIZE = 15
 const DEFAULT_FILTERS: DamageThreeSkillFilterValues = { kind: 'ALL', query: '', profession: 'ALL', rarity: 'ALL', damageType: 'ALL' }
@@ -81,7 +80,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [sort, setSort] = useState<MatrixSort>(DEFAULT_SORT)
   const [layout, setLayout] = useState<AttributeLayout>('columns')
   const [showDifference, setShowDifference] = useState(false)
-  const [comparisonPolicy, setComparisonPolicy] = useState<typeof ATTRIBUTE_EFFECTS[number][0]>('excludeAttributeEffects')
+  const [comparisonPolicy, setComparisonPolicy] = useState<typeof ADVANTAGE_POLICIES[number][0]>('excludeAttributeEffects')
   const [actualApplyPenetration, setActualApplyPenetration] = useState(true)
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
@@ -165,7 +164,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
       <PageOutputHeader segments={[COMPARISON_CONDITIONS]}><h2>{COMPARISON_CONDITIONS}</h2></PageOutputHeader>
       <div className="dc3-matrix-option-group dc3-matrix-comparison-policy">
         <span>{ATTRIBUTE_EFFECTS_LABEL}</span>
-        <PageViewSwitch views={ATTRIBUTE_EFFECTS} selected={comparisonPolicy} label={ATTRIBUTE_EFFECTS_LABEL} onChange={next => {
+        <PageViewSwitch views={ADVANTAGE_POLICIES} selected={comparisonPolicy} label={ATTRIBUTE_EFFECTS_LABEL} onChange={next => {
           setComparisonPolicy(next)
           if (mode === 'virtual' && sort.resistance !== undefined) setPage(0)
         }} />
@@ -191,7 +190,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
       </div>
       <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
         {unavailable ? <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>
-          : !distribution?.total ? <p role="status">防御力と術耐性を対応させる出現データがありません。</p>
+          : !distribution?.total ? <p role="status">{NO_CORRESPONDENCE_DATA}</p>
           : loading && !rows.length ? <p role="status">スキルを読み込んでいます…</p>
           : !rows.length ? <p role="alert">オペレーターデータを取得できません。</p>
           : matching === null ? <p role="status">元の攻撃属性で絞り込み中…</p>

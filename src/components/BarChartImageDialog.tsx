@@ -10,6 +10,7 @@ import { getChartImageRasterSize } from '../lib/chartImageRasterSize'
 import { getBarChartNaturalHeight } from '../lib/barChartLayout'
 import { parseTableImageAspect } from '../lib/tableImageAspect'
 import { BarChartPlot } from './BarChartPlot'
+import { BarChartStackLegend } from './BarChartStackedPlot'
 import type { ChartImageFrameProps } from './ChartImageFrame'
 import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImageSaveDialog'
 import { ChartImageBatchOptions, ChartImageBatchPreviewChoices } from './ChartImageBatchOptions'
@@ -23,6 +24,7 @@ export function getBarChartImageFrame(snapshot: BarChartImageSnapshot, aspectRat
   onLayout?: ChartImageFrameProps['onLayout']): ChartImageFrameProps {
   return {
     title: snapshot.document.title,
+    legend: snapshot.document.stack && <BarChartStackLegend stack={snapshot.document.stack} />,
     conditions: snapshot.document.conditions,
     axisTitle: snapshot.document.xAxisTitle,
     naturalChartHeight: getBarChartNaturalHeight(snapshot.document, snapshot.settings),

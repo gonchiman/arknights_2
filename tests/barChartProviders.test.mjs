@@ -36,7 +36,7 @@ test('提供元は既存の度数と階級の意味を保持し、同じ入力�
   const document = histogram()
   assert.deepEqual(BAR_CHART_PROVIDERS.map(provider => provider.id), [
     'enemy-stat-histogram', 'enemy-defense-resistance', 'enemy-stat-rating-comparison',
-    'enemy-rank-band-statistics',
+    'enemy-rank-band-statistics', 'dc3-attribute-advantage',
   ])
   assert.deepEqual(histogram(), document)
   assert.equal(document.title, '術耐性のヒストグラム')
