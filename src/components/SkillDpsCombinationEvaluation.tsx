@@ -4,6 +4,8 @@ import {
   evaluateSkillDpsPredictorCombinations, SKILL_DPS_REGRESSION_PREDICTORS,
   type SkillDpsCombinationModel, type SkillDpsRegressionPredictor,
 } from '../lib/skillDpsMultipleRegression'
+import { PageViewSwitch, TABLE_CHART_VIEWS, type TableChartView } from './PageViewSwitch'
+import { SkillDpsCombinationChart } from './SkillDpsCombinationChart'
 import { SkillDpsCombinationVifDialog } from './SkillDpsCombinationVifDialog'
 import { SkillDpsVifCell } from './SkillDpsVifCell'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
@@ -21,10 +23,12 @@ type SortMode = 'all' | 'withinLimit'
 const predictorLabel = (predictor: SkillDpsRegressionPredictor) => SKILL_DPS_REGRESSION_PREDICTORS.find(([key]) => key === predictor)![1]
 const PREDICTORS_WITHOUT_UPTIME = SKILL_DPS_REGRESSION_PREDICTORS.filter(([key]) => key !== 'uptime')
 
-export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, onOpenRegression }: {
+export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, view, onViewChange, onOpenRegression }: {
   dataset: SkillDpsAnalysisDataset
   metric: SkillDpsAnalysisMetric
   includeUptime: boolean
+  view: TableChartView
+  onViewChange: (view: TableChartView) => void
   onOpenRegression: (predictors: readonly SkillDpsRegressionPredictor[], cohortCandidates: readonly SkillDpsRegressionPredictor[]) => void
 }) {
   const statusId = useId()
@@ -142,42 +146,49 @@ export function SkillDpsCombinationEvaluation({ dataset, metric, includeUptime, 
             {DIFFERENCE_LIMITS.map(limit => <option key={limit} value={limit}>{limit.toFixed(1)} pt以内</option>)}
           </select>
         </label>
+        <PageViewSwitch views={TABLE_CHART_VIEWS} selected={view} onChange={onViewChange}
+          label="組み合わせ評価の表示形式" />
       </div>
     </div>
-    <div ref={tableRegion} className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="説明変数の組み合わせ評価">
-      <table className="skill-dps-table skill-dps-combination-table" aria-label="説明変数の組み合わせ評価">
-        <colgroup><col style={{ width: '41%' }} /><col style={{ width: '12%' }} /><col style={{ width: '16%' }} />
-          <col style={{ width: '15%' }} /><col style={{ width: '16%' }} /></colgroup>
-        <thead><tr>
-          <th scope="col">説明変数の組み合わせ</th>
-          <th scope="col">項目数</th>
-          <TableSortHeader label="調整済みR²" sortKey="adjusted" sort={sort} onSort={changeSort} ariaLabel="調整済みR²で並べ替え" />
-          <th scope="col">首位との差（pt）</th>
-          <TableSortHeader label="最大VIF" sortKey="vif" sort={sort} onSort={changeSort} ariaLabel="最大VIFで並べ替え" />
-        </tr></thead>
-        <tbody>{filteredModels.length ? filteredModels.slice(start, end).map(model => {
-          const modelLabel = model.predictors.map(predictorLabel).join('・')
-          const difference = (bestAdjustedRSquared - model.adjustedRSquared) * 100
-          return <tr key={model.predictors.join(',')}>
-            <th scope="row"><button type="button" className="skill-dps-table-action"
-              onClick={() => onOpenRegression(model.predictors, appliedCandidates)}>{modelLabel}</button></th>
-            <td>{model.predictors.length}</td>
-            <td>{PERCENTAGE.format(model.adjustedRSquared)}</td>
-            <td>{difference > DIFFERENCE_EPSILON && difference < 0.01 ? '<0.01' : difference.toFixed(2)}</td>
-            <SkillDpsVifCell value={model.maxVif} detail={{ modelLabel,
-              onOpen: trigger => setDetail({ model, observationCount: evaluation.observationCount, trigger }),
-            }} />
-          </tr>
-        }) : <tr><td colSpan={5} className="skill-dps-table-empty">
-          {evaluation.models.length ? '条件に合う組み合わせなし' : '計算可能な組み合わせなし'}
-        </td></tr>}</tbody>
-      </table>
-    </div>
-    <nav className="skill-dps-combination-pages" aria-label="評価結果のページ">
-      <button className="button secondary" type="button" disabled={page === 0} onClick={() => setPagination({ evaluation, page: page - 1 })}>前へ</button>
-      <span role="status">{filteredModels.length ? `${COUNT.format(start + 1)}–${COUNT.format(end)} / ${COUNT.format(filteredModels.length)}通り` : '0通り'}</span>
-      <button className="button secondary" type="button" disabled={end >= filteredModels.length} onClick={() => setPagination({ evaluation, page: page + 1 })}>次へ</button>
-    </nav>
+    {view === 'chart'
+      ? <SkillDpsCombinationChart models={evaluation.models} visibleModels={filteredModels}
+          bestAdjustedRSquared={bestAdjustedRSquared} differenceLimit={differenceLimit} />
+      : <>
+        <div ref={tableRegion} className="skill-dps-table-scroll" role="region" tabIndex={0} aria-label="説明変数の組み合わせ評価">
+          <table className="skill-dps-table skill-dps-combination-table" aria-label="説明変数の組み合わせ評価">
+            <colgroup><col style={{ width: '41%' }} /><col style={{ width: '12%' }} /><col style={{ width: '16%' }} />
+              <col style={{ width: '15%' }} /><col style={{ width: '16%' }} /></colgroup>
+            <thead><tr>
+              <th scope="col">説明変数の組み合わせ</th>
+              <th scope="col">項目数</th>
+              <TableSortHeader label="調整済みR²" sortKey="adjusted" sort={sort} onSort={changeSort} ariaLabel="調整済みR²で並べ替え" />
+              <th scope="col">首位との差（pt）</th>
+              <TableSortHeader label="最大VIF" sortKey="vif" sort={sort} onSort={changeSort} ariaLabel="最大VIFで並べ替え" />
+            </tr></thead>
+            <tbody>{filteredModels.length ? filteredModels.slice(start, end).map(model => {
+              const modelLabel = model.predictors.map(predictorLabel).join('・')
+              const difference = (bestAdjustedRSquared - model.adjustedRSquared) * 100
+              return <tr key={model.predictors.join(',')}>
+                <th scope="row"><button type="button" className="skill-dps-table-action"
+                  onClick={() => onOpenRegression(model.predictors, appliedCandidates)}>{modelLabel}</button></th>
+                <td>{model.predictors.length}</td>
+                <td>{PERCENTAGE.format(model.adjustedRSquared)}</td>
+                <td>{difference > DIFFERENCE_EPSILON && difference < 0.01 ? '<0.01' : difference.toFixed(2)}</td>
+                <SkillDpsVifCell value={model.maxVif} detail={{ modelLabel,
+                  onOpen: trigger => setDetail({ model, observationCount: evaluation.observationCount, trigger }),
+                }} />
+              </tr>
+            }) : <tr><td colSpan={5} className="skill-dps-table-empty">
+              {evaluation.models.length ? '条件に合う組み合わせなし' : '計算可能な組み合わせなし'}
+            </td></tr>}</tbody>
+          </table>
+        </div>
+        <nav className="skill-dps-combination-pages" aria-label="評価結果のページ">
+          <button className="button secondary" type="button" disabled={page === 0} onClick={() => setPagination({ evaluation, page: page - 1 })}>前へ</button>
+          <span role="status">{filteredModels.length ? `${COUNT.format(start + 1)}–${COUNT.format(end)} / ${COUNT.format(filteredModels.length)}通り` : '0通り'}</span>
+          <button className="button secondary" type="button" disabled={end >= filteredModels.length} onClick={() => setPagination({ evaluation, page: page + 1 })}>次へ</button>
+        </nav>
+      </>}
     {detail && <SkillDpsCombinationVifDialog model={detail.model}
       observationCount={detail.observationCount} onClose={closeVifDetail} />}
   </section>

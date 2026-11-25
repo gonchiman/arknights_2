@@ -1,0 +1,18 @@
+.skill-dps-combination-chart { min-width: 0; }
+.skill-dps-combination-chart-header { justify-content: space-between; }
+.skill-dps-combination-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  list-style: none;
+}
+.skill-dps-combination-chart-legend li { display: inline-flex; align-items: center; gap: 5px; }
+.skill-dps-combination-chart-legend svg { flex: none; }
+.skill-dps-combination-chart-best,
+.skill-dps-combination-chart-lowest { stroke: var(--surface); stroke-width: 1; }
+.skill-dps-combination-chart-best { fill: var(--link); }
+.skill-dps-combination-chart-lowest { fill: var(--warning, var(--text)); }
