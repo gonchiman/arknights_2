@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { getMapEntrances } from '../lib/mapWaves'
 import { formatTdCell } from '../lib/tdCoordinates'
 import { canDeployAt } from '../lib/tdDeployment'
 import { describeTdRoute, getTdEnemyRoutes, type TdEnemyRoute } from '../lib/tdEnemyRoutes'
 import type { MapDetail, MapPosition, MapSummary } from '../types/map'
 import { TdDeploymentBoard } from './TdDeploymentBoard'
+import type { MapEntranceVisibility } from './MapInformation'
 import { useTdDeployment } from './TdDeploymentContext'
 import { PageOutputHeader } from './PageLayout'
 import { TdMapImage } from './TdMapImage'
@@ -12,9 +13,11 @@ import './TdMapTerrain.css'
 
 type Geometry = ReturnType<typeof describeTdRoute>
 
-export function TdTerrainBoard({ map, detail }: { map: MapSummary; detail: MapDetail }) {
+export function TdTerrainBoard({ map, detail, nonTileEntrances }: {
+  map: MapSummary; detail: MapDetail; nonTileEntrances: MapEntranceVisibility
+}) {
   return <TdMapImage map={map} filenameParts={['地形']} caption="地形">
-    <TdDeploymentBoard detail={detail} name={`${map.code} ${map.name}`} />
+    <TdDeploymentBoard detail={detail} name={`${map.code} ${map.name}`} nonTileEntrances={nonTileEntrances} />
   </TdMapImage>
 }
 
@@ -107,9 +110,16 @@ function RouteBoard({ detail, name, selection }: {
   </>
 }
 
-interface RoutePanelProps { map: MapSummary; detail: MapDetail; enemyId: string; enemyName: string; onClear: () => void }
+interface RoutePanelProps {
+  map: MapSummary
+  detail: MapDetail
+  enemyId: string
+  enemyName: string
+  onClear: () => void
+  children: ReactNode
+}
 
-export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: RoutePanelProps) {
+export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear, children }: RoutePanelProps) {
   const [selected, setSelected] = useState(0)
   const editing = useTdDeployment()?.editing
   const routes = getTdEnemyRoutes(map, detail, enemyId)
@@ -134,7 +144,7 @@ export function TdEnemyRoutePanel({ map, detail, enemyId, enemyName, onClear }: 
         </TdMapImage>
       : <>
         <p className="map-empty" role="status">この敵の経路データはありません。</p>
-        <TdTerrainBoard map={map} detail={detail} />
+        {children}
       </>}
   </div>
 }

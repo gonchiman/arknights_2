@@ -5,7 +5,7 @@ import { getMapEntrances } from '../lib/mapWaves'
 import { formatTdCell, tdFile, tdRank } from '../lib/tdCoordinates'
 import { getMapCoverageReasons, getMapCoverageStatus, getMapCoverageStatusLabel } from '../lib/enemyMapCoverage'
 import { DATA_SOURCE_URLS } from '../lib/dataSources'
-import type { MapDetail, MapIndex, MapSummary, MapTile } from '../types/map'
+import type { MapDetail, MapIndex, MapPosition, MapSummary, MapTile } from '../types/map'
 
 const formatNumber = (value: number | null | undefined) => value == null ? '—' : value.toLocaleString('ja-JP')
 const difficultyLabel = (map: MapSummary) => {
@@ -144,6 +144,11 @@ function tileKind(tile: MapTile | undefined): TileKind {
   return tile.heightType === 'HIGHLAND' ? 'high' : 'ground'
 }
 
+export interface MapEntranceVisibility {
+  visible: boolean
+  onChange: (visible: boolean) => void
+}
+
 interface MapBoardProps {
   detail: MapDetail
   name: string
@@ -151,6 +156,7 @@ interface MapBoardProps {
   cellStates?: ReadonlyMap<string, 'candidate' | 'ally'>
   markedEntrance?: { row: number; col: number }
   showEntranceLabels?: boolean
+  nonTileEntrances?: MapEntranceVisibility
   routeDescription?: string
   routeLinks?: ReactNode
   routeLegend?: ReactNode
@@ -180,7 +186,7 @@ function TdTileMarks({ kind, entrance, state, badgeMark }: {
   </>
 }
 
-function boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }: MapBoardProps, blockedPatternId: string) {
+function boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, nonTileEntrances, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }: MapBoardProps, blockedPatternId: string) {
   if (!detail.grid[0]?.length) return null
   const rows = detail.grid.length
   const columns = detail.grid[0].length
@@ -188,7 +194,11 @@ function boardContents({ detail, name, appearance, cellStates, markedEntrance, s
   const cellLabel = (row: number, col: number) => showShogiCoordinates
     ? formatTdCell(columns, row, col)
     : `上から${row + 1}行、左から${col + 1}列`
-  const entrances = showEntranceLabels === false ? [] : getMapEntrances(detail).filter((entrance) => !markedEntrance
+  const mapEntrances = showEntranceLabels === false ? [] : getMapEntrances(detail)
+  const isDedicated = ({ row, col }: MapPosition) => tileKind(detail.tiles[detail.grid[rows - 1 - row][col]]) === 'start'
+  const visibility = td && !markedEntrance && nonTileEntrances && mapEntrances.some(entrance => !isDedicated(entrance)) ? nonTileEntrances : undefined
+  const eligibleEntrances = visibility?.visible === false ? mapEntrances.filter(isDedicated) : mapEntrances
+  const entrances = eligibleEntrances.filter((entrance) => !markedEntrance
     || entrance.row === markedEntrance.row && entrance.col === markedEntrance.col)
   const entranceLegend = entrances.length > 4 ? `A–${entrances[entrances.length - 1].label}` : entrances.map((entrance) => entrance.label).join('・')
   const entranceByTile = new Map(entrances.map((entrance) => [`${rows - 1 - entrance.row}-${entrance.col}`, entrance]))
@@ -232,16 +242,27 @@ function boardContents({ detail, name, appearance, cellStates, markedEntrance, s
     </svg>
   )
   const legend = (
-    <figcaption className="map-board-legend">{(Object.keys(TILE_LABELS) as TileKind[]).filter((kind) => kinds.has(kind) || kind === 'start' && entrances.length > 0).map((kind) => <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />{TILE_LABELS[kind]}{kind === 'start' && entrances.length > 0 ? `（${entranceLegend}）` : ''}</span>)}{routeLegend}</figcaption>
+    <figcaption className="map-board-legend">
+      {(Object.keys(TILE_LABELS) as TileKind[]).filter(kind => kinds.has(kind) || !td && kind === 'start' && entrances.length > 0).map(kind =>
+        <span key={kind}><i className={`map-tile-${kind}`} aria-hidden="true" />
+          {td && kind === 'start' ? '出現専用マス' : TILE_LABELS[kind]}
+          {!td && kind === 'start' && entrances.length > 0 && `（${entranceLegend}）`}
+        </span>)}
+      {td && markedEntrance && entrances[0] && <span><b className="td-route-entrance-key">{entrances[0].label}</b>選択中の出現口</span>}
+      {routeLegend}
+      {visibility && <div className="td-entrance-visibility">
+        <label><input type="checkbox" checked={visibility.visible} onChange={event => visibility.onChange(event.currentTarget.checked)} />専用マス以外の出現口</label>
+      </div>}
+    </figcaption>
   )
   return { terrain, legend }
 }
 
-export function MapBoard({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, boardOverlay, showShogiCoordinates, highlightedCell, children }: MapBoardProps) {
+export function MapBoard({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, nonTileEntrances, routeDescription, routeLinks, routeLegend, boardOverlay, showShogiCoordinates, highlightedCell, children }: MapBoardProps) {
   const blockedPatternId = useId()
   // Moving markers can update many times per second over the same terrain.
-  const board = useMemo(() => boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }, blockedPatternId),
-    [detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children, blockedPatternId])
+  const board = useMemo(() => boardContents({ detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, nonTileEntrances, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children }, blockedPatternId),
+    [detail, name, appearance, cellStates, markedEntrance, showEntranceLabels, nonTileEntrances, routeDescription, routeLinks, routeLegend, showShogiCoordinates, children, blockedPatternId])
   if (!board) return <p className="map-empty">マス配置のデータがありません</p>
   const terrain = boardOverlay == null ? board.terrain : <div className="map-board-layers">
     {board.terrain}

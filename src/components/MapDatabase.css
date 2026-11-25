@@ -167,6 +167,18 @@
 .map-board-figure[data-appearance="td"] .map-tile-end { --map-tile-fill: #48758b; }
 .map-board-figure[data-appearance="td"] .map-board-ranks { min-width: 18px; }
 .map-board-figure[data-appearance="td"] .map-board-legend { gap: 5px 12px; margin-top: 10px; }
+.map-board-legend:has(.td-entrance-visibility):not(.td-map-image *) {
+  max-width: 550px;
+  margin-inline: auto;
+  justify-content: flex-start;
+}
+.td-entrance-visibility { flex-basis: 100%; border-top: 1px solid var(--border); text-align: left; }
+.td-entrance-visibility label { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding-right: 4px; font-size: 12px; cursor: pointer; }
+.td-entrance-visibility input { width: 16px; height: 16px; margin: 0; }
+.td-route-entrance-key { padding: 0 3px; background: var(--td-entrance-color); color: #fff; border-radius: 1px; }
+@media (pointer: coarse) {
+  .td-entrance-visibility label { min-height: 44px; }
+}
 .map-board-figure[data-appearance="td"] .map-board-legend i.map-tile-blocked { background: var(--map-tile-fill); }
 .map-board-figure[data-appearance="td"] .map-tile text { text-anchor: middle; dominant-baseline: central; }
 .map-tile[data-cell-state="candidate"] .td-tile-surface { fill: var(--td-candidate-fill); stroke: var(--td-candidate-border); stroke-width: .75; }
