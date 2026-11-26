@@ -107,12 +107,12 @@ export function EnemyDetailModal({ enemy, onClose, locationSegments }: Props) {
 
         <div className="enemy-detail-modal-body">
           <section className="enemy-detail-description" aria-labelledby={`${titleId}-description`}>
-            <h3 id={`${titleId}-description`}>説明</h3>
+            <DetailSectionHeading id={`${titleId}-description`} label="説明" locationSegments={locationSegments} />
             <p>{enemy.description || '説明はありません。'}</p>
           </section>
 
           <section aria-labelledby={`${titleId}-stats`}>
-            <h3 id={`${titleId}-stats`}>基礎ステータス</h3>
+            <DetailSectionHeading id={`${titleId}-stats`} label="基礎ステータス" locationSegments={locationSegments} />
             <table className="enemy-detail-table" aria-labelledby={`${titleId}-stats`}>
               <tbody>
                 <EnemyDetailValue label="HP" value={formatInteger(enemy.stats.maxHp)} numeric />
@@ -128,7 +128,7 @@ export function EnemyDetailModal({ enemy, onClose, locationSegments }: Props) {
           </section>
 
           <section aria-labelledby={`${titleId}-combat`}>
-            <h3 id={`${titleId}-combat`}>戦闘情報</h3>
+            <DetailSectionHeading id={`${titleId}-combat`} label="戦闘情報" locationSegments={locationSegments} />
             <table className="enemy-detail-table" aria-labelledby={`${titleId}-combat`}>
               <tbody>
                 <EnemyDetailValue label="区分" value={LEVEL_LABELS[enemy.levelType]} />
@@ -142,7 +142,7 @@ export function EnemyDetailModal({ enemy, onClose, locationSegments }: Props) {
           </section>
 
           <section aria-labelledby={`${titleId}-abilities`}>
-            <h3 id={`${titleId}-abilities`}>能力・状態異常耐性</h3>
+            <DetailSectionHeading id={`${titleId}-abilities`} label="能力・状態異常耐性" locationSegments={locationSegments} />
             <table className="enemy-detail-table enemy-detail-ability-table" aria-labelledby={`${titleId}-abilities`}>
               <tbody>
                 <tr>
@@ -173,6 +173,19 @@ export function EnemyDetailModal({ enemy, onClose, locationSegments }: Props) {
       </article>
     </dialog>
   )
+}
+
+function DetailSectionHeading({ id, label, locationSegments }: {
+  id: string
+  label: string
+  locationSegments?: readonly string[]
+}) {
+  const heading = <h3 id={id}>{label}</h3>
+  if (!locationSegments) return heading
+  return <div className="enemy-detail-section-heading">
+    {heading}
+    <ElementLocationCopyButton segments={[...locationSegments, label]} />
+  </div>
 }
 
 function EnemyDetailValue({ label, value, numeric = false }: { label: string; value: string; numeric?: boolean }) {

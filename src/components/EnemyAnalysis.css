@@ -1021,6 +1021,14 @@
 .enemy-data-details > summary > span::before { content: '+'; }
 .enemy-data-details[open] > summary > span::before { content: '−'; }
 
+.enemy-data-notes-with-copy { position: relative; }
+.enemy-data-notes-with-copy summary { padding-inline-end: 56px; }
+.enemy-data-notes-with-copy > .element-location-copy-button { position: absolute; top: 5px; right: 5px; }
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-data-notes-with-copy summary { min-height: 44px; }
+  .enemy-data-notes-with-copy > .element-location-copy-button { top: 1px; right: 1px; }
+}
+
 @container enemy-reference (max-width: 900px) {
   .enemy-detail-button span { display: none; }
   .enemy-table th,

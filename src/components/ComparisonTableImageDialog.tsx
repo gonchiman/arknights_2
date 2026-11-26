@@ -17,7 +17,8 @@ export interface ComparisonTableImageSnapshot {
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth, helpMode = 'popover' }: {
+export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth, helpMode = 'popover', parentLocation }: {
+  parentLocation?: readonly string[]
   snapshot: ComparisonTableImageSnapshot
   onClose: () => void
   options?: (saving: boolean) => ReactNode
@@ -110,6 +111,7 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
   }
 
   return <ChartImageSaveDialog
+    parentLocation={parentLocation}
     initialFilename={filename}
     getDefaultFilename={ratio => withChartImageAspect(filename, ratio)}
     aspect={aspect}

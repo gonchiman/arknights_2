@@ -83,7 +83,8 @@ function EnemyListTable({ rows, mode, sort = null, onSort, onOpenDetail }: {
   </table>
 }
 
-export function EnemyDatabase2Results({ rows, mode, scopeLabel, onOpenDetail, children }: {
+export function EnemyDatabase2Results({ rows, mode, scopeLabel, onOpenDetail, children, listLocation }: {
+  listLocation: readonly string[]
   rows: readonly EnemyRecord[]
   mode: Mode
   scopeLabel: string
@@ -148,6 +149,6 @@ export function EnemyDatabase2Results({ rows, mode, scopeLabel, onOpenDetail, ch
         <button type="button" disabled={page + 1 >= pageCount} onClick={() => setPagination({ rows, page: page + 1 })}>次へ</button>
       </div>
     </nav>}
-    {image && <ComparisonTableImageDialog snapshot={image} helpMode="none" onClose={() => setImage(null)} />}
+    {image && <ComparisonTableImageDialog snapshot={image} helpMode="none" parentLocation={listLocation} onClose={() => setImage(null)} />}
   </>
 }

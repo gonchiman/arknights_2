@@ -32,7 +32,7 @@
 
 .enemy-rating-reference-header h2 { margin: 0; font-size: 17px; font-weight: 600; }
 .enemy-rating-reference-actions { display: flex; align-items: center; gap: 8px; }
-.enemy-rating-reference-header button {
+.enemy-rating-reference-header button:not(.output-icon-button) {
   min-height: 44px;
   flex-shrink: 0;
   border: 1px solid var(--border-strong);
@@ -43,7 +43,7 @@
   font-size: 11px;
   cursor: pointer;
 }
-.enemy-rating-reference-header button:hover { background: var(--surface-hover); }
+.enemy-rating-reference-header button:not(.output-icon-button):hover { background: var(--surface-hover); }
 .enemy-rating-reference-header button:focus-visible,
 .enemy-rating-stat-picker select:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 

@@ -99,6 +99,18 @@
   font-weight: 600;
 }
 
+.enemy-detail-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.enemy-detail-section-heading h3 {
+  margin: 0;
+}
+
 .enemy-detail-description > p {
   margin: 0;
   border: 1px solid var(--border);
