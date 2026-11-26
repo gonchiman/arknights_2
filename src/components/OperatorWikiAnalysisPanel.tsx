@@ -23,6 +23,7 @@ const METRICS = [
   ['count', '集計人数', '人'], ['missingCount', '未取得人数', '人'],
   ['mean', '平均値', ''], ['median', '中央値', ''],
   ['firstQuartile', '第1四分位数', ''], ['thirdQuartile', '第3四分位数', ''],
+  ['interquartileRange', '四分位範囲（IQR）', ''], ['standardDeviation', '標準偏差', ''],
   ['maximum', '最大値', ''], ['zeroCount', '0回・0件の人数', '人'],
 ] as const
 
