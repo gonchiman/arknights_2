@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-11-25T17:41:57.589Z",
+  "observedAt": "2026-11-26T08:28:10.937Z",
   "throughDate": "2026-11-25",
   "entries": [
     {
@@ -251,7 +251,7 @@
       "counts": {
         "2026-11-02": 1
       },
-      "total": 383
+      "total": 384
     },
     {
       "operatorId": "char_109_fmout",
@@ -2466,7 +2466,7 @@
         "2026-11-21": 7,
         "2026-11-23": 3
       },
-      "total": 875
+      "total": 876
     },
     {
       "operatorId": "char_4087_ines",
@@ -2769,14 +2769,14 @@
         "2026-11-13": 1,
         "2026-11-15": 1
       },
-      "total": 820
+      "total": 821
     },
     {
       "operatorId": "char_1031_slent2",
       "wikiUrl": "https://arknights.wikiru.jp/?%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%2F%E6%B7%AC%E7%BE%BD%E3%82%B5%E3%82%A4%E3%83%AC%E3%83%B3%E3%82%B9",
       "coveredFrom": "2026-10-27",
       "counts": {},
-      "total": 397
+      "total": 398
     },
     {
       "operatorId": "char_4202_haruka",
@@ -2872,7 +2872,7 @@
         "2026-11-24": 6,
         "2026-11-25": 4
       },
-      "total": 1407
+      "total": 1408
     },
     {
       "operatorId": "char_1502_crosly",
@@ -3239,7 +3239,7 @@
         "2026-11-12": 1,
         "2026-11-18": 1
       },
-      "total": 876
+      "total": 881
     },
     {
       "operatorId": "char_264_f12yin",
@@ -3313,7 +3313,7 @@
         "2026-11-05": 2,
         "2026-11-15": 1
       },
-      "total": 1442
+      "total": 1443
     },
     {
       "operatorId": "char_4088_hodrer",
@@ -3630,7 +3630,7 @@
         "2026-11-24": 12,
         "2026-11-25": 2
       },
-      "total": 348
+      "total": 349
     },
     {
       "operatorId": "wiki:%E3%82%A2%E3%83%BC%E3%83%9F%E3%83%A4(%E5%89%8D%E8%A1%9B)",
