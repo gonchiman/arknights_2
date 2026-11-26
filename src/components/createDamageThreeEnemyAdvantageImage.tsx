@@ -9,7 +9,7 @@ import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSI
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
 import { TABLE_CHART_VIEWS } from './PageViewSwitch'
 
-export const ENEMY_ADVANTAGE_VIEWS = [...TABLE_CHART_VIEWS, ['histogram', 'スキル別の分布']] as const
+export const ENEMY_ADVANTAGE_VIEWS = [...TABLE_CHART_VIEWS, ['histogram', 'スキル別の分布'], ['operatorVotes', 'オペレーター別の票']] as const
 export type EnemyAdvantageView = typeof ENEMY_ADVANTAGE_VIEWS[number][0]
 
 export type EnemyAdvantageImage =
@@ -20,7 +20,7 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   statistics: EnemySpawnAdvantageStatistics
   advantageUnit: AdvantageUnit
   showBands: boolean
-  format: EnemyAdvantageView
+  format: Exclude<EnemyAdvantageView, 'operatorVotes'>
 }
 
 export function createDamageThreeEnemyAdvantageImage({
