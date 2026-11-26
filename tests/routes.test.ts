@@ -86,6 +86,7 @@ test('集計マップ確認は敵分析用の独立ページとして開く', ()
 test('集計版を含むURLの直接アクセスでも敵の集計ページを開く', () => {
   const routes = [
     ['#/analysis/enemies', 'enemy-analysis'],
+    ['#/analysis/enemies/rating-pairs', 'enemy-rating-pairs'],
     ['#/analysis/enemies/defense-resistance', 'enemy-defense-resistance'],
     ['#/analysis/enemies/defense-resistance/formula', 'enemy-defense-resistance-formula'],
     ['#/analysis/enemies/maps', 'enemy-map-coverage'],
@@ -173,6 +174,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['enemy-regression', 'enemy-regression'],
       ['enemy-immunities', 'enemy-immunities'],
       ['enemy-defense-resistance', 'enemy-defense-resistance'],
+      ['enemy-rating-pairs', 'enemy-rating-pairs'],
       ['enemy-defense-resistance-formula', 'enemy-defense-resistance-formula'],
       ['enemy-map-coverage', 'enemy-map-coverage'],
       ['main-enemy-trends', 'main-enemy-trends'],

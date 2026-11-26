@@ -58,6 +58,7 @@ export type AppRoute =
   | { view: 'enemy-wiki-stats' }
   | { view: 'enemy-regression' }
   | { view: 'enemy-immunities' }
+  | { view: 'enemy-rating-pairs' }
   | { view: 'enemy-defense-resistance' }
   | { view: 'enemy-defense-resistance-formula' }
   | { view: 'enemy-map-coverage' }
@@ -303,6 +304,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/enemies/wiki-stats') return { view: 'enemy-wiki-stats' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/immunities')) return { view: 'enemy-immunities' }
+  if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/rating-pairs')) return { view: 'enemy-rating-pairs' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance')) return { view: 'enemy-defense-resistance' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/defense-resistance/formula')) return { view: 'enemy-defense-resistance-formula' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies/maps')) return { view: 'enemy-map-coverage' }

@@ -1,0 +1,19 @@
+.enemy-rating-pairs-chart {
+  min-width: 0;
+}
+.enemy-rating-pairs-legend {
+  --enemy-joint-blue: var(--link);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.chart-image-frame .enemy-rating-pairs-legend {
+  --enemy-joint-blue: #245ea8;
+  --surface-soft: #f7f7f7;
+  color: #555;
+  font-size: 10px;
+  flex-wrap: wrap;
+}

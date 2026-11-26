@@ -9,6 +9,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'attribute-effects'
   | 'physical-arts-comparison'
   | 'main-enemy-spawns'
+  | 'enemy-rating-pairs'
   | 'enemy-defense-resistance-formula'
   | 'bar-chart-workbench'
   | 'td-maps'
@@ -41,6 +42,7 @@ export const STANDARD_PAGE_TITLES = {
   'skill-numeric-statistics': 'スキル数値分析',
   'enemies-2': '敵データベース2',
   'enemy-defense-resistance': '防御力と術耐性の対応',
+  'enemy-rating-pairs': '防御力と術耐性の組み合わせ',
   'td-maps': 'TDマップ詳細',
   'damage-three-skill-attribute-matrix': 'スキル別の物理・術ダメージ',
   'attribute-effects': '属性限定効果一覧',
@@ -81,6 +83,14 @@ export const DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM: NavigationItem = {
   id: 'damage-three-skill-attribute-matrix',
   href: '#/damage-3/skill-attribute-matrix',
   label: STANDARD_PAGE_TITLES['damage-three-skill-attribute-matrix'],
+  description: '',
+  section: 'analysis',
+}
+
+export const ENEMY_RATING_PAIRS_ITEM: NavigationItem = {
+  id: 'enemy-rating-pairs',
+  href: '#/analysis/enemies/rating-pairs',
+  label: STANDARD_PAGE_TITLES['enemy-rating-pairs'],
   description: '',
   section: 'analysis',
 }
@@ -447,6 +457,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
+  ENEMY_RATING_PAIRS_ITEM,
   {
     id: 'enemy-defense-resistance-formula',
     href: '#/analysis/enemies/defense-resistance/formula',
