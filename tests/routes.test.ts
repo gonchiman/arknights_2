@@ -168,6 +168,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['damage-verification', 'damage-verification'],
       ['comparison', 'comparison'],
       ['enemies', 'enemies'],
+      ['enemies-2', 'enemies-2'],
       ['enemy-analysis', 'enemy-analysis'],
       ['enemy-regression', 'enemy-regression'],
       ['enemy-immunities', 'enemy-immunities'],
@@ -848,23 +849,26 @@ test('削除済みのスキル分類ページのhashはデータベースへ戻�
   assert.deepEqual(parseHashRoute('#/skills/%E0%A4%A'), { view: 'operators' })
 })
 
-test('敵データベースの既存URLを維持し、統計分析は独立したURLで開く', () => {
+test('敵データベースと敵データベース2を独立したURLとメニューから開く', () => {
   assert.deepEqual(parseHashRoute('#/enemies'), { view: 'enemies' })
+  assert.deepEqual(parseHashRoute('#/enemies-2'), { view: 'enemies-2' })
+  assert.equal(getStandardPageTitle('enemies-2'), '敵データベース2')
   assert.deepEqual(parseHashRoute('#/analysis/enemies'), { view: 'enemy-analysis' })
 
   const databaseIndex = APP_NAV_ITEMS.findIndex((item) => item.id === 'enemies')
   assert.ok(databaseIndex >= 0)
   assert.deepEqual(
-    APP_NAV_ITEMS.slice(databaseIndex, databaseIndex + 2).map(({ id, href, label, section }) => ({ id, href, label, section })),
+    APP_NAV_ITEMS.slice(databaseIndex, databaseIndex + 3).map(({ id, href, label, section }) => ({ id, href, label, section })),
     [
       { id: 'enemies', href: '#/enemies', label: '敵データベース', section: 'analysis' },
+      { id: 'enemies-2', href: '#/enemies-2', label: '敵データベース2', section: 'analysis' },
       { id: 'enemy-analysis', href: '#/analysis/enemies', label: '敵の統計分析', section: 'analysis' },
     ],
   )
 })
 
 test('敵の各ページの不正なURLはデータベースへフォールバックする', () => {
-  for (const hash of ['#/enemies', '#/analysis/enemies']) {
+  for (const hash of ['#/enemies', '#/enemies-2', '#/analysis/enemies']) {
     for (const suffix of ['/', '/extra', '?enemy=001', '-extra']) {
       assert.deepEqual(parseHashRoute(`${hash}${suffix}`), { view: 'operators' })
     }

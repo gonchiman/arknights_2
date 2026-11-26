@@ -1,0 +1,22 @@
+.enemy-db2-filters {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: 12px;
+}
+
+.enemy-db2-filters h2 { margin: 0; font-size: 14px; }
+.enemy-db2-filter-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 12px 16px;
+}
+.enemy-db2-filter-fields :is(.enemy-table-search, .enemy-level-filter) { margin: 0; }
+.enemy-db2-filters .enemy-numeric-filter { margin: 0; padding: 0; border: 0; }
+.enemy-db2-stat-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.enemy-db2-analysis-link { justify-self: start; color: var(--link); font-size: 12px; }
+
+@media (max-width: 600px) {
+  .enemy-db2-filter-fields { grid-template-columns: minmax(0, 1fr); }
+}

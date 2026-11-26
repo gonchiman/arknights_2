@@ -1,0 +1,50 @@
+.enemy-db2-result-heading,
+.enemy-db2-result-controls,
+.enemy-db2-order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.enemy-db2-result-heading h2 { margin: 0; font-size: 16px; }
+.enemy-db2-result-heading > span,
+.enemy-db2-order,
+.enemy-db2-empty { color: var(--text-muted); font-size: 12px; }
+.enemy-db2-order { margin-inline-start: auto; }
+.enemy-db2-order .button { min-height: 30px; }
+.enemy-db2-empty { margin: 0; padding-block: 16px; }
+
+.enemy-db2-scroll { max-height: min(65vh, 620px); overflow: auto; }
+.enemy-db2-table { min-width: 840px; }
+.enemy-db2-col-index { width: 8%; }
+.enemy-db2-col-name { width: 19%; }
+.enemy-db2-col-level { width: 8%; }
+.enemy-db2-table th:first-child { width: auto; }
+.enemy-db2-table th,
+.enemy-db2-table td { padding: 7px 8px; overflow-wrap: anywhere; }
+.enemy-db2-table thead th { text-align: center; }
+.enemy-db2-scroll thead th { position: sticky; top: 0; z-index: 1; }
+.enemy-db2-scroll thead th:has(button) { padding: 0; }
+.enemy-db2-table .skill-sort-button { padding: 6px; gap: 2px; }
+.enemy-db2-table tbody th { color: var(--text); text-align: left; font-size: inherit; }
+.enemy-db2-table td:first-child { text-align: left; }
+.enemy-db2-table td:nth-child(3) { text-align: center; }
+.enemy-db2-name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.comparison-table-image-frame .enemy-db2-table { border: 1px solid var(--border); }
+
+@media (max-width: 760px), (pointer: coarse) {
+  .enemy-db2-order .button,
+  .enemy-db2-name { min-height: 44px; }
+}
