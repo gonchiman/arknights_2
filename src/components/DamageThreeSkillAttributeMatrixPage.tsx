@@ -283,7 +283,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
             {enemyActive ? (
               !filtered.length ? <p role="status">該当するスキルはありません。</p>
                 : operatorVotesActive && enemyPopulation ? <DamageThreeOperatorVotes
-                    operators={voteOperators} operatorId={voteOperatorId} statistics={enemyStats} population={enemyPopulation}
+                    operators={voteOperators} professionOptions={professionOptions} operatorId={voteOperatorId}
+                    statistics={enemyStats} population={enemyPopulation}
                     imageConditions={imageConditions} selection={operatorVoteSelection} />
                 : !enemyPopulation || !enemyStats || !enemyRows ? <p role="status">出現敵ごとの主攻撃ダメージを集計中…</p>
                 : !enemyStats.skillCount ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>

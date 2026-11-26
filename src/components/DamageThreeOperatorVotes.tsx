@@ -1,9 +1,11 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { getEnemySkillVoteDetails, type EnemyOperatorVotes, type EnemySpawnAdvantageStatistics, type EnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
+import { getEnemySkillVoteDetails, type EnemySpawnAdvantageStatistics, type EnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
 import type { StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
 import { OperatorVoteDetailTable, OperatorVotesTable } from './DamageThreeOperatorVoteTables'
 import { getOperatorVotesSegments, OperatorVotesImageButton } from './OperatorVotesImageButton'
 import { PageOutputHeader } from './PageLayout'
+import { OperatorNamePicker, type OperatorChoice } from './OperatorNamePicker'
+import type { FilterOption } from './Filters'
 import './DamageThreeOperatorVotes.css'
 
 interface VoteSelection {
@@ -20,8 +22,9 @@ export function useOperatorVoteSelection() {
   return useState<VoteSelection>({ operatorId: 'char_350_surtr', skillKey: null, pairKey: '100/20' })
 }
 
-export function DamageThreeOperatorVotes({ operators, operatorId, statistics, population, imageConditions, selection }: {
-  operators: readonly Pick<EnemyOperatorVotes, 'operatorId' | 'operatorName'>[]
+export function DamageThreeOperatorVotes({ operators, professionOptions, operatorId, statistics, population, imageConditions, selection }: {
+  operators: readonly OperatorChoice[]
+  professionOptions: readonly FilterOption[]
   operatorId: string
   statistics: EnemySpawnAdvantageStatistics | null
   population: EnemySpawnPopulation
@@ -38,12 +41,8 @@ export function DamageThreeOperatorVotes({ operators, operatorId, statistics, po
   const current = options.find(option => option.key === selected.pairKey) ?? options[0]
   const rows = skill && current ? getEnemySkillVoteDetails(skill, current.index, current.pair.spawnCount) : []
 
-  const picker = <label className="dc3-vote-picker">オペレーター
-    <select value={operatorId} disabled={!operators.length} onChange={event => setSelected({ ...selected, operatorId: event.target.value, skillKey: null })}>
-      {!operators.length && <option value="">該当なし</option>}
-      {operators.map(row => <option key={row.operatorId} value={row.operatorId}>{row.operatorName}</option>)}
-    </select>
-  </label>
+  const picker = <OperatorNamePicker operators={operators} professionOptions={professionOptions} value={operatorId}
+    onSelect={id => setSelected(previous => ({ ...previous, operatorId: id, skillKey: null }))} />
   if (!operator) return <div className="dc3-operator-votes">
     {picker}
     <p role="status">{!operators.length ? '該当するオペレーターはありません。'

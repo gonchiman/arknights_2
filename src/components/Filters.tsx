@@ -14,7 +14,7 @@ export interface FilterOption {
 
 interface Props {
   value: FilterState
-  professionOptions: FilterOption[]
+  professionOptions: readonly FilterOption[]
   subProfessionOptions?: FilterOption[]
   onChange: (next: FilterState) => void
   onReset?: () => void

@@ -1,4 +1,5 @@
 import type { OperatorInitial, SkillRecord } from '../types/skill.ts'
+import { toHiragana } from './operatorFilters.ts'
 
 export interface FilterState {
   query: string
@@ -59,17 +60,21 @@ export function normalizeRecentOperatorIds(
   return normalized
 }
 
-export function getRecentOperatorRows(
-  rows: SkillRecord[],
+export function getRecentOperatorRows<Row extends { operatorId: string }>(
+  rows: readonly Row[],
   recentOperatorIds: readonly string[],
-): SkillRecord[] {
-  const firstRowByOperator = new Map<string, SkillRecord>()
+): Row[] {
+  const firstRowByOperator = new Map<string, Row>()
   rows.forEach((row) => {
     if (!firstRowByOperator.has(row.operatorId)) firstRowByOperator.set(row.operatorId, row)
   })
   return recentOperatorIds
     .map((operatorId) => firstRowByOperator.get(operatorId))
-    .filter((row): row is SkillRecord => row !== undefined)
+    .filter((row): row is Row => row !== undefined)
+}
+
+export function matchesOperatorName(name: string, query: string): boolean {
+  return toHiragana(normalizeSearchText(name)).includes(toHiragana(normalizeSearchText(query)))
 }
 
 export function matchesOperatorFilters(row: SkillRecord, filters: FilterState): boolean {
