@@ -1,4 +1,4 @@
-import { calculateNumericStatistics, type NumericStatistics } from './enemyStatistics.ts'
+import { calculateNumericStatisticsWithDispersion, type NumericStatisticsWithDispersion } from './enemyStatistics.ts'
 import { calculatePearsonCorrelation } from './pearsonCorrelation.ts'
 import { getWikiCommentCount, getWikiCommentRange, type OperatorWikiCommentSnapshot } from './operatorWikiComments.ts'
 import { matchOperatorWikiDisplayEntries, type OperatorWikiDisplayEntry } from './operatorWikiDisplay.ts'
@@ -7,10 +7,10 @@ import {
   type OperatorWikiViewEntry, type OperatorWikiViewSnapshot,
 } from './operatorWikiViews.ts'
 
-export const WIKI_ANALYSIS_VERSION = 'v1'
+export const WIKI_ANALYSIS_VERSION = 'v2'
 export type WikiAnalysisPeriod = 1 | 7
 export type WikiAnalysisHistory = ReadonlyMap<string, OperatorWikiViewHistory>
-export type WikiAnalysisMetric = NumericStatistics & { zeroCount: number | null }
+export type WikiAnalysisMetric = NumericStatisticsWithDispersion & { zeroCount: number | null }
 export interface OperatorWikiAnalysis {
   range: { start: string; end: string }
   totalCount: number
@@ -63,7 +63,7 @@ function periodViews(
 }
 
 function summarize(values: readonly (number | null)[]): WikiAnalysisMetric {
-  const stats = calculateNumericStatistics(values)
+  const stats = calculateNumericStatisticsWithDispersion(values)
   return { ...stats, zeroCount: stats.count > 0 ? values.filter(value => value === 0).length : null }
 }
 
