@@ -308,7 +308,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           </>}
       </EnemyDataContent>
     </AnalysisTabPanel>
-    {imageSnapshot?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={imageSnapshot.snapshot}
+    {imageSnapshot?.view === 'chart' && <DamageCalculatorThreeAttributeChartImageDialog snapshot={imageSnapshot.snapshot} alternateLayout={imageSnapshot.alternateLayout}
       parentLocation={imageSnapshot.location} onClose={() => setImageSnapshot(null)} />}
     {imageSnapshot?.view === 'table' && <ComparisonTableImageDialog snapshot={imageSnapshot.snapshot}
       parentLocation={imageSnapshot.location} onClose={() => setImageSnapshot(null)} />}

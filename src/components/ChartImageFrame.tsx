@@ -9,6 +9,7 @@ export interface ChartImageFrameProps {
   legend?: ReactNode
   conditions?: string
   axisTitle?: string
+  footerNote?: string
   naturalChartHeight: number
   informationPlacement?: 'header' | 'top-right-box'
   aspectRatio?: number
@@ -60,7 +61,7 @@ export function ChartImageHeading({ title, legend, conditions, informationPlacem
 }
 
 /** Shared rendering surface for single and stacked exports; dimensions are owned by their frames. */
-export function ChartImageSurface({ title, legend, conditions, axisTitle, informationPlacement = 'header', className, children,
+export function ChartImageSurface({ title, legend, conditions, axisTitle, footerNote, informationPlacement = 'header', className, children,
   layout, onMeasure }: Omit<ChartImageFrameProps, 'naturalChartHeight' | 'aspectRatio' | 'exactAspect' | 'onLayout'> & {
   layout: ChartImageLayout
   onMeasure: (measurement: ChartImageSurfaceMeasurement) => void
@@ -127,6 +128,7 @@ export function ChartImageSurface({ title, legend, conditions, axisTitle, inform
     </div>
     <div ref={footerRef} className={`chart-image-frame-footer${axisTitle ? ' has-axis-title' : ''}`}>
       {axisTitle && <p className="chart-image-frame-axis-title">{axisTitle}</p>}
+      {footerNote && <p className="chart-image-frame-note">{footerNote}</p>}
     </div>
   </figure>
 }

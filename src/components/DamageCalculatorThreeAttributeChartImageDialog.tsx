@@ -12,6 +12,8 @@ import './DamageCalculatorThreeAttributeChartImageDialog.css'
 export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   title: string
   axisTitle?: string
+  footerNote?: string
+  className?: string
   naturalChartHeight?: number
   additionalChartHeight?: number
   conditions: readonly string[]
@@ -20,33 +22,47 @@ export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   chart: ChartImageFrameProps['children']
 }
 
+export interface ChartImageAlternateLayout {
+  label: string
+  defaultAspect: ChartImageAspectSettings
+  snapshot: DamageCalculatorThreeAttributeChartImageSnapshot
+}
+
 const NATURAL_CHART_HEIGHT = 334
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
+const AUTO_ASPECT: ChartImageAspectSettings = { preset: 'auto', width: '16', height: '9' }
 
-export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClose, parentLocation, helpMode = 'popover' }: {
+export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alternateLayout, onClose, parentLocation, helpMode = 'popover' }: {
   snapshot: DamageCalculatorThreeAttributeChartImageSnapshot
+  alternateLayout?: ChartImageAlternateLayout
   onClose: () => void
   parentLocation?: readonly string[]
   helpMode?: 'popover' | 'none'
 }) {
-  const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
+  const [chosenAspect, setAspect] = useState<ChartImageAspectSettings | null>(null)
+  const [useAlternateLayout, setUseAlternateLayout] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
   const saveInProgress = useRef(false)
+  const layout = useAlternateLayout ? alternateLayout : undefined
+  const aspect = chosenAspect ?? layout?.defaultAspect ?? AUTO_ASPECT
   const parsedAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
   const invalidAspect = aspect.preset !== 'auto' && !parsedAspect
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined
   const picker = getChartImageSavePicker()
-  const filename = createChartImageFilename(snapshot.title, snapshot.filenameParts)
+  const image = layout?.snapshot ?? snapshot
+  const filename = createChartImageFilename(image.title, image.filenameParts)
   const frameProps: ChartImageFrameProps = {
-    title: snapshot.title,
-    legend: snapshot.legend,
-    conditions: snapshot.conditions.join('・'),
-    axisTitle: snapshot.axisTitle ?? 'ゲーム内評価',
-    naturalChartHeight: snapshot.naturalChartHeight ?? (NATURAL_CHART_HEIGHT + (snapshot.additionalChartHeight ?? 0)),
+    title: image.title,
+    legend: image.legend,
+    conditions: image.conditions.join('・'),
+    axisTitle: image.axisTitle ?? 'ゲーム内評価',
+    footerNote: image.footerNote,
+    className: image.className,
+    naturalChartHeight: image.naturalChartHeight ?? (NATURAL_CHART_HEIGHT + (image.additionalChartHeight ?? 0)),
     aspectRatio,
     exactAspect: parsedAspect ?? undefined,
-    children: snapshot.chart,
+    children: image.chart,
   }
 
   async function saveImage(selectedFilename: string, chooseLocation: boolean) {
@@ -90,6 +106,14 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
       label: 'ダウンロード',
       onSave: selectedFilename => { void saveImage(selectedFilename, false) },
     } : undefined}
+    options={alternateLayout && <label className="chart-image-save-field">
+      <span>出力レイアウト</span>
+      <select value={useAlternateLayout ? 'alternate' : 'standard'} disabled={saving}
+        onChange={event => { setUseAlternateLayout(event.target.value === 'alternate'); setSaveError(false) }}>
+        <option value="standard">標準</option>
+        <option value="alternate">{alternateLayout.label}</option>
+      </select>
+    </label>}
     preview={!invalidAspect && <ChartFrameImagePreview
       key={`${filename}:${aspectRatio ?? 'auto'}`} {...frameProps} />}
   />
