@@ -3,12 +3,12 @@ import type { DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttr
 import type { EnemyDamageStatPair } from '../lib/damageCalculatorThreeAttributeTables'
 import type { DamageCell, SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
 import {
-  evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type SkillRankStageSample,
+  evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type NamedSkillRankStageSample,
 } from '../lib/damageThreeSkillRankStatistics'
 import type { EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 
 const EMPTY_THRESHOLDS: readonly EnemyResistanceThreshold[] = []
-const EMPTY_STAGES: readonly SkillRankStageSample[] = []
+const EMPTY_STAGES: readonly NamedSkillRankStageSample[] = []
 const PAIRS_PER_BATCH = 12
 
 export function useDamageThreeSkillRankStatistics(
@@ -23,11 +23,11 @@ export function useDamageThreeSkillRankStatistics(
 export function useDamageThreeSkillStageSamples(
   active: boolean, entries: readonly DamageThreeAttributeEntry[], pairs: readonly EnemyDamageStatPair[],
   effectPolicy: SkillRankEffectPolicy,
-): readonly SkillRankStageSample[] | null {
+): readonly NamedSkillRankStageSample[] | null {
   // Cache identity ties both intermediate cells and the summary to the current combat conditions.
   const cache = useMemo(() => new WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>(), [pairs, effectPolicy])
   const [result, setResult] = useState<{
-    entries: readonly DamageThreeAttributeEntry[]; cache: typeof cache; stages: SkillRankStageSample[]
+    entries: readonly DamageThreeAttributeEntry[]; cache: typeof cache; stages: NamedSkillRankStageSample[]
   } | null>(null)
   const current = result?.entries === entries && result.cache === cache ? result.stages : null
 
@@ -35,7 +35,7 @@ export function useDamageThreeSkillStageSamples(
     if (!active || !entries.length || !pairs.length || current) return
     let index = 0
     let partialCells: DamageCell[] = []
-    const stages: SkillRankStageSample[] = []
+    const stages: NamedSkillRankStageSample[] = []
     // Actual enemy populations can have hundreds of pairs even for a single stage.
     function calculateBatch() {
       const deadline = performance.now() + 10
@@ -53,7 +53,7 @@ export function useDamageThreeSkillStageSamples(
           }
           cache.set(entry, cells)
         }
-        if (cells) stages.push({ skill: entry.skill, cells })
+        if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
         partialCells = []
         index++
       } while (index < entries.length && performance.now() < deadline)

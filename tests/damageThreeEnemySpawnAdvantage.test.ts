@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { buildEnemySpawnPopulation, summarizeEnemySpawnAdvantage } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
+import { buildEnemySpawnPopulation, getEnemySkillVoteDetails, summarizeEnemySpawnAdvantage } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
-import type { SkillRankStageSample } from '../src/lib/damageThreeSkillRankStatistics.ts'
+import type { NamedSkillRankStageSample } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import type { EnemyRecord } from '../src/types/enemy.ts'
 import type { EnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
 
@@ -11,8 +11,9 @@ function enemy(id: string, defense: number | null, magicResistance: number | nul
   return { id, stats: { defense, magicResistance } } as EnemyRecord
 }
 
-function sample(operatorId: string, cells: SkillRankStageSample['cells']): SkillRankStageSample {
-  return { skill: { operatorId, skillId: operatorId + '-skill', skillIndex: 1 }, cells }
+function sample(operatorId: string, cells: NamedSkillRankStageSample['cells'], stageLabel = '通常', skillIndex = 1): NamedSkillRankStageSample {
+  return { skill: { operatorId, operatorName: operatorId, skillId: 'skill-' + skillIndex, skillIndex, skillName: 'S' + skillIndex },
+    stageLabel, cells }
 }
 
 test('同じ敵の2値を保ち、同一組だけをまとめて欠測・出現なしを分ける', () => {
@@ -55,6 +56,35 @@ test('物理優勢率は下限を含む10ポイント幅で数え、100%も最�
   assert.deepEqual(skillPhysicalRateBins, pairs.map((_, index) => ({
     lower: index * 10, upper: (index + 1) * 10, count: index === 9 ? 2 : 1,
   })))
+})
+
+test('オペレーター別の票と段階ごとの内訳を、同一スキルID・欠測を含む集計でも照合できる', () => {
+  const pairs = [{ defense: 100, resistance: 20, spawnCount: 647 }, { defense: 0, resistance: 0, spawnCount: 901 }]
+  const physical = { physical: 120, arts: 100 }, arts = { physical: 80, arts: 100 }
+  const tie = { physical: 100, arts: 100.000000001 }, missing = { physical: null, arts: 0 }
+  const a1 = sample('A', [physical, missing], '本人')
+  const a2 = sample('A', [arts, tie], '召喚物')
+  const stats = summarizeEnemySpawnAdvantage(pairs, [a1, a2, sample('A', [missing, physical], '通常', 2),
+    sample('B', [physical, missing]), sample('C', [missing, missing])])
+  assert.deepEqual(stats.operators.map(op => op.operatorId), ['A', 'B'])
+  const [operatorA, operatorB] = stats.operators
+  assert.deepEqual(operatorA.skills.map(skill => [skill.skillIndex, skill.skillName]), [[1, 'S1'], [2, 'S2']])
+  assert.notEqual(operatorA.skills[0].key, operatorB.skills[0].key)
+  assert.equal(operatorA.skills[0].stages[0], a1)
+  assert.deepEqual(operatorA.skills[0].votes, { physicalWins: 323.5, ties: 901, artsWins: 323.5, count: 1548 })
+  assert.deepEqual(operatorA.votes, { physicalWins: 1224.5, ties: 901, artsWins: 323.5, count: 2449 })
+  assert.deepEqual(operatorB.votes, { physicalWins: 647, ties: 0, artsWins: 0, count: 647 })
+  for (const field of ['physicalWins', 'ties', 'artsWins', 'count'] as const) {
+    assert.equal(operatorA.votes[field] + operatorB.votes[field], stats.rows[0].skill[field])
+  }
+  assert.deepEqual(getEnemySkillVoteDetails(operatorA.skills[0], 0, 647), [
+    { stageLabel: '本人', ...physical, outcome: 'physicalWins', votesPerSpawn: 0.5, weightedVotes: 323.5 },
+    { stageLabel: '召喚物', ...arts, outcome: 'artsWins', votesPerSpawn: 0.5, weightedVotes: 323.5 },
+  ])
+  assert.deepEqual(getEnemySkillVoteDetails(operatorA.skills[0], 1, 901), [
+    { stageLabel: '召喚物', ...tie, outcome: 'ties', votesPerSpawn: 1, weightedVotes: 901 },
+  ])
+  assert.deepEqual(getEnemySkillVoteDetails(operatorB.skills[0], 1, 901), [])
 })
 
 test('丸め前の率を用い、スキルごとに比較不能な敵を分母から除く', () => {

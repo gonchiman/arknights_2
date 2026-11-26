@@ -57,6 +57,11 @@ export interface SkillRankStageSample {
   cells: readonly DamageCell[]
 }
 
+export interface NamedSkillRankStageSample extends SkillRankStageSample {
+  skill: SkillRankStageSample['skill'] & Pick<DamageThreeAttributeEntry['skill'], 'operatorName' | 'skillName'>
+  stageLabel: string
+}
+
 export function isComparableDamage(cell: DamageCell): cell is { physical: number; arts: number } {
   return cell.physical !== null && cell.arts !== null && Number.isFinite(cell.physical) && Number.isFinite(cell.arts)
     && cell.physical >= 0 && cell.arts >= 0

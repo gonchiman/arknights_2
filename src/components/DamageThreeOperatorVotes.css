@@ -1,0 +1,39 @@
+.dc3-operator-votes,
+.dc3-operator-votes-detail:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.dc3-operator-votes-detail:not([hidden]) { margin-top: 6px; }
+.dc3-operator-votes h2,
+.dc3-operator-votes h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.dc3-vote-detail-skill { display: inline-block; color: var(--text-soft); font-size: 12px; font-weight: 400; }
+.dc3-vote-picker,
+.dc3-vote-detail-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+.dc3-vote-picker { width: fit-content; max-width: 100%; }
+.dc3-vote-picker select { min-height: 30px; max-width: 100%; }
+.dc3-operator-votes-detail .button.secondary { min-height: 28px; padding: 3px 8px; font-size: 12px; }
+.damage-two-table.dc3-operator-vote-table { min-width: 390px; }
+.damage-two-table.dc3-operator-vote-table th:first-child,
+.damage-two-table.dc3-operator-vote-table .dc3-vote-skill-name { text-align: left; }
+.dc3-operator-vote-table .dc3-vote-outcome { text-align: center; }
+.dc3-operator-vote-table tfoot :is(th, td) {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--surface-soft);
+  font-weight: 600;
+}
+.damage-two-table.dc3-operator-vote-table .dc3-vote-selected > * { background: var(--surface-soft); }
+.comparison-table-image-frame .dc3-operator-vote-table { border-inline: 1px solid var(--border); }
+.comparison-table-image-frame .dc3-operator-vote-table :is(th, .dc3-vote-skill-name) { white-space: normal; overflow-wrap: anywhere; }
+@media (pointer: coarse) {
+  .dc3-vote-picker select { min-height: 44px; font-size: 16px; }
+  .dc3-operator-votes .text-button,
+  .dc3-operator-votes-detail .button.secondary { min-height: 44px; }
+}

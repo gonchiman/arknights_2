@@ -16,6 +16,7 @@ import { createDamageThreeEnemyAdvantageImage, ENEMY_ADVANTAGE_VIEWS, type Enemy
 import { ComparisonTableImageDialog } from './ComparisonTableImageDialog'
 import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable } from './DamageThreeEnemyAdvantageViews'
+import { DamageThreeOperatorVotes, useOperatorVoteSelection } from './DamageThreeOperatorVotes'
 import { DamageThreeSkillPhysicalRateHistogram } from './DamageThreeSkillPhysicalRateHistogram'
 import { useDamageThreeEnemySpawnAdvantage } from './useDamageThreeEnemySpawnAdvantage'
 import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
@@ -94,6 +95,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [enemyFormat, setEnemyFormat] = useState<EnemyAdvantageView>('chart')
+  const operatorVoteSelection = useOperatorVoteSelection()
   const [showDefenseBands, setShowDefenseBands] = useState(false)
   const [imageSnapshot, setImageSnapshot] = useState<(EnemyAdvantageImage & { location: string[] }) | null>(null)
   const [selectedResistance, setSelectedResistance] = useState(0)
@@ -112,7 +114,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
   const statsActive = mode === 'statistics'
   const enemyActive = mode === 'enemies'
-  const enemyOverviewActive = enemyActive && enemyFormat !== 'histogram'
+  const enemyOverviewActive = enemyActive && (enemyFormat === 'table' || enemyFormat === 'chart')
+  const operatorVotesActive = enemyActive && enemyFormat === 'operatorVotes'
   const anyStatistics = statsActive || enemyActive
   const enemyPopulation = useMemo(() => scoped && !unavailable
     ? buildEnemySpawnPopulation(scoped.rows, scoped.counts) : null, [scoped, unavailable])
@@ -123,6 +126,20 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const candidates = useMemo(() => filterDamageThreeSkillEntries(entries, activeFilters), [entries, activeFilters])
   const matching = useOriginalDamageTypeFilter(candidates, filters.damageType)
   const filtered = matching ?? EMPTY_ENTRIES
+  const voteOperators = useMemo(() => {
+    const operators = new Map<string, SkillRecord>()
+    if (operatorVotesActive) {
+      for (const { skill, capability } of filtered) {
+        if (capability.supported) operators.set(skill.operatorId, skill)
+      }
+    }
+    return [...operators.values()]
+  }, [operatorVotesActive, filtered])
+  const requestedOperatorId = operatorVoteSelection[0].operatorId
+  const voteOperatorId = voteOperators.find(skill => skill.operatorId === requestedOperatorId)?.operatorId ?? voteOperators[0]?.operatorId ?? ''
+  const enemyEntries = useMemo(() => operatorVotesActive
+    ? filtered.filter(entry => entry.skill.operatorId === voteOperatorId)
+    : filtered, [operatorVotesActive, voteOperatorId, filtered])
   const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
   const canReset = (!distributionActive && filters.kind !== 'ALL') || filters.query !== '' || filters.profession !== 'ALL'
     || filters.rarity !== 'ALL' || filters.damageType !== 'ALL'
@@ -131,18 +148,19 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
-  const enemyStats = useDamageThreeEnemySpawnAdvantage(enemyActive, filtered, enemyPopulation, comparisonPolicy)
+  const enemyStats = useDamageThreeEnemySpawnAdvantage(enemyActive, enemyEntries, enemyPopulation, comparisonPolicy)
   const enemyRows = showDefenseBands ? enemyStats?.rows : enemyStats?.rows.slice(0, 1)
+  const imageConditions = { aggregationVersion: aggregation.selectedId, scope, comparisonPolicy, filters: activeFilters }
   const rankImage = statsActive && statisticFormat === 'chart' && statistics
     ? createDamageThreeStatisticsChartImage({
         rows: statistics, view: statisticView, resistance: histogramResistance, advantageUnit,
-        aggregationVersion: aggregation.selectedId, scope, comparisonPolicy, filters: activeFilters,
+        ...imageConditions,
       })
     : null
-  const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats
+  const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyFormat !== 'operatorVotes'
     ? createDamageThreeEnemyAdvantageImage({
         statistics: enemyStats, format: enemyFormat, showBands: showDefenseBands, advantageUnit,
-        aggregationVersion: aggregation.selectedId, scope, comparisonPolicy, filters: activeFilters,
+        ...imageConditions,
       })
     : rankImage && { view: 'chart', snapshot: rankImage }
   const sortedEntries = useSkillDamageMatrixSort(filtered, mode === 'actual' ? 'actual' : 'virtual',
@@ -264,6 +282,9 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
             </div>
             {enemyActive ? (
               !filtered.length ? <p role="status">該当するスキルはありません。</p>
+                : operatorVotesActive && enemyPopulation ? <DamageThreeOperatorVotes
+                    operators={voteOperators} operatorId={voteOperatorId} statistics={enemyStats} population={enemyPopulation}
+                    imageConditions={imageConditions} selection={operatorVoteSelection} />
                 : !enemyPopulation || !enemyStats || !enemyRows ? <p role="status">出現敵ごとの主攻撃ダメージを集計中…</p>
                 : !enemyStats.skillCount ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>
                 : <>
