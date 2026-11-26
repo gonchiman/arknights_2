@@ -38,10 +38,10 @@ const observedTime = new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 })
 
-export function useWikiSnapshot<T>(load: (signal?: AbortSignal) => Promise<T>, enabled = true) {
+export function useWikiSnapshot<T>(load: ((signal?: AbortSignal) => Promise<T>) | null, enabled = true) {
   const [state, setState] = useState<SnapshotState<T>>({ status: 'loading' })
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || !load) return
     const controller = new AbortController()
     load(controller.signal).then(
       snapshot => { if (!controller.signal.aborted) setState({ status: 'ready', snapshot }) },

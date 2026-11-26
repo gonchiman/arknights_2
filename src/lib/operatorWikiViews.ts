@@ -19,6 +19,12 @@ export type OperatorWikiViewSnapshot = {
   entries: readonly OperatorWikiViewEntry[]
 }
 
+export type OperatorWikiViewHistory = {
+  date: string
+  observedAt: string
+  counts: Readonly<Record<string, number | null>>
+}
+
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -55,6 +61,19 @@ function count(value: unknown): number | null {
     throw new Error(INVALID_SNAPSHOT)
   }
   return value
+}
+
+export function parseOperatorWikiViewHistory(value: unknown, date: string): OperatorWikiViewHistory {
+  const invalid = `Wiki 閲覧数の履歴が不正です（${date}）。`
+  if (!isRecord(value) || !isCalendarDate(date) || value.date !== date
+    || typeof value.observedAt !== 'string' || !Number.isFinite(Date.parse(value.observedAt))
+    || !isRecord(value.counts)) throw new Error(invalid)
+  const counts: [string, number | null][] = []
+  for (const [id, n] of Object.entries(value.counts)) {
+    if (!id.trim() || (n !== null && (typeof n !== 'number' || !Number.isSafeInteger(n) || n < 0))) throw new Error(invalid)
+    counts.push([id, n])
+  }
+  return { date, observedAt: value.observedAt, counts: Object.fromEntries(counts) }
 }
 
 export function parseOperatorWikiViewSnapshot(value: unknown): OperatorWikiViewSnapshot {
