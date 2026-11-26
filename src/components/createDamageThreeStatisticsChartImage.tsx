@@ -9,20 +9,23 @@ import { DamageThreeDistributionChartImage, DamageThreeDistributionImageLegend }
 import type { StatisticView } from './DamageThreeSkillRankStatisticsTable'
 import { ENEMY_MAIN_STORY_LABEL, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 
-interface StatisticsImageOptions {
-  rows: readonly SkillRankStatistics[]
-  view: StatisticView
-  resistance: number
-  advantageUnit: AdvantageUnit
+export interface StatisticsImageConditions {
   aggregationVersion: string
   scope: EnemyAggregationScope
   comparisonPolicy: 'excludeAttributeEffects' | 'apply'
   filters: DamageThreeSkillFilterValues
 }
 
-export function createDamageThreeStatisticsChartImage({
-  rows, view, resistance, advantageUnit, aggregationVersion, scope, comparisonPolicy, filters,
-}: StatisticsImageOptions): DamageCalculatorThreeAttributeChartImageSnapshot | null {
+interface StatisticsImageOptions extends StatisticsImageConditions {
+  rows: readonly SkillRankStatistics[]
+  view: StatisticView
+  resistance: number
+  advantageUnit: AdvantageUnit
+}
+
+export function getDamageThreeStatisticsImageConditions({
+  aggregationVersion, scope, comparisonPolicy, filters,
+}: StatisticsImageConditions) {
   const source = [`集計版 ${aggregationVersion}`, scope === 'main' ? ENEMY_MAIN_STORY_LABEL : '全体']
   const settings = [
     comparisonPolicy === 'apply' ? '属性限定効果を適用' : '属性限定効果を除外',
@@ -32,7 +35,13 @@ export function createDamageThreeStatisticsChartImage({
   if (filters.rarity !== 'ALL') settings.push(`★${filters.rarity}`)
   if (filters.damageType !== 'ALL') settings.push(`元の攻撃属性 ${DAMAGE_TYPE_LABELS[filters.damageType]}`)
   if (filters.query.trim()) settings.push(`検索「${filters.query.trim()}」`)
+  return { source, settings }
+}
 
+export function createDamageThreeStatisticsChartImage({
+  rows, view, resistance, advantageUnit, ...options
+}: StatisticsImageOptions): DamageCalculatorThreeAttributeChartImageSnapshot | null {
+  const { source, settings } = getDamageThreeStatisticsImageConditions(options)
   if (view === 'distribution') {
     const histogram = getDamageThreeDistributionHistogram(rows, resistance)
     if (!histogram) return null
