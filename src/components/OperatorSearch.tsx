@@ -1,21 +1,18 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Filters, type FilterOption, type FilterState } from './Filters'
 import { OperatorTable } from './OperatorTable'
+import { useRecentOperators } from './useRecentOperators'
 import { PROFESSION_ORDER } from '../lib/operatorFilters'
 import {
   EMPTY_OPERATOR_FILTERS,
-  addRecentOperatorId,
   buildSubProfessionOptions,
   getRecentOperatorRows,
   hasActiveOperatorFilters,
   matchesOperatorFilters,
-  normalizeRecentOperatorIds,
 } from '../lib/operatorSearchFilters'
 import type { SkillRecord } from '../types/skill'
 
 export { EMPTY_OPERATOR_FILTERS, matchesOperatorFilters } from '../lib/operatorSearchFilters'
-
-const RECENT_OPERATOR_STORAGE_KEY = 'arknights-recent-operator-ids-v1'
 
 interface Props {
   rows: SkillRecord[]
@@ -40,7 +37,7 @@ export function OperatorSearch({
   className = '',
   selectedOperatorId,
 }: Props) {
-  const [recentOperatorIds, setRecentOperatorIds] = useState(loadRecentOperatorIds)
+  const { recentOperatorIds, rememberOperator } = useRecentOperators()
   const professionOptions = useMemo(() => sortProfessionOptions(uniqueOptions(rows.map((row) => ({
     value: row.profession,
     label: row.professionLabel,
@@ -73,13 +70,7 @@ export function OperatorSearch({
   const displayedOperators = hasActiveFilters ? filteredOperators : recentOperators
 
   const selectOperator = (row: SkillRecord) => {
-    const latestRecentOperatorIds = normalizeRecentOperatorIds([
-      ...loadRecentOperatorIds(),
-      ...recentOperatorIds,
-    ])
-    const nextRecentOperatorIds = addRecentOperatorId(latestRecentOperatorIds, row.operatorId)
-    persistRecentOperatorIds(nextRecentOperatorIds)
-    setRecentOperatorIds(nextRecentOperatorIds)
+    rememberOperator(row.operatorId)
     onSelect(row)
   }
 
@@ -123,28 +114,6 @@ export function OperatorSearch({
       )}
     </section>
   )
-}
-
-function loadRecentOperatorIds(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const stored = window.localStorage.getItem(RECENT_OPERATOR_STORAGE_KEY)
-    if (!stored) return []
-    const parsed: unknown = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return []
-    return normalizeRecentOperatorIds(parsed.filter((value): value is string => typeof value === 'string'))
-  } catch {
-    return []
-  }
-}
-
-function persistRecentOperatorIds(operatorIds: string[]): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(RECENT_OPERATOR_STORAGE_KEY, JSON.stringify(operatorIds))
-  } catch {
-    // ストレージが利用できない場合も、オペレーターの選択操作は続行する。
-  }
 }
 
 function uniqueOptions(options: FilterOption[]): FilterOption[] {

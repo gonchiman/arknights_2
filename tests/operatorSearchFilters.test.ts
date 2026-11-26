@@ -7,6 +7,7 @@ import {
   getRecentOperatorRows,
   hasActiveOperatorFilters,
   matchesOperatorFilters,
+  matchesOperatorName,
   normalizeRecentOperatorIds,
   type FilterState,
 } from '../src/lib/operatorSearchFilters.ts'
@@ -94,6 +95,14 @@ test('文字検索は既存どおりNFKC正規化・小文字化・前後空白�
     MECH_ACCORD,
     filters({ query: 'ＳＫＣＨＲ＿ＧＧ＿１' }),
   ), true)
+})
+
+test('名前の部分一致はかな・全半角・英字大小を揃え、濁点を区別する', () => {
+  assert.equal(matchesOperatorName('スズラン', 'すず'), true)
+  assert.equal(matchesOperatorName('スズラン', ' ｽﾞﾗ '), true)
+  assert.equal(matchesOperatorName('スズラン', 'すす'), false)
+  assert.equal(matchesOperatorName('ヴィジェル', 'ゔぃじぇ'), true)
+  assert.equal(matchesOperatorName('Lancet-2', 'ＮＣＥＴ'), true)
 })
 
 test('文字・頭文字・職業・職分・レアリティをAND条件で判定する', () => {

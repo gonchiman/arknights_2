@@ -18,6 +18,30 @@
 }
 .dc3-vote-picker { width: fit-content; max-width: 100%; }
 .dc3-vote-picker select { min-height: 30px; max-width: 100%; }
+.dc3-name-picker { width: min(100%, 38rem); }
+.dc3-name-trigger { display: inline-flex; align-items: center; gap: 16px; font-weight: 500; }
+.dc3-name-trigger::after {
+  content: ''; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1px 1px 0;
+  transform: translateY(-2px) rotate(45deg);
+}
+.dc3-name-trigger[aria-expanded="true"]::after { transform: translateY(2px) rotate(225deg); }
+.dc3-name-panel { margin-top: 6px; padding: 10px; border: 1px solid var(--border); }
+.dc3-name-panel input {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); font-size: 14px;
+}
+.dc3-name-attributes { margin-top: 8px; }
+.dc3-name-attributes .filters { border-bottom: 0; }
+.dc3-name-attributes .initial-filter { padding: 4px 0; border-bottom: 0; }
+.dc3-name-attributes .initial-filter-label { min-width: 5em; font-size: 12px; }
+.dc3-name-attributes .initial-button { font-size: 12px; white-space: nowrap; }
+.dc3-name-results { margin-top: 6px; max-height: 14rem; overflow-y: auto; }
+.dc3-name-choices { padding: 4px; }
+.dc3-name-group-label { display: block; margin-bottom: 4px; color: var(--text-soft); font-size: 12px; }
+.dc3-name-options { display: flex; flex-wrap: wrap; gap: 4px; }
+.dc3-name-options .button { min-height: 30px; padding: 4px 8px; font-size: 13px; font-weight: 400; }
+.dc3-name-options .button[aria-current="true"] { border-color: var(--text); background: var(--surface-soft); font-weight: 600; }
+.dc3-name-results p { margin: 4px; color: var(--text-muted); }
 .dc3-operator-votes-detail .button.secondary { min-height: 28px; padding: 3px 8px; font-size: 12px; }
 .damage-two-table.dc3-operator-vote-table { min-width: 390px; }
 .damage-two-table.dc3-operator-vote-table th:first-child,
@@ -33,6 +57,8 @@
 .comparison-table-image-frame .dc3-operator-vote-table { border-inline: 1px solid var(--border); }
 .comparison-table-image-frame .dc3-operator-vote-table :is(th, .dc3-vote-skill-name) { white-space: normal; overflow-wrap: anywhere; }
 @media (pointer: coarse) {
+  .dc3-name-picker .button, .dc3-name-panel input { min-height: 44px; }
+  .dc3-name-panel input { font-size: 16px; }
   .dc3-vote-picker select { min-height: 44px; font-size: 16px; }
   .dc3-operator-votes .text-button,
   .dc3-operator-votes-detail .button.secondary { min-height: 44px; }

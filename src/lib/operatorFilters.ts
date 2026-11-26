@@ -89,10 +89,6 @@ export function getOperatorInitial(name: string): OperatorInitial {
   return 'OTHER'
 }
 
-function toHiragana(value: string): string {
-  const codePoint = value.codePointAt(0)
-  if (codePoint !== undefined && codePoint >= 0x30a1 && codePoint <= 0x30f6) {
-    return String.fromCodePoint(codePoint - 0x60)
-  }
-  return value
+export function toHiragana(value: string): string {
+  return value.replace(/[ァ-ヶ]/g, kana => String.fromCharCode(kana.charCodeAt(0) - 0x60))
 }
