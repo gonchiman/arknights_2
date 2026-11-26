@@ -12,6 +12,7 @@ import './DamageCalculatorThreeAttributeChartImageDialog.css'
 export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   title: string
   axisTitle?: string
+  naturalChartHeight?: number
   additionalChartHeight?: number
   conditions: readonly string[]
   filenameParts: readonly string[]
@@ -22,9 +23,10 @@ export interface DamageCalculatorThreeAttributeChartImageSnapshot {
 const NATURAL_CHART_HEIGHT = 334
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClose }: {
+export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClose, parentLocation }: {
   snapshot: DamageCalculatorThreeAttributeChartImageSnapshot
   onClose: () => void
+  parentLocation?: readonly string[]
 }) {
   const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
   const [saving, setSaving] = useState(false)
@@ -40,7 +42,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
     legend: snapshot.legend,
     conditions: snapshot.conditions.join('・'),
     axisTitle: snapshot.axisTitle ?? 'ゲーム内評価',
-    naturalChartHeight: NATURAL_CHART_HEIGHT + (snapshot.additionalChartHeight ?? 0),
+    naturalChartHeight: snapshot.naturalChartHeight ?? (NATURAL_CHART_HEIGHT + (snapshot.additionalChartHeight ?? 0)),
     aspectRatio,
     exactAspect: parsedAspect ?? undefined,
     children: snapshot.chart,
@@ -70,6 +72,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, onClo
   }
 
   return <ChartImageSaveDialog
+    parentLocation={parentLocation}
     initialFilename={filename}
     getDefaultFilename={ratio => withChartImageAspect(filename, ratio)}
     aspect={aspect}

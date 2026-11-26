@@ -1,0 +1,80 @@
+import type { EnemySpawnAdvantageRow } from '../lib/damageThreeEnemySpawnAdvantage'
+import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
+import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
+import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
+import './DamageThreeEnemyAdvantageViews.css'
+
+interface EnemyAdvantageViewProps {
+  rows: readonly EnemySpawnAdvantageRow[]
+  unit: AdvantageUnit
+}
+
+const INTEGER = new Intl.NumberFormat('ja-JP')
+
+export function DamageThreeEnemyAdvantageTable({ rows, unit }: EnemyAdvantageViewProps) {
+  return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label="出現敵での優勢率">
+    <colgroup><col /><col />{ADVANTAGE_OUTCOMES.map(({ key }) => <col key={key} />)}</colgroup>
+    <thead><tr>
+      <th scope="col">防御力帯</th><th scope="col">出現回数</th>
+      {ADVANTAGE_OUTCOMES.map(({ key, label }) => <th scope="col" key={key}>{label} (%)</th>)}
+    </tr></thead>
+    <tbody>{rows.map(row => {
+      const votes = row[unit]
+      return <tr key={row.label}>
+        <th scope="row">{row.label}</th><td data-table-image-number>{INTEGER.format(row.spawnCount)}</td>
+        {ADVANTAGE_OUTCOMES.map(({ key }) => <td key={key} data-table-image-number>
+          {formatAdvantagePercentage(votes[key], votes.count)}
+        </td>)}
+      </tr>
+    })}</tbody>
+  </table>
+}
+
+export function getEnemyAdvantagePlotHeight(rowCount: number) {
+  return rowCount * 80
+}
+
+export function DamageThreeEnemyAdvantagePlot({ rows, unit, width, height }: EnemyAdvantageViewProps & {
+  width?: number
+  height: number
+}) {
+  const rowHeight = height / Math.max(rows.length, 1)
+  return <svg className="dc3-enemy-advantage-plot" width={width ?? '100%'} height={height}
+    aria-label="出現回数で重み付けした属性別の優勢率" role="img">
+    <desc>{rows.map(row => {
+      const votes = row[unit]
+      const details = votes.count > 0 ? ADVANTAGE_OUTCOMES.map(({ key, label }) =>
+        `${label} ${formatAdvantagePercentage(votes[key], votes.count)}%`).join('、') : '対象なし'
+      return `${row.label}、出現回数 ${INTEGER.format(row.spawnCount)}、${details}`
+    }).join('。')}</desc>
+    {rows.map((row, index) => {
+      const votes = row[unit]
+      const center = (index + 0.5) * rowHeight
+      let offset = 0
+      return <g key={row.label} data-band={row.label} aria-hidden="true">
+        <text y={center - 15} fontWeight="600">{row.label === '全体' ? row.label : `防御力 ${row.label}`}</text>
+        <text x="100%" y={center - 15} textAnchor="end">出現回数 {INTEGER.format(row.spawnCount)}</text>
+        {votes.count > 0 ? ADVANTAGE_OUTCOMES.map(({ series, key, label }, seriesIndex) => {
+          const start = offset
+          const share = votes[key] / votes.count
+          offset += share
+          const color = DAMAGE_THREE_STATISTIC_COLORS[series]
+          const labelX = `${seriesIndex * 100 / ADVANTAGE_OUTCOMES.length}%`
+          return <g key={key}>
+            <rect data-series={series} x={`${start * 100}%`} y={center - 7}
+              width={`${share * 100}%`} height={19} fill={color} />
+            <rect x={labelX} y={center + 21} width={8} height={8} fill={color} />
+            <text x={labelX} dx={13} y={center + 29}>{label} {formatAdvantagePercentage(votes[key], votes.count)}%</text>
+          </g>
+        }) : <text y={center + 9}>対象なし</text>}
+      </g>
+    })}
+  </svg>
+}
+
+export function DamageThreeEnemyAdvantageChart({ rows, unit }: EnemyAdvantageViewProps) {
+  return <figure className="dc3-stat-chart" aria-label="出現敵での優勢率">
+    <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
+    <DamageThreeEnemyAdvantagePlot rows={rows} unit={unit} height={getEnemyAdvantagePlotHeight(rows.length)} />
+  </figure>
+}

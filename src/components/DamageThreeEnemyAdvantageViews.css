@@ -1,0 +1,18 @@
+.dc3-enemy-advantage-plot {
+  display: block;
+  fill: var(--text-soft, #444);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.damage-two-table.dc3-enemy-advantage-table {
+  min-width: 320px;
+}
+
+.damage-two-table.dc3-enemy-advantage-table :is(thead, tbody) th:first-child {
+  text-align: left;
+}
+
+.comparison-table-image-frame .dc3-enemy-advantage-table {
+  border-inline: 1px solid var(--border);
+}

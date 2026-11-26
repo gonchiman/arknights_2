@@ -51,6 +51,7 @@ export interface DamageThreeAttributeTables {
 }
 
 type DamageThreeAttributeRankPair = Pick<EnemyResistanceThreshold, 'resistance' | 'defense' | 'percentage'>
+export type EnemyDamageStatPair = Pick<DamageThreeAttributeRankPair, 'resistance' | 'defense'>
 
 export interface DamageThreeAttributeRankRow extends DamageThreeAttributeRankPair {
   physical: number | null
@@ -286,23 +287,34 @@ export function evaluateDamageThreeAttributeTables(input: DamageThreeAttributeTa
   return { reference, physical: physicalResults, arts: artsResults, canShowDps, errors: [...new Set(errors)] }
 }
 
-/** Use the same appearance-rank DEF/RES pair for both virtual attributes. */
+/** Both virtual attributes face the very same enemy stats. */
+export function evaluateDamageThreePairedAttacks(
+  input: DamageThreeAttributeTablesInput,
+  pairs: readonly EnemyDamageStatPair[],
+) {
+  const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rank')
+  const invalidInput = errors.length > 0
+  let hasProbabilisticMainAttack = false
+  const cells = pairs.map(({ resistance, defense }) => {
+    const missing = { physical: null, arts: null }
+    if (invalidInput || defense === null) return missing
+
+    const physical = evaluate(defense, resistance, 'PHYSICAL')
+    const arts = evaluate(defense, resistance, 'ARTS')
+    if (!physical || !arts) return missing
+    hasProbabilisticMainAttack ||= physical.hasProbabilisticMainAttack || arts.hasProbabilisticMainAttack
+    return { physical: physical.perAttack, arts: arts.perAttack }
+  })
+  return { reference, cells, errors: [...new Set(errors)], hasProbabilisticMainAttack }
+}
+
 export function evaluateDamageThreeAttributeRankTable(
   input: DamageThreeAttributeTablesInput,
   pairs: readonly DamageThreeAttributeRankPair[],
 ): DamageThreeAttributeRankTable {
-  const { reference, errors, evaluate } = createAttributeEvaluator(input, 'rank')
-  const invalidInput = errors.length > 0
-  let hasProbabilisticMainAttack = false
-  const rows = pairs.map(({ resistance, defense, percentage }): DamageThreeAttributeRankRow => {
-    const row = { resistance, defense, percentage, physical: null, arts: null }
-    if (invalidInput || defense === null) return row
-
-    const physical = evaluate(defense, resistance, 'PHYSICAL')
-    const arts = evaluate(defense, resistance, 'ARTS')
-    if (!physical || !arts) return row
-    hasProbabilisticMainAttack ||= physical.hasProbabilisticMainAttack || arts.hasProbabilisticMainAttack
-    return { ...row, physical: physical.perAttack, arts: arts.perAttack }
-  })
-  return { reference, rows, errors: [...new Set(errors)], hasProbabilisticMainAttack }
+  const { cells, ...result } = evaluateDamageThreePairedAttacks(input, pairs)
+  const rows = pairs.map(({ resistance, defense, percentage }, index) => ({
+    resistance, defense, percentage, ...cells[index],
+  }))
+  return { ...result, rows }
 }

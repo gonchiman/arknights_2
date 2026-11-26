@@ -1,4 +1,5 @@
 import type { DamageThreeAttributeEntry } from './damageCalculatorThreeAttributeComparison.ts'
+import type { EnemyDamageStatPair } from './damageCalculatorThreeAttributeTables.ts'
 import { evaluateDamageThreeSkillRankRow, type DamageCell, type SkillRankEffectPolicy } from './damageThreeSkillRankMatrix.ts'
 import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 import { calculateBoxPlotStatistics } from './enemyStatistics.ts'
@@ -12,7 +13,7 @@ interface DamageQuartiles {
 
 export type AdvantageUnit = 'skill' | 'stage'
 
-interface AdvantageVotes {
+export interface AdvantageVotes {
   physicalWins: number
   ties: number
   artsWins: number
@@ -56,7 +57,12 @@ export interface SkillRankStageSample {
   cells: readonly DamageCell[]
 }
 
-function outcome(physical: number, arts: number): keyof AdvantageVotes {
+export function isComparableDamage(cell: DamageCell): cell is { physical: number; arts: number } {
+  return cell.physical !== null && cell.arts !== null && Number.isFinite(cell.physical) && Number.isFinite(cell.arts)
+    && cell.physical >= 0 && cell.arts >= 0
+}
+
+export function getAdvantageOutcome(physical: number, arts: number): keyof AdvantageVotes {
   const tolerance = 1e-9 * Math.max(1, Math.abs(physical), Math.abs(arts))
   if (Math.abs(physical - arts) <= tolerance) return 'ties'
   return physical > arts ? 'physicalWins' : 'artsWins'
@@ -69,7 +75,7 @@ function quartiles(values: number[]): DamageQuartiles | null {
 
 export function evaluateSkillRankStatisticsStage(
   entry: DamageThreeAttributeEntry,
-  pairs: readonly EnemyResistanceThreshold[],
+  pairs: readonly EnemyDamageStatPair[],
   effectPolicy: SkillRankEffectPolicy | boolean = 'apply',
 ) {
   if (!entry.capability.supported) return null
@@ -88,10 +94,10 @@ export function summarizeSkillRankStatistics(
   }))
   for (const { skill, cells } of stages) {
     const skillKey = createSkillJsonSelectionKey(skill)
-    cells.forEach(({ physical, arts }, index) => {
+    cells.forEach((cell, index) => {
       const sample = samples[index]
-      if (!sample || sample.defense === null || physical === null || arts === null
-        || !Number.isFinite(physical) || !Number.isFinite(arts) || physical < 0 || arts < 0) return
+      if (!sample || sample.defense === null || !isComparableDamage(cell)) return
+      const { physical, arts } = cell
       sample.physical.push(physical)
       sample.arts.push(arts)
       sample.histogram[damageBinIndex(physical)].physical++
@@ -101,7 +107,7 @@ export function summarizeSkillRankStatistics(
         votes = { physicalWins: 0, ties: 0, artsWins: 0 }
         sample.skills.set(skillKey, votes)
       }
-      const result = outcome(physical, arts)
+      const result = getAdvantageOutcome(physical, arts)
       votes[result]++
       sample.stageVotes[result]++
     })
