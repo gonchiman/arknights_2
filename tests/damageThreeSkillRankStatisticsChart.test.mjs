@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
 let server, Chart, Table, ImagePlot, DistributionImage, getHistogram, createStatisticsImage
+let createEnemyImage, SkillPhysicalRateHistogram
 before(async () => {
   server = await createServer({
     configFile: false, plugins: [react()], logLevel: 'error',
@@ -18,6 +19,8 @@ before(async () => {
   DistributionImage = (await server.ssrLoadModule('/src/components/DamageThreeDistributionChartImage.tsx')).DamageThreeDistributionChartImage
   getHistogram = (await server.ssrLoadModule('/src/lib/damageThreeDistributionChart.ts')).getDamageThreeDistributionHistogram
   createStatisticsImage = (await server.ssrLoadModule('/src/components/createDamageThreeStatisticsChartImage.tsx')).createDamageThreeStatisticsChartImage
+  createEnemyImage = (await server.ssrLoadModule('/src/components/createDamageThreeEnemyAdvantageImage.tsx')).createDamageThreeEnemyAdvantageImage
+  SkillPhysicalRateHistogram = (await server.ssrLoadModule('/src/components/DamageThreeSkillPhysicalRateHistogram.tsx')).DamageThreeSkillPhysicalRateHistogram
 })
 after(async () => { await server?.close() })
 
@@ -39,6 +42,40 @@ const missing = {
 const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
+
+test('スキル別の分布は以前の段階単位・防御力帯の選択に左右されず表示中の条件を保存する', () => {
+  const counts = [4, 1, 0, 0, 0, 0, 0, 0, 0, 2]
+  const bins = counts.map((count, index) => ({ lower: index * 10, upper: (index + 1) * 10, count }))
+  const options = {
+    statistics: { skillCount: 7, stageCount: 9, skillPhysicalRateBins: bins,
+      rows: [{ label: '全体', spawnCount: 20, skill: { count: 140 }, stage: { count: 180 } }] },
+    format: 'histogram', advantageUnit: 'stage', showBands: true,
+    aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
+    filters: { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: '6', query: '' },
+  }
+  const image = createEnemyImage(options)
+  assert.equal(image.view, 'chart')
+  const { snapshot } = image
+  const normal = createEnemyImage({ ...options, advantageUnit: 'skill', showBands: false }).snapshot
+  assert.deepEqual(snapshot.filenameParts, normal.filenameParts)
+  assert.deepEqual(snapshot.conditions, normal.conditions)
+  assert.equal(snapshot.title, 'スキル別の物理優勢率の分布')
+  for (const label of ['集計版 v12', 'メインストーリー', '属性限定効果を除外', '全出力型', '★6']) {
+    assert.ok(snapshot.conditions.includes(label), label)
+    assert.ok(snapshot.filenameParts.includes(label), label)
+  }
+  assert.doesNotMatch([...snapshot.conditions, ...snapshot.filenameParts].join(' '), /段階単位|防御力帯別/)
+  const saved = renderToStaticMarkup(snapshot.chart({ width: 960, height: 300 }))
+  const screen = renderToStaticMarkup(createElement(SkillPhysicalRateHistogram, { bins }))
+  for (const markup of [saved, screen]) {
+    assert.match(markup, /スキル数/)
+    const marks = [...markup.matchAll(/data-lower="(\d+)" data-count="(\d+)"/g)]
+    assert.deepEqual(marks.map(([, lower, count]) => [Number(lower), Number(count)]),
+      bins.map(bin => [bin.lower, bin.count]))
+    assert.match(markup, /90%以上100%以下、2スキル/)
+    assert.doesNotMatch(markup, /NaN|Infinity/)
+  }
+})
 
 const peakRow = { ...sample, resistance: 0, defense: 0, count: 20,
   histogram: sample.histogram.map(bin => ({ ...bin, physical: bin.lower === 0 ? 20 : 0, arts: bin.lower === 0 ? 20 : 0 })) }

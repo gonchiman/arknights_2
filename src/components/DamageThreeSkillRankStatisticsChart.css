@@ -48,6 +48,10 @@
 .dc3-histogram-bin span { width: 38%; max-width: 42px; background: currentColor; }
 .dc3-histogram-bins { grid-column: 2; margin-top: 5px; text-align: center; white-space: nowrap; }
 .dc3-histogram-x-title { grid-column: 2; text-align: center; margin-top: 8px; }
+.dc3-skill-rate-plot { display: block; min-width: 560px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.dc3-skill-rate-plot text { fill: var(--text-soft, #444); }
+.dc3-skill-rate-plot line { stroke: var(--border, #d6d6d6); }
+.dc3-skill-rate-y-title { font-size: 12px; font-weight: 700; }
 
 .dc3-stat-chart-heading,
 .dc3-stat-chart-row {
