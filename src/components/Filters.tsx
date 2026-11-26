@@ -17,13 +17,19 @@ interface Props {
   professionOptions: FilterOption[]
   subProfessionOptions?: FilterOption[]
   onChange: (next: FilterState) => void
-  onReset: () => void
+  onReset?: () => void
   searchPlaceholder?: string
   searchLabel?: string
   searchFirst?: boolean
   showNameInitial?: boolean
   showSearch?: boolean
   headingLabel?: string | null
+}
+
+export function FilterResetButton({ value, onReset }: { value: FilterState; onReset: () => void }) {
+  return <button type="button" className="filter-reset-button" disabled={!hasActiveOperatorFilters(value)} onClick={onReset}>
+    条件をリセット
+  </button>
 }
 
 export function Filters({
@@ -39,12 +45,7 @@ export function Filters({
   showSearch = true,
   headingLabel = '検索条件',
 }: Props) {
-  const hasActiveFilters = hasActiveOperatorFilters(value)
-  const reset = (
-    <button type="button" className="filter-reset-button" disabled={!hasActiveFilters} onClick={onReset}>
-      条件をリセット
-    </button>
-  )
+  const reset = onReset && <FilterResetButton value={value} onReset={onReset} />
   const search = showSearch && (
     <label className="search-filter">
       <span className="initial-filter-label">{searchLabel}</span>

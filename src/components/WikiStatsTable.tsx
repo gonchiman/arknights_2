@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useImperativeHandle, useMemo, useState, type RefObject } from 'react'
 import { WIKI_COMMENT_PERIODS, type WikiCommentPeriod } from '../lib/operatorWikiComments'
 import { sortOperatorWikiMetricRows } from '../lib/operatorWikiViews'
 import { TableSortHeader, type TableSort } from './TableSortHeader'
+import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import './WikiStatsTable.css'
 
-type SnapshotState<T> =
+export type SnapshotState<T> =
   | { status: 'loading' | 'error' }
   | { status: 'ready'; snapshot: T }
 
@@ -37,16 +38,17 @@ const observedTime = new Intl.DateTimeFormat('ja-JP', {
   hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
 })
 
-export function useWikiSnapshot<T>(load: (signal?: AbortSignal) => Promise<T>) {
+export function useWikiSnapshot<T>(load: (signal?: AbortSignal) => Promise<T>, enabled = true) {
   const [state, setState] = useState<SnapshotState<T>>({ status: 'loading' })
   useEffect(() => {
+    if (!enabled) return
     const controller = new AbortController()
     load(controller.signal).then(
       snapshot => { if (!controller.signal.aborted) setState({ status: 'ready', snapshot }) },
       () => { if (!controller.signal.aborted) setState({ status: 'error' }) },
     )
     return () => controller.abort()
-  }, [load])
+  }, [load, enabled])
   return state
 }
 
@@ -75,13 +77,17 @@ export function WikiDateRange({ start, end }: { start: string; end: string }) {
   </span>
 }
 
+export function formatWikiObservedTime(observedAt: string) {
+  return `${observedTime.format(new Date(observedAt))} JST`
+}
+
 export function ObservedTime({ observedAt }: { observedAt: string }) {
-  return <span>取得 <time dateTime={observedAt}>{observedTime.format(new Date(observedAt))} JST</time></span>
+  return <span>取得 <time dateTime={observedAt}>{formatWikiObservedTime(observedAt)}</time></span>
 }
 
 export function WikiStatsTable<Metric extends string>({
   columns, rows, ranks, defaultSort, page, onPageChange, label, tableLabel, metricLabel, linkLabel, nameColumnClass,
-  subject = 'operator', provisionalRanks = false,
+  subject = 'operator', provisionalRanks = false, imageRef, imageConditions = [], imageTitle = tableLabel,
 }: {
   columns: readonly { key: Metric; label: string; className?: string }[]
   rows: readonly WikiStatsRow<Metric>[]
@@ -96,6 +102,9 @@ export function WikiStatsTable<Metric extends string>({
   nameColumnClass: string
   subject?: 'operator' | 'enemy'
   provisionalRanks?: boolean
+  imageRef?: RefObject<(() => ComparisonTableImageSnapshot) | null>
+  imageConditions?: readonly string[]
+  imageTitle?: string
 }) {
   const showIndex = subject === 'enemy'
   const rowLabel = subject === 'enemy' ? '敵' : 'オペレーター'
@@ -107,6 +116,19 @@ export function WikiStatsTable<Metric extends string>({
   const activePage = Math.max(0, Math.min(page, pages - 1))
   const start = activePage * PAGE_SIZE
   const visible = ordered.slice(start, start + PAGE_SIZE)
+  const pageRange = ordered.length > 0
+    ? `${start + 1}〜${start + visible.length} / ${ordered.length}${resultUnit}`
+    : `0${resultUnit}`
+
+  useImperativeHandle(imageRef, () => () => {
+    const sortLabel = columns.find(column => column.key === sort.key)?.label ?? nameLabel
+    const sortCondition = `${sortLabel}${sort.direction === 'asc' ? '昇順' : '降順'}`
+    return {
+      title: imageTitle,
+      conditions: [...imageConditions, sortCondition, pageRange],
+      table: <div className="wiki-stats-scroll wiki-stats-image">{renderTable(true)}</div>,
+    }
+  })
 
   function changeSort(key: 'name' | Metric) {
     setSort(previous => ({
@@ -118,8 +140,15 @@ export function WikiStatsTable<Metric extends string>({
     onPageChange(0)
   }
 
-  return <>
-    <div className="wiki-stats-scroll" role="region" aria-label={label} tabIndex={0}>
+  function renderTable(image: boolean) {
+    function sortHeader(key: 'name' | Metric, title: string, ariaLabel: string) {
+      if (image) {
+        const active = key === sort.key
+        return <th key={key} scope="col" aria-sort={active ? (sort.direction === 'desc' ? 'descending' : 'ascending') : undefined}>{title}</th>
+      }
+      return <TableSortHeader key={key} label={title} ariaLabel={ariaLabel} sortKey={key} sort={sort} onSort={changeSort} />
+    }
+    return (
       <table aria-label={tableLabel} className={showIndex ? 'wiki-stats-indexed-table' : undefined}>
         <colgroup><col className="wiki-stats-rank-column" />
           {showIndex && <col className="wiki-stats-index-column" />}
@@ -129,23 +158,22 @@ export function WikiStatsTable<Metric extends string>({
         <thead><tr>
           <th scope="col" className="wiki-stats-rank">{provisionalRanks ? '暫定順位' : '累計順位'}</th>
           {showIndex && <th scope="col" className="wiki-stats-index">図鑑番号</th>}
-          <TableSortHeader label={nameLabel} ariaLabel={`${rowLabel}名で並べ替え`} sortKey="name" sort={sort} onSort={changeSort} />
-          {columns.map(column => <TableSortHeader key={column.key} label={column.label}
-            ariaLabel={`${column.label === metricLabel ? metricLabel : `${column.label}の${metricLabel}`}で並べ替え`}
-            sortKey={column.key} sort={sort} onSort={changeSort} />)}
+          {sortHeader('name', nameLabel, `${rowLabel}名で並べ替え`)}
+          {columns.map(column => sortHeader(column.key, column.label,
+            `${column.label === metricLabel ? metricLabel : `${column.label}の${metricLabel}`}で並べ替え`))}
         </tr></thead>
         <tbody>
           {visible.map(row => <tr key={row.operatorId}>
-            <td className="wiki-stats-rank">{ranks.get(row.operatorId) ?? '—'}</td>
+            <td className="wiki-stats-rank" data-table-image-number={image || undefined}>{ranks.get(row.operatorId) ?? '—'}</td>
             {showIndex && <td className="wiki-stats-index">{row.index ?? '—'}</td>}
             <th scope="row" className={sort.key === 'name' ? 'wiki-stats-sorted' : undefined}>
-              {row.wikiUrl
+              {!image && row.wikiUrl
                 ? <a href={row.wikiUrl} target="_blank" rel="noopener noreferrer" aria-label={`${row.name}の ${row.wikiLinkLabel ?? linkLabel}を開く`}>{row.name}</a>
                 : row.name}
             </th>
             {columns.map(({ key }) => {
               const count = row[key]
-              return <td key={key} className={sort.key === key ? 'wiki-stats-sorted' : undefined}>
+              return <td key={key} className={sort.key === key ? 'wiki-stats-sorted' : undefined} data-table-image-number={image || undefined}>
                 {count === null ? <span className="wiki-stats-missing">{row.missingLabel ?? '未取得'}</span> : counts.format(count)}
               </td>
             })}
@@ -157,9 +185,15 @@ export function WikiStatsTable<Metric extends string>({
           </tr>}
         </tbody>
       </table>
+    )
+  }
+
+  return <>
+    <div className="wiki-stats-scroll" role="region" aria-label={label} tabIndex={0}>
+      {renderTable(false)}
     </div>
     {ordered.length > 0 && <div className="wiki-stats-pagination">
-      <span aria-live="polite">{start + 1}〜{start + visible.length} / {ordered.length}{resultUnit}</span>
+      <span aria-live="polite">{pageRange}</span>
       <div>
         <button type="button" className="button secondary" aria-label={`前の${rowLabel}一覧`}
           disabled={activePage === 0} onClick={() => onPageChange(activePage - 1)}>前へ</button>

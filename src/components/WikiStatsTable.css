@@ -88,6 +88,12 @@
 .wiki-stats-scroll .wiki-stats-empty { text-align: center; }
 .wiki-stats-missing { color: var(--text-muted); }
 
+.wiki-stats-image { overflow: visible; }
+.wiki-stats-image .wiki-stats-rank-column { width: 6em; }
+.wiki-stats-image thead th { padding: 7px 8px; }
+.wiki-stats-image thead th:nth-child(n + 3) { text-align: right; }
+.wiki-stats-image .wiki-stats-indexed-table thead th:nth-child(3) { text-align: left; }
+
 @media (max-width: 480px) {
   .wiki-stats-page .calculator-panel { padding-inline: 8px; }
   .wiki-stats-scroll .skill-sort-button,
