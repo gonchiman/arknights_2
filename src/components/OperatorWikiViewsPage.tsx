@@ -1,18 +1,26 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState, type RefObject } from 'react'
+import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { EMPTY_OPERATOR_DATABASE_FILTERS, type OperatorDatabaseFilters, type OperatorDatabaseRecord } from '../lib/operatorDatabase'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
-import { getWikiCommentCount, getWikiCommentRange, loadOperatorWikiCommentSnapshot } from '../lib/operatorWikiComments'
+import {
+  getWikiCommentCount, getWikiCommentRange, loadOperatorWikiCommentSnapshot, WIKI_COMMENT_PERIODS,
+  type OperatorWikiCommentSnapshot,
+} from '../lib/operatorWikiComments'
 import {
   buildOperatorWikiDisplayRoster, filterOperatorWikiDisplayRoster, matchOperatorWikiDisplayEntries,
   type OperatorWikiDisplayEntry,
 } from '../lib/operatorWikiDisplay'
 import { loadOperatorWikiRoster, type OperatorWikiRosterEntry } from '../lib/operatorWikiRoster'
-import { loadOperatorWikiViewSnapshot, rankOperatorWikiTotals } from '../lib/operatorWikiViews'
-import { AnalysisTabs } from './AnalysisTabs'
-import { Filters } from './Filters'
+import { loadOperatorWikiViewSnapshot, rankOperatorWikiTotals, type OperatorWikiViewSnapshot } from '../lib/operatorWikiViews'
+import { AnalysisTabPanel } from './AnalysisTabs'
+import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
+import { Filters, FilterResetButton } from './Filters'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
+import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
+import { viewLabel } from './PageViewSwitch'
 import {
-  getWikiViewColumns, ObservedTime, useWikiSnapshot, WikiDateRange, WikiPeriodButtons, WikiStatsTable,
-  type WikiStatsPeriod,
+  formatWikiObservedTime, getWikiViewColumns, ObservedTime, useWikiSnapshot, WikiDateRange, WikiPeriodButtons, WikiStatsTable,
+  type SnapshotState, type WikiStatsPeriod,
 } from './WikiStatsTable'
 import './DamageCalculator.css'
 import './OperatorWikiViewsPage.css'
@@ -22,12 +30,15 @@ interface Props {
   loading: boolean
 }
 
-interface PanelProps {
+interface PanelProps<Snapshot> {
   operators: readonly OperatorWikiDisplayEntry[]
   allOperators: readonly OperatorWikiDisplayEntry[]
   loading: boolean
   page: number
   setPage: (page: number) => void
+  state: SnapshotState<Snapshot>
+  imageRef: RefObject<(() => ComparisonTableImageSnapshot) | null>
+  filterConditions: readonly string[]
 }
 
 const TABS = [['views', '閲覧数'], ['comments', 'コメント']] as const
@@ -45,10 +56,24 @@ export function OperatorWikiViewsPage({ operators, loading }: Props) {
   const waitingForOperators = allOperators.length === 0 && (rosterState.status === 'loading' || loading)
   const [tab, setTab] = useState<Tab>('views')
   const [commentsOpened, setCommentsOpened] = useState(false)
+  const viewState = useWikiSnapshot(loadOperatorWikiViewSnapshot)
+  const commentState = useWikiSnapshot(loadOperatorWikiCommentSnapshot, commentsOpened)
   const [filters, setFilters] = useState(EMPTY_OPERATOR_DATABASE_FILTERS)
   const [viewPage, setViewPage] = useState(0)
   const [commentPage, setCommentPage] = useState(0)
   const filteredOperators = useMemo(() => filterOperatorWikiDisplayRoster(allOperators, filters), [allOperators, filters])
+  const filterConditions = [
+    filters.profession === 'ALL' ? '全職業' : getProfessionLabel(filters.profession),
+    filters.rarity === 'ALL' ? '全レアリティ' : `★${filters.rarity}`,
+    ...(filters.query.trim() ? [`名前「${filters.query.trim()}」`] : []),
+  ]
+  const viewImage = useRef<(() => ComparisonTableImageSnapshot) | null>(null)
+  const commentImage = useRef<(() => ComparisonTableImageSnapshot) | null>(null)
+  const [image, setImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const activeImage = tab === 'views' ? viewImage : commentImage
+  const activeState = tab === 'views' ? viewState : commentState
+  const canExport = activeState.status === 'ready' && activeState.snapshot.entries.length > 0
+    && rosterState.status === 'ready' && !loading && filteredOperators.length > 0
 
   function changeFilters(next: OperatorDatabaseFilters) {
     setFilters(next)
@@ -56,33 +81,41 @@ export function OperatorWikiViewsPage({ operators, loading }: Props) {
     setCommentPage(0)
   }
 
-  return <section className="calculator-page wiki-stats-page operator-wiki-views-page">
-    <header className="page-intro">
-      <h1>{tab === 'views' ? 'オペレーター別 Wiki 閲覧数' : 'オペレーター別 Wiki コメント件数'}</h1>
-    </header>
-    <AnalysisTabs tabs={TABS} activeTab={tab} onChange={next => {
+  return <PageLayout page="operator-wiki-views" className="wiki-stats-page operator-wiki-views-page" settings={
+    <section className="operator-wiki-views-filters" aria-label="オペレーターの絞り込み">
+      <PageOutputHeader segments={['絞り込み']} actions={
+        <FilterResetButton value={filters} onReset={() => changeFilters(EMPTY_OPERATOR_DATABASE_FILTERS)} />
+      }><h2>絞り込み</h2></PageOutputHeader>
+      <Filters value={filters} professionOptions={PROFESSION_OPTIONS} onChange={changeFilters}
+        showNameInitial={false} searchFirst searchLabel="オペレーター名" searchPlaceholder="オペレーター名で検索" />
+    </section>
+  }>
+    <PageOutputTabs tabs={TABS} activeTab={tab} onChange={next => {
       setTab(next)
       if (next === 'comments') setCommentsOpened(true)
-    }} idPrefix={id} label="Wiki 集計の表示" />
-    <div className="operator-wiki-views-filters" role="region" aria-label="オペレーターの絞り込み">
-      <Filters value={filters} professionOptions={PROFESSION_OPTIONS} onChange={changeFilters}
-        onReset={() => changeFilters(EMPTY_OPERATOR_DATABASE_FILTERS)} showNameInitial={false}
-        searchFirst searchLabel="オペレーター名" searchPlaceholder="オペレーター名で検索" />
-    </div>
+    }} idPrefix={id} label="Wiki 集計の表示" actions={canExport &&
+      <OutputImageSaveButton onClick={() => setImage(activeImage.current?.() ?? null)} />
+    } />
     {rosterState.status === 'error' && <p className="error-box" role="alert">Wiki オペレーター一覧を読み込めませんでした。</p>}
-    <section id={`${id}-panel-views`} role="tabpanel" aria-labelledby={`${id}-tab-views`} hidden={tab !== 'views'}>
+    <AnalysisTabPanel idPrefix={id} activeTab={tab} tab="views">
       <WikiViewPanel operators={filteredOperators} allOperators={allOperators}
+        state={viewState} imageRef={viewImage} filterConditions={filterConditions}
         loading={waitingForOperators} page={viewPage} setPage={setViewPage} />
-    </section>
-    <section id={`${id}-panel-comments`} role="tabpanel" aria-labelledby={`${id}-tab-comments`} hidden={tab !== 'comments'}>
+    </AnalysisTabPanel>
+    <AnalysisTabPanel idPrefix={id} activeTab={tab} tab="comments">
       {commentsOpened && <WikiCommentPanel operators={filteredOperators} allOperators={allOperators}
+        state={commentState} imageRef={commentImage} filterConditions={filterConditions}
         loading={waitingForOperators} page={commentPage} setPage={setCommentPage} />}
-    </section>
-  </section>
+    </AnalysisTabPanel>
+    <footer className="operator-wiki-views-source">出典{' '}
+      <a href="https://arknights.wikiru.jp/" target="_blank" rel="noopener noreferrer">アークナイツ攻略 Wiki</a>
+    </footer>
+    {image && <ComparisonTableImageDialog snapshot={image} onClose={() => setImage(null)} helpMode="none"
+      parentLocation={[STANDARD_PAGE_TITLES['operator-wiki-views'], viewLabel(TABS, tab)]} />}
+  </PageLayout>
 }
 
-function WikiViewPanel({ operators, allOperators, loading, page, setPage }: PanelProps) {
-  const state = useWikiSnapshot(loadOperatorWikiViewSnapshot)
+function WikiViewPanel({ operators, allOperators, loading, page, setPage, state, imageRef, filterConditions }: PanelProps<OperatorWikiViewSnapshot>) {
   const snapshot = state.status === 'ready' ? state.snapshot : null
   const byId = useMemo(() => matchOperatorWikiDisplayEntries(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
   const ranks = useMemo(() => rankOperatorWikiTotals(allOperators, allOperators.map(({ operatorId }) => ({
@@ -99,20 +132,23 @@ function WikiViewPanel({ operators, allOperators, loading, page, setPage }: Pane
 
   if (loading || state.status === 'loading') return <p className="calculator-loading" role="status">読み込み中…</p>
 
-  return <div className="calculator-panel">
+  return <>
     <div className="wiki-stats-meta">
-      <a href="https://arknights.wikiru.jp/" target="_blank" rel="noopener noreferrer">アークナイツ攻略 Wiki</a>
+      <span>閲覧数（回）</span>
       {snapshot && <ObservedTime observedAt={snapshot.observedAt} />}
     </div>
     {state.status === 'error' && <p className="error-box" role="alert">Wiki 閲覧数を読み込めませんでした。</p>}
     <WikiStatsTable columns={columns} rows={rows} ranks={ranks} defaultSort="yesterday"
       page={page} onPageChange={setPage} label="Wiki 閲覧数一覧" tableLabel="オペレーター別のページ閲覧数（回）"
+      imageRef={imageRef} imageTitle="オペレーター別 Wiki 閲覧数（回）" imageConditions={snapshot ? [
+        `前日 ${snapshot.yesterdayDate}`, `当日 ${snapshot.todayDate}`,
+        `取得 ${formatWikiObservedTime(snapshot.observedAt)}`, ...filterConditions,
+      ] : []}
       metricLabel="閲覧数" linkLabel="Wiki ページ" nameColumnClass="wiki-stats-name-column" />
-  </div>
+  </>
 }
 
-function WikiCommentPanel({ operators, allOperators, loading, page, setPage }: PanelProps) {
-  const state = useWikiSnapshot(loadOperatorWikiCommentSnapshot)
+function WikiCommentPanel({ operators, allOperators, loading, page, setPage, state, imageRef, filterConditions }: PanelProps<OperatorWikiCommentSnapshot>) {
   const [period, setPeriod] = useState<WikiStatsPeriod>(30)
   const snapshot = state.status === 'ready' ? state.snapshot : null
   const byId = useMemo(() => matchOperatorWikiDisplayEntries(allOperators, snapshot?.entries ?? []), [allOperators, snapshot])
@@ -137,20 +173,23 @@ function WikiCommentPanel({ operators, allOperators, loading, page, setPage }: P
 
   if (loading || state.status === 'loading') return <p className="calculator-loading" role="status">読み込み中…</p>
 
-  return <div className="calculator-panel">
+  const periodLabel = WIKI_COMMENT_PERIODS.find(({ days }) => days === period)?.label ?? '累計'
+  return <>
+    <WikiPeriodButtons period={period} onChange={next => {
+      setPeriod(next)
+      setPage(0)
+    }} />
     <div className="wiki-stats-meta">
-      <WikiPeriodButtons period={period} onChange={next => {
-        setPeriod(next)
-        setPage(0)
-      }} />
-      {snapshot && <div className="wiki-stats-dates">
-        {range && <WikiDateRange {...range} />}
-        <ObservedTime observedAt={snapshot.observedAt} />
-      </div>}
+      <span>{range ? <WikiDateRange {...range} /> : periodLabel}（件）</span>
+      {snapshot && <ObservedTime observedAt={snapshot.observedAt} />}
     </div>
     {state.status === 'error' && <p className="error-box" role="alert">Wiki コメント件数を読み込めませんでした。</p>}
     <WikiStatsTable columns={COMMENT_COLUMNS} rows={rows} ranks={ranks} defaultSort="comments"
       page={page} onPageChange={setPage} label="Wiki コメント件数一覧" tableLabel="オペレーター別のコメント件数（件）"
+      imageRef={imageRef} imageTitle="オペレーター別 Wiki コメント件数（件）" imageConditions={snapshot ? [
+        periodLabel, range ? (range.start === range.end ? range.end : `${range.start}〜${range.end}`) : `${snapshot.throughDate}まで`,
+        `取得 ${formatWikiObservedTime(snapshot.observedAt)}`, ...filterConditions,
+      ] : []}
       metricLabel="コメント件数" linkLabel="Wiki コメントページ" nameColumnClass="wiki-stats-comments-name-column" />
-  </div>
+  </>
 }

@@ -33,6 +33,7 @@ export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: 
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const STANDARD_PAGE_TITLES = {
+  'operator-wiki-views': 'オペレーター別 Wiki 集計',
   'bar-chart-workbench': '棒グラフ作成',
   'damage-three-comparison': 'DC3 スキル比較',
   'damage-three-power-by-year': '火力水準の比較',
@@ -233,7 +234,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'operator-wiki-views',
     href: '#/analysis/operators/wiki-views',
-    label: 'オペレーター別 Wiki 閲覧数',
+    label: STANDARD_PAGE_TITLES['operator-wiki-views'],
     description: '',
     section: 'analysis',
   },

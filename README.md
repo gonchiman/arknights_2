@@ -55,7 +55,7 @@ npm run generate:enemy-stages
 
 `stage_table.json` の戦闘ステージを `levelId` 単位で重複除去し、各Level JSONから `public/data/enemy-stage-appearances.json` を生成します。取得できなかったLevelと未対応の敵IDは生成物の診断欄に残ります。
 
-「オペレーター別 Wiki 閲覧数」の「コメント」タブは、wikiru の専用コメントページと公開過去ログを集計します。期間別の件数は日本時間の前日まで、累計は取得時点の当日分も含みます。投稿と返信をそれぞれ1件とし、削除済みの表示は数えません。`public/data/operator-wiki-comments.json` には直近30日分の日別件数と累計を保存します。必要なログを確認できない項目は未取得とします。既存の閲覧数の日次処理で更新します。手動では `npm run refresh:operator-wiki-comments`、1人の確認では `npm run refresh:operator-wiki-comments -- --operator <operatorId>` を使います。1人の確認ではファイルを更新しません。
+[オペレーター別 Wiki 集計](docs/operator-wiki-stats/README.md)の「コメント」タブは、wikiru の専用コメントページと公開過去ログを集計します。期間別の件数は日本時間の前日まで、累計は取得時点の当日分も含みます。投稿と返信をそれぞれ1件とし、削除済みの表示は数えません。`public/data/operator-wiki-comments.json` には直近30日分の日別件数と累計を保存します。必要なログを確認できない項目は未取得とします。既存の閲覧数の日次処理で更新します。手動では `npm run refresh:operator-wiki-comments`、1人の確認では `npm run refresh:operator-wiki-comments -- --operator <operatorId>` を使います。1人の確認ではファイルを更新しません。
 
 投稿日時が不明でも、投稿として確認できるものは累計に含めます。返信の日付から集計期間外と確認できる投稿は期間別集計から除き、判定できない期間だけを未取得とします。この判定は敵のコメント集計にも適用します。
 

@@ -1,6 +1,16 @@
-.operator-wiki-views-filters { border: 1px solid var(--border); }
-.operator-wiki-views-filters .filters,
-.operator-wiki-views-filters .rarity-filter { border-bottom: 0; }
+.operator-wiki-views-filters { width: 100%; }
+.operator-wiki-views-filters h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.operator-wiki-views-filters .filters { border: 0; }
+.operator-wiki-views-filters :is(.filters-search-first, .initial-filter) {
+  padding-inline: 0;
+  border: 0;
+}
+.operator-wiki-views-filters .search-filter { max-width: 36rem; }
+.operator-wiki-views-filters .initial-filter-label { width: 7em; font-size: 12px; }
+.operator-wiki-views-page .wiki-stats-meta,
+.operator-wiki-views-page .wiki-stats-pagination { margin: 0; }
+.operator-wiki-views-source { color: var(--text-soft); font-size: 12px; }
+.operator-wiki-views-source a { color: var(--link); }
 
 @media (pointer: coarse) {
   .operator-wiki-views-filters .initial-button,
