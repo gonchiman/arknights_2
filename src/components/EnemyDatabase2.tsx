@@ -10,7 +10,7 @@ import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyNumericFilter } from './EnemyNumericFilter'
 import { EnemyDataContent, EnemyDataNotes } from './EnemyPageShared'
-import { EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
+import { ENEMY_RATING_REFERENCE_TITLE, EnemyRatingReferenceDialog } from './EnemyRatingReferenceDialog'
 import { PageLayout, PageOutputHeader } from './PageLayout'
 import { PageViewSwitch } from './PageViewSwitch'
 import './EnemyAnalysis.css'
@@ -18,6 +18,8 @@ import './EnemyDatabase2.css'
 
 const FILTERS_TITLE = '絞り込み'
 const PAGE = 'enemies-2'
+const PAGE_LOCATION = [STANDARD_PAGE_TITLES[PAGE]]
+const LIST_LOCATION = [...PAGE_LOCATION, ENEMY_LIST_TITLE]
 const INITIAL_FILTERS: EnemyFilters = { query: '', levelType: 'ALL' }
 const STAT_MODES = [['RATING', 'ゲーム内評価'], ['VALUE', '実数値']] as const
 type StatMode = typeof STAT_MODES[number][0]
@@ -26,7 +28,7 @@ type Dialog = { kind: 'enemy'; enemy: EnemyRecord } | { kind: 'ratings' }
 function detailAddress(enemy: EnemyRecord, rows: readonly EnemyRecord[]) {
   const sameName = enemy.index && rows.some(row => row.name === enemy.name && row.id !== enemy.id)
   const label = sameName ? `${enemy.name}（図鑑番号 ${enemy.index}）` : enemy.name
-  return [STANDARD_PAGE_TITLES[PAGE], ENEMY_LIST_TITLE, label]
+  return [...LIST_LOCATION, label]
 }
 
 export function EnemyDatabase2() {
@@ -78,19 +80,19 @@ export function EnemyDatabase2() {
 
   return <PageLayout page={PAGE} className="enemy-db2" settings={settings}>
     <EnemyDataContent loading={loading} error={error} onRetry={retry}>
-      <EnemyDatabase2Results rows={filteredRows} mode={mode} scopeLabel={scopeLabel}
+      <EnemyDatabase2Results rows={filteredRows} mode={mode} scopeLabel={scopeLabel} listLocation={LIST_LOCATION}
         onOpenDetail={(enemy, trigger) => openDialog({ kind: 'enemy', enemy }, trigger)}>
         <div className="enemy-db2-stat-controls">
           <PageViewSwitch label="ステータス表記" views={STAT_MODES} selected={mode} onChange={setMode} />
           <button type="button" className="button secondary" aria-haspopup="dialog"
-            onClick={event => openDialog({ kind: 'ratings' }, event.currentTarget)}>評価基準</button>
+            onClick={event => openDialog({ kind: 'ratings' }, event.currentTarget)}>{ENEMY_RATING_REFERENCE_TITLE}</button>
         </div>
       </EnemyDatabase2Results>
     </EnemyDataContent>
-    <EnemyDataNotes />
+    <EnemyDataNotes parentLocation={PAGE_LOCATION} />
     <a className="enemy-db2-analysis-link" href="#/analysis/enemies">敵の統計分析へ</a>
     {dialog?.kind === 'enemy' && <EnemyDetailModal enemy={dialog.enemy} onClose={closeDialog}
       locationSegments={detailAddress(dialog.enemy, rows)} />}
-    {dialog?.kind === 'ratings' && <EnemyRatingReferenceDialog onClose={closeDialog} />}
+    {dialog?.kind === 'ratings' && <EnemyRatingReferenceDialog onClose={closeDialog} parentLocation={LIST_LOCATION} />}
   </PageLayout>
 }

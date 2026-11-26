@@ -1,18 +1,23 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { ENEMY_RATING_STATS, type EnemyRatingStat } from '../lib/enemyStatRatings'
 import { lockPageScroll } from '../lib/pageScrollLock'
+import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import { EnemyRatingReferenceTable } from './EnemyRatingReferenceTable'
 import { EnemyRatingImageSaveDialog } from './EnemyRatingImageSaveDialog'
 import './EnemyRatingReferenceDialog.css'
+
+export const ENEMY_RATING_REFERENCE_TITLE = '評価基準'
 
 export function EnemyRatingReferenceDialog({
   onClose,
   initialStat = 'magicResistance',
   context = 'database',
+  parentLocation,
 }: {
   onClose: () => void
   initialStat?: EnemyRatingStat
   context?: 'database' | 'histogram'
+  parentLocation?: readonly string[]
 }) {
   const [stat, setStat] = useState<EnemyRatingStat>(initialStat)
   const [imageSaveOpen, setImageSaveOpen] = useState(false)
@@ -23,6 +28,9 @@ export function EnemyRatingReferenceDialog({
   const backdropPointerDownRef = useRef(false)
   const titleId = useId()
   const statId = useId()
+  const location = parentLocation && [
+    ...parentLocation, ENEMY_RATING_REFERENCE_TITLE, ENEMY_RATING_STATS.find(({ key }) => key === stat)!.label,
+  ]
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -60,13 +68,14 @@ export function EnemyRatingReferenceDialog({
     >
       <div className="enemy-rating-reference">
         <header className="enemy-rating-reference-header">
-          <h2 id={titleId}>評価基準</h2>
+          <h2 id={titleId}>{ENEMY_RATING_REFERENCE_TITLE}</h2>
           <div className="enemy-rating-reference-actions">
             <button type="button" onClick={() => {
               setImageStats([stat])
               setSaveStatus('')
               setImageSaveOpen(true)
             }}>画像を保存</button>
+            {location && <ElementLocationCopyButton segments={location} />}
             <button ref={closeRef} type="button" aria-label="評価基準を閉じる" onClick={onClose}>閉じる</button>
           </div>
         </header>
@@ -98,7 +107,7 @@ export function EnemyRatingReferenceDialog({
         </div>
       </div>
     </dialog>
-    {imageSaveOpen && <EnemyRatingImageSaveDialog stats={imageStats} onStatsChange={setImageStats}
+    {imageSaveOpen && <EnemyRatingImageSaveDialog parentLocation={location} stats={imageStats} onStatsChange={setImageStats}
       onClose={() => setImageSaveOpen(false)} onSaved={setSaveStatus} />}
     </>
   )

@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
 import { lockPageScroll } from '../lib/pageScrollLock'
+import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import './GoldenglowDetailModal.css'
 
-export function GoldenglowDetailModal({ title, closeLabel, children, onClose, className, initialFocusRef, closeDisabled = false, closeOnContextMenu = false }: {
+export function GoldenglowDetailModal({ title, closeLabel, children, onClose, className, initialFocusRef, closeDisabled = false, closeOnContextMenu = false, parentLocation }: {
   title: string
   closeLabel: string
   children: ReactNode
@@ -11,6 +12,7 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
   className?: string
   initialFocusRef?: RefObject<HTMLElement | null>
   closeDisabled?: boolean
+  parentLocation?: readonly string[]
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -58,7 +60,8 @@ export function GoldenglowDetailModal({ title, closeLabel, children, onClose, cl
     >
       <header className="gg-detail-header">
         <h2 ref={titleRef} id={titleId} tabIndex={-1}>{title}</h2>
-        <button type="button" aria-label={closeLabel} disabled={closeDisabled}
+        {parentLocation && <ElementLocationCopyButton segments={[...parentLocation, title]} />}
+        <button className="gg-detail-close" type="button" aria-label={closeLabel} disabled={closeDisabled}
           onClick={() => { if (!closeDisabled) onClose() }}>×</button>
       </header>
       <div className="gg-detail-body">{children}</div>

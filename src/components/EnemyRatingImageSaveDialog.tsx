@@ -7,11 +7,12 @@ import { ChartImageSaveDialog, type ChartImageAspectSettings } from './ChartImag
 import { EnemyRatingReferenceImage, saveEnemyRatingReferenceImage } from './saveEnemyRatingReferenceImage'
 import './EnemyRatingImageSaveDialog.css'
 
-export function EnemyRatingImageSaveDialog({ stats, onStatsChange, onClose, onSaved }: {
+export function EnemyRatingImageSaveDialog({ stats, onStatsChange, onClose, onSaved, parentLocation }: {
   stats: readonly EnemyRatingStat[]
   onStatsChange: (stats: EnemyRatingStat[]) => void
   onClose: () => void
   onSaved?: (message: string) => void
+  parentLocation?: readonly string[]
 }) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(false)
@@ -49,6 +50,7 @@ export function EnemyRatingImageSaveDialog({ stats, onStatsChange, onClose, onSa
   }
 
   return <ChartImageSaveDialog
+    parentLocation={parentLocation}
     initialFilename={filename}
     getDefaultFilename={(ratio) => ratio === undefined ? filename : withChartImageAspect(filename, ratio)}
     aspect={aspectSettings}

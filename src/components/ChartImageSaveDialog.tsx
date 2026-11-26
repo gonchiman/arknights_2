@@ -12,7 +12,8 @@ export interface ChartImageAspectSettings {
   height: string
 }
 
-export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = CHART_IMAGE_ASPECT_PRESETS, aspectHint, canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false, archive = false, saveLabel, progress, showFilename = true }: {
+export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspect, onAspectChange, aspectError, aspectPresets = CHART_IMAGE_ASPECT_PRESETS, aspectHint, canChooseLocation, saving, saveDisabled = false, error, onClose, onSave, additionalSaveAction, helpMode = 'inline', options, preview, videoExtension, cancelWhileSaving = false, archive = false, saveLabel, progress, showFilename = true, parentLocation }: {
+  parentLocation?: readonly string[]
   initialFilename: string
   getDefaultFilename?: (aspectRatio?: number) => string
   aspect?: ChartImageAspectSettings
@@ -79,7 +80,7 @@ export function ChartImageSaveDialog({ initialFilename, getDefaultFilename, aspe
     ? `${outputLabel}を保存できませんでした。保存先を確認して、もう一度お試しください。`
     : error
 
-  return <GoldenglowDetailModal title={`${mediaLabel}を保存`} closeLabel={`${mediaLabel}の保存を閉じる`}
+  return <GoldenglowDetailModal title={`${mediaLabel}を保存`} closeLabel={`${mediaLabel}の保存を閉じる`} parentLocation={parentLocation}
     className={`chart-image-save-dialog${hasPreview ? ' chart-image-save-dialog-with-preview' : ''}`} initialFocusRef={inputRef} closeDisabled={closeDisabled} onClose={onClose}>
     <form className="chart-image-save-form" aria-busy={saving}
       onSubmit={(event) => {
