@@ -12,10 +12,11 @@ import { useEnemyAggregation } from '../lib/useEnemyAggregation'
 import type { SkillRecord } from '../types/skill'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { createDamageThreeStatisticsChartImage } from './createDamageThreeStatisticsChartImage'
-import { createDamageThreeEnemyAdvantageImage, type EnemyAdvantageImage } from './createDamageThreeEnemyAdvantageImage'
+import { createDamageThreeEnemyAdvantageImage, ENEMY_ADVANTAGE_VIEWS, type EnemyAdvantageImage, type EnemyAdvantageView } from './createDamageThreeEnemyAdvantageImage'
 import { ComparisonTableImageDialog } from './ComparisonTableImageDialog'
 import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable } from './DamageThreeEnemyAdvantageViews'
+import { DamageThreeSkillPhysicalRateHistogram } from './DamageThreeSkillPhysicalRateHistogram'
 import { useDamageThreeEnemySpawnAdvantage } from './useDamageThreeEnemySpawnAdvantage'
 import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
@@ -92,7 +93,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [statisticView, setStatisticView] = useState<StatisticView>('distribution')
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
-  const [enemyFormat, setEnemyFormat] = useState<TableChartView>('chart')
+  const [enemyFormat, setEnemyFormat] = useState<EnemyAdvantageView>('chart')
   const [showDefenseBands, setShowDefenseBands] = useState(false)
   const [imageSnapshot, setImageSnapshot] = useState<(EnemyAdvantageImage & { location: string[] }) | null>(null)
   const [selectedResistance, setSelectedResistance] = useState(0)
@@ -111,6 +112,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
   const statsActive = mode === 'statistics'
   const enemyActive = mode === 'enemies'
+  const enemyOverviewActive = enemyActive && enemyFormat !== 'histogram'
   const anyStatistics = statsActive || enemyActive
   const enemyPopulation = useMemo(() => scoped && !unavailable
     ? buildEnemySpawnPopulation(scoped.rows, scoped.counts) : null, [scoped, unavailable])
@@ -145,7 +147,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     : rankImage && { view: 'chart', snapshot: rankImage }
   const sortedEntries = useSkillDamageMatrixSort(filtered, mode === 'actual' ? 'actual' : 'virtual',
     distribution?.resistanceThresholds, anyStatistics ? DEFAULT_SORT : sort, effectPolicy)
-  const format = enemyActive ? [viewLabel(TABLE_CHART_VIEWS, enemyFormat)]
+  const format = enemyActive ? [viewLabel(ENEMY_ADVANTAGE_VIEWS, enemyFormat)]
     : statsActive ? [viewLabel(STATISTIC_VIEWS, statisticView), viewLabel(TABLE_CHART_VIEWS, statisticFormat)]
     : [`表（${viewLabel(ATTRIBUTE_LAYOUTS, layout)}）`]
   const pages = Math.ceil(filtered.length / PAGE_SIZE)
@@ -242,16 +244,17 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 }} />
                 ダメージ差を表示
               </label>}
-              {(enemyActive || (statsActive && statisticView === 'advantage')) && <div className="dc3-matrix-option-group">
+              {(enemyOverviewActive || (statsActive && statisticView === 'advantage')) && <div className="dc3-matrix-option-group">
                 <span className="dc3-matrix-option-label">集計単位</span>
                 <PageViewSwitch views={ADVANTAGE_UNITS} selected={advantageUnit} onChange={setAdvantageUnit} label="集計単位" />
               </div>}
               {anyStatistics && <div className="dc3-matrix-option-group">
                 <span className="dc3-matrix-option-label">表示形式</span>
-                <PageViewSwitch views={TABLE_CHART_VIEWS} selected={enemyActive ? enemyFormat : statisticFormat}
-                  onChange={enemyActive ? setEnemyFormat : setStatisticFormat} label="表示形式" />
+                {enemyActive
+                  ? <PageViewSwitch views={ENEMY_ADVANTAGE_VIEWS} selected={enemyFormat} onChange={setEnemyFormat} label="表示形式" />
+                  : <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />}
               </div>}
-              {enemyActive && <label className="dc3-matrix-toggle">
+              {enemyOverviewActive && <label className="dc3-matrix-toggle">
                 <input type="checkbox" checked={showDefenseBands} onChange={event => setShowDefenseBands(event.target.checked)} />
                 防御力帯別の内訳
               </label>}
@@ -267,9 +270,10 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                     <div className="dc3-matrix-conditions">
                       <span>対象敵 {NUMBER.format(enemyPopulation.enemyCount)}種類</span>
                       <span>有効スキル数 {NUMBER.format(enemyStats.skillCount)}</span>
-                      <span>有効段階数 {NUMBER.format(enemyStats.stageCount)}</span>
+                      {enemyOverviewActive && <span>有効段階数 {NUMBER.format(enemyStats.stageCount)}</span>}
                     </div>
-                    {enemyFormat === 'chart' ? <DamageThreeEnemyAdvantageChart rows={enemyRows} unit={advantageUnit} />
+                    {enemyFormat === 'histogram' ? <DamageThreeSkillPhysicalRateHistogram bins={enemyStats.skillPhysicalRateBins} />
+                      : enemyFormat === 'chart' ? <DamageThreeEnemyAdvantageChart rows={enemyRows} unit={advantageUnit} />
                       : <div className="damage-two-table-wrap" role="region" aria-label="出現敵での優勢率" tabIndex={0}>
                           <DamageThreeEnemyAdvantageTable rows={enemyRows} unit={advantageUnit} />
                         </div>}

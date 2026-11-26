@@ -46,11 +46,16 @@ export interface EnemySpawnAdvantageRow {
   stage: WeightedVotes
 }
 
+export type SkillPhysicalRateBin = { lower: number; upper: number; count: number }
+
 export interface EnemySpawnAdvantageStatistics {
   rows: EnemySpawnAdvantageRow[]
   skillCount: number
   stageCount: number
+  skillPhysicalRateBins: SkillPhysicalRateBin[]
 }
+
+const SKILL_RATE_BIN_WIDTH = 10
 
 const defenseBands = [
   { label: '200未満', upper: 200 }, { label: '200〜499', upper: 500 },
@@ -88,9 +93,14 @@ export function summarizeEnemySpawnAdvantage(
     if (group) group.push(stage)
     else skills.set(key, [stage])
   }
+  const skillPhysicalRateBins = Array.from({ length: 100 / SKILL_RATE_BIN_WIDTH }, (_, index) => ({
+    lower: index * SKILL_RATE_BIN_WIDTH, upper: (index + 1) * SKILL_RATE_BIN_WIDTH, count: 0,
+  }))
   let stageCount = 0
   for (const group of skills.values()) {
     stageCount += group.length
+    const winsByStageCount = new Map<number, number>()
+    let comparableSpawns = 0
     pairs.forEach(({ spawnCount }, index) => {
       const votes = emptyVotes()
       for (const { cells } of group) {
@@ -104,7 +114,20 @@ export function summarizeEnemySpawnAdvantage(
       addVotes(band.stage, votes, spawnCount)
       // Each skill shares one vote among the valid stages for this particular enemy.
       addVotes(band.skill, votes, spawnCount / votes.count)
+      const weightedWins = spawnCount * votes.physicalWins
+      winsByStageCount.set(votes.count, (winsByStageCount.get(votes.count) ?? 0) + weightedWins)
+      comparableSpawns += spawnCount
     })
+    if (comparableSpawns > 0) {
+      // Combine the stage fractions before dividing so six 1/3 votes count as exactly two.
+      let numerator = 0, denominator = 1
+      for (const [validStages, weightedWins] of winsByStageCount) {
+        numerator = numerator * validStages + weightedWins * denominator
+        denominator *= validStages
+      }
+      const binIndex = Math.floor(numerator * skillPhysicalRateBins.length / (denominator * comparableSpawns))
+      skillPhysicalRateBins[Math.min(binIndex, skillPhysicalRateBins.length - 1)].count++
+    }
   }
   const [overall, ...bands] = rows
   for (const band of bands) {
@@ -112,5 +135,5 @@ export function summarizeEnemySpawnAdvantage(
     addVotes(overall.skill, band.skill)
     addVotes(overall.stage, band.stage)
   }
-  return { rows, skillCount: skills.size, stageCount }
+  return { rows, skillCount: skills.size, stageCount, skillPhysicalRateBins }
 }
