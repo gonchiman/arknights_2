@@ -18,7 +18,7 @@
 | このサイトのテーブルを新規作成・修正するとき | [テーブルの表示方針](instructions/table-ui.md) |
 | 分析で参照する一覧・対応状況・集計結果を新設するとき、掲載内容・元データ・抽出や計算の規則を変更するとき、またはその版を公開するとき | [分析に使うデータと結果の版管理](instructions/analysis-versioning.md) |
 | このサイトのグラフの追加・修正について、案を提示するとき、設計するとき、または実装するとき | [グラフの操作方針](instructions/chart-ui.md) |
-| 共通の棒グラフ作成ページ、その提供元、共通描画を追加・変更するとき | [共通の棒グラフ作成仕様](docs/bar-chart-workbench/README.md) |
+| 棒グラフ作成ページ・提供元・描画形式・共通描画の追加や変更を提案・設計・実装するとき | [共通の棒グラフ作成仕様](docs/bar-chart-workbench/README.md) |
 | ステータス指標を色で区別するグラフを追加・変更するとき | [ステータス指標の共通配色](docs/stat-metric-colors/README.md) |
 | テーブルの画像出力を作成・変更するとき | [テーブル画像出力の共通仕様](instructions/shared/table-image.md) |
 | MOD比較テーブルの画像出力・最大MOD表示を新規作成・修正するとき | [MOD比較テーブルの共通出力](docs/comparison-table-output/README.md) |
