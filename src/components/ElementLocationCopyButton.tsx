@@ -21,14 +21,14 @@ export function ElementLocationCopyButton({ segments, className, disabled = fals
   const copyState = feedback?.text === text ? feedback.state : null
   const visualState = copying ? 'copying' : copyState ?? 'idle'
 
-  async function copyLocation() {
+  async function copyLocation(trigger: HTMLButtonElement) {
     if (disabled || !text || copyInProgress.current) return
     const copiedText = text
     copyInProgress.current = true
     setCopying(true)
     setFeedback(null)
     try {
-      await writeClipboardText(`〈${copiedText}〉`)
+      await writeClipboardText(`〈${copiedText}〉`, trigger)
       if (currentText.current === copiedText) setFeedback({ text: copiedText, state: 'copied' })
     } catch {
       if (currentText.current === copiedText) setFeedback({ text: copiedText, state: 'failed' })
@@ -42,7 +42,7 @@ export function ElementLocationCopyButton({ segments, className, disabled = fals
     <button type="button" className={`output-icon-button element-location-copy-button${className ? ` ${className}` : ''}`}
       disabled={disabled || !text} aria-disabled={disabled || copying || !text} aria-busy={copying}
       data-copy-state={visualState}
-      aria-label={text ? `${text}の場所をコピー` : '場所をコピー'} onClick={() => void copyLocation()}>
+      aria-label={text ? `${text}の場所をコピー` : '場所をコピー'} onClick={event => void copyLocation(event.currentTarget)}>
       <span className="output-icon-face" aria-hidden="true">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" focusable="false">
