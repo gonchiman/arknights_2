@@ -43,6 +43,39 @@ const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
 
+test('出現敵の棒上ラベルは全体グラフの保存時だけ選べ、集計単位ごとの割合を表示する', () => {
+  const options = {
+    statistics: { skillCount: 2, stageCount: 3, skillPhysicalRateBins: [],
+      rows: [{ label: '全体', spawnCount: 500,
+        skill: { count: 1000, physicalWins: 999, ties: 1, artsWins: 0 },
+        stage: { count: 1500, physicalWins: 825, ties: 150, artsWins: 525 } }] },
+    format: 'chart', showBands: false, advantageUnit: 'skill',
+    aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
+    filters: { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' },
+  }
+  for (const [advantageUnit, values] of [['skill', ['99.9', '0.1', '0.0']], ['stage', ['55.0', '10.0', '35.0']]]) {
+    const { snapshot, alternateLayout } = createEnemyImage({ ...options, advantageUnit })
+    assert.equal(alternateLayout.label, '割合を棒の上に表示')
+    assert.deepEqual(alternateLayout.defaultAspect, { preset: '16:9', width: '16', height: '9' })
+    assert.equal(alternateLayout.snapshot.title, snapshot.title)
+    assert.ok(alternateLayout.snapshot.filenameParts.includes('割合を棒上に表示'))
+    assert.ok(!snapshot.filenameParts.includes('割合を棒上に表示'))
+    const svg = renderToStaticMarkup(alternateLayout.snapshot.chart({ width: 928, height: 420 }))
+    const bars = [...svg.matchAll(/<rect\b[^>]*data-series="([^"]+)"[^>]*\by="([^"]+)"[^>]*>/g)]
+    assert.deepEqual(bars.map(bar => bar[1]), ['physical', 'tie', 'arts'])
+    const directLabels = [...svg.matchAll(/<text\b[^>]*\bx="([^"]+)"[^>]*\by="([^"]+)"[^>]*>(\d+\.\d%)<\/text>/g)]
+    assert.deepEqual(directLabels.map(label => label[3]), values.map(value => value + '%'))
+    directLabels.forEach((label, i) => {
+      assert.ok(Number(label[2]) < Number(bars[i][2]), '割合は棒の上に表示する')
+      if (i > 0) assert.ok(Number(label[1]) > Number(directLabels[i - 1][1]), '狭い区分のラベルも別々に置く')
+    })
+    assert.doesNotMatch(svg, /NaN|Infinity/)
+  }
+  for (const overrides of [{ showBands: true }, { format: 'table' }, { format: 'histogram' }]) {
+    assert.equal(createEnemyImage({ ...options, ...overrides }).alternateLayout, undefined)
+  }
+})
+
 test('スキル別の分布は以前の段階単位・防御力帯の選択に左右されず表示中の条件を保存する', () => {
   const counts = [4, 1, 0, 0, 0, 0, 0, 0, 0, 2]
   const bins = counts.map((count, index) => ({ lower: index * 10, upper: (index + 1) * 10, count }))

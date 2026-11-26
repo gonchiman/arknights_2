@@ -69,6 +69,15 @@
 .chart-image-frame-plot { min-width: 0; }
 .chart-image-frame-plot > svg { display: block; }
 .chart-image-frame-footer { min-width: 0; }
+.chart-image-frame-note {
+  margin: 0;
+  padding-top: 10px;
+  color: var(--text-muted, #666);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 .chart-image-frame-footer.has-axis-title { padding-top: 12px; }
 .chart-image-frame-axis-title {
   margin: 0;

@@ -16,3 +16,18 @@
 .comparison-table-image-frame .dc3-enemy-advantage-table {
   border-inline: 1px solid var(--border);
 }
+
+.dc3-enemy-advantage-labeled-image .chart-image-frame-heading {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 8px;
+  padding-top: 12px;
+}
+.dc3-enemy-advantage-labeled-image .chart-image-frame-legends { display: none; }
+.dc3-enemy-advantage-labeled-image .chart-image-frame-heading > strong { font-size: 28px; line-height: 1.3; }
+.dc3-enemy-advantage-labeled-image .chart-image-frame-conditions {
+  justify-self: center;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
