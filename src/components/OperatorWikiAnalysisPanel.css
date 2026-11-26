@@ -1,0 +1,22 @@
+.wiki-analysis-panel { display: grid; gap: 10px; min-width: 0; }
+.wiki-analysis-panel > .page-view-switch { justify-self: start; }
+.wiki-analysis-tools, .wiki-analysis-relation-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.wiki-analysis-tools { justify-content: space-between; }
+.wiki-analysis-relation-values strong { color: var(--text); font-size: 14px; }
+.wiki-analysis-table table { width: 100%; min-width: 0; }
+.wiki-analysis-table thead th { padding: 7px 8px; text-align: right; }
+.wiki-analysis-table thead th:first-child { text-align: left; }
+.wiki-analysis-legend, .wiki-analysis-empty { color: var(--text-soft); font-size: 12px; }
+.wiki-analysis-legend { text-align: right; }
+.wiki-analysis-empty { margin: 8px 0; }
+@media (pointer: coarse) {
+  .wiki-analysis-tools .button { min-height: 44px; }
+}

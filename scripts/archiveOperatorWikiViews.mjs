@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { isCalendarDate, parseOperatorWikiViewSnapshot } from '../src/lib/operatorWikiViews.ts'
+import { isCalendarDate, parseOperatorWikiViewHistory, parseOperatorWikiViewSnapshot } from '../src/lib/operatorWikiViews.ts'
 
 const HISTORY_DIRECTORY = fileURLToPath(new URL('../public/data/operator-wiki-views-history/', import.meta.url))
 const STAGING_DIRECTORY = fileURLToPath(new URL('../.cache/', import.meta.url))
@@ -16,15 +16,7 @@ async function readHistory(path, date) {
     throw error
   }
 
-  const history = JSON.parse(source)
-  if (history?.date !== date || typeof history.observedAt !== 'string'
-    || !Number.isFinite(Date.parse(history.observedAt))
-    || !history.counts || typeof history.counts !== 'object' || Array.isArray(history.counts)
-    || Object.entries(history.counts).some(([id, value]) =>
-      !id.trim() || (value !== null && (!Number.isSafeInteger(value) || value < 0)))) {
-    throw new Error(`Wiki 閲覧数の履歴が不正です。 ${path}`)
-  }
-  return { history, source }
+  return { history: parseOperatorWikiViewHistory(JSON.parse(source), date), source }
 }
 
 export async function loadOperatorWikiViewHistory(date, { directory = HISTORY_DIRECTORY } = {}) {
