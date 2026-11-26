@@ -24,6 +24,7 @@ const HOME_PANELS = [
     title: '敵',
     links: [
       { label: '敵データベース', href: '#/enemies' },
+      { label: STANDARD_PAGE_TITLES['enemies-2'], href: '#/enemies-2' },
       { label: '敵の統計分析', href: '#/analysis/enemies' },
       { label: '敵の重回帰分析', href: '#/analysis/enemies/regression' },
     ],

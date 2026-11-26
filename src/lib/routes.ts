@@ -53,6 +53,7 @@ export type AppRoute =
   | { view: 'goldenglow-trial-benchmark' }
   | { view: 'comparison' }
   | { view: 'enemies' }
+  | { view: 'enemies-2' }
   | { view: 'enemy-analysis' }
   | { view: 'enemy-wiki-stats' }
   | { view: 'enemy-regression' }
@@ -297,6 +298,7 @@ export function parseHashRoute(hash: string): AppRoute {
   if (hash === '#/analysis/goldenglow-target-switch') return { view: 'goldenglow-target-switch' }
   if (hash === '#/comparison') return { view: 'comparison' }
   if (hash === '#/enemies') return { view: 'enemies' }
+  if (hash === '#/enemies-2') return { view: 'enemies-2' }
   if (matchesEnemyAggregationRoute(hash, '#/analysis/enemies')) return { view: 'enemy-analysis' }
   if (hash === '#/analysis/enemies/wiki-stats') return { view: 'enemy-wiki-stats' }
   if (hash === '#/analysis/enemies/regression') return { view: 'enemy-regression' }
