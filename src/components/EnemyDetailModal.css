@@ -36,7 +36,7 @@
 
 .enemy-detail-modal-header > div { min-width: 0; }
 
-.enemy-detail-modal-header span {
+.enemy-detail-modal-header > div:first-child > span {
   display: block;
   color: var(--text-muted);
   font-size: 9px;
@@ -58,7 +58,14 @@
   font-size: 11px;
 }
 
-.enemy-detail-modal-header button {
+.enemy-detail-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.enemy-detail-close {
   width: 44px;
   height: 44px;
   flex: 0 0 44px;
@@ -71,8 +78,8 @@
   cursor: pointer;
 }
 
-.enemy-detail-modal-header button:hover { background: var(--surface-hover); }
-.enemy-detail-modal-header button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.enemy-detail-close:hover { background: var(--surface-hover); }
+.enemy-detail-close:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
 .enemy-detail-modal-body {
   min-height: 0;

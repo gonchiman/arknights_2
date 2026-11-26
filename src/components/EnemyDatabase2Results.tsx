@@ -10,7 +10,7 @@ import './DamageCalculatorTwo.css'
 import './EnemyDatabase2Results.css'
 
 const PAGE_SIZE = 100
-const OUTPUT_NAME = '敵一覧'
+export const ENEMY_LIST_TITLE = '敵一覧'
 const INTEGER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const DECIMAL = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 type Mode = 'RATING' | 'VALUE'
@@ -60,7 +60,7 @@ function EnemyListTable({ rows, mode, sort = null, onSort, onOpenDetail }: {
   onSort?: (key: EnemyTableSortKey) => void
   onOpenDetail?: OpenDetail
 }) {
-  return <table className="damage-two-table enemy-db2-table" aria-label={OUTPUT_NAME}>
+  return <table className="damage-two-table enemy-db2-table" aria-label={ENEMY_LIST_TITLE}>
     <colgroup>{COLUMNS.map(column => <col key={column.key} className={`enemy-db2-col-${column.key}`} />)}</colgroup>
     <thead><tr>{COLUMNS.map(column => {
       const label = heading(column, mode)
@@ -121,9 +121,9 @@ export function EnemyDatabase2Results({ rows, mode, scopeLabel, onOpenDetail, ch
   }
 
   return <>
-    <PageOutputHeader segments={[OUTPUT_NAME]}
+    <PageOutputHeader segments={[ENEMY_LIST_TITLE]}
       actions={visible.length > 0 && <OutputImageSaveButton onClick={saveCurrentPage} />}>
-      <div className="enemy-db2-result-heading"><h2>{OUTPUT_NAME}</h2>
+      <div className="enemy-db2-result-heading"><h2>{ENEMY_LIST_TITLE}</h2>
         <span role="status">{INTEGER.format(rows.length)}体</span>
       </div>
     </PageOutputHeader>

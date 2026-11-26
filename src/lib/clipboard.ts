@@ -1,4 +1,4 @@
-export async function writeClipboardText(text: string): Promise<void> {
+export async function writeClipboardText(text: string, trigger?: HTMLElement): Promise<void> {
   if (navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text)
@@ -18,17 +18,23 @@ export async function writeClipboardText(text: string): Promise<void> {
   textarea.style.left = '-9999px'
   textarea.style.opacity = '0'
   textarea.style.pointerEvents = 'none'
-  document.body.append(textarea)
+  // A native modal makes the rest of the document inert, including a textarea appended to body.
+  const dialog = (trigger?.isConnected ? trigger.closest('dialog[open]') : null)
+    ?? previousFocus?.closest('dialog[open]')
+  const container = dialog ?? document.body
+  container.append(textarea)
 
   let copied = false
   try {
     textarea.focus({ preventScroll: true })
-    textarea.select()
-    textarea.setSelectionRange(0, textarea.value.length)
-    copied = document.execCommand('copy')
+    if (document.activeElement === textarea) {
+      textarea.select()
+      textarea.setSelectionRange(0, textarea.value.length)
+      copied = document.execCommand('copy')
+    }
   } finally {
     textarea.remove()
-    previousFocus?.focus()
+    if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true })
   }
 
   if (!copied) throw new Error('クリップボードへコピーできませんでした。')

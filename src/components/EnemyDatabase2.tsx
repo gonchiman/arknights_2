@@ -2,9 +2,10 @@ import { useMemo, useRef, useState } from 'react'
 import { matchesEnemyFilters, type EnemyFilters } from '../lib/enemyData'
 import { formatEnemyLevelSelection } from '../lib/enemyLevelSelection'
 import { formatEnemyNumericCondition, matchesEnemyNumericConditions, type EnemyNumericCondition } from '../lib/enemyNumericFilters'
+import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { useEnemyRecords } from '../lib/useEnemyRecords'
 import type { EnemyRecord } from '../types/enemy'
-import { EnemyDatabase2Results } from './EnemyDatabase2Results'
+import { EnemyDatabase2Results, ENEMY_LIST_TITLE } from './EnemyDatabase2Results'
 import { EnemyDetailModal } from './EnemyDetailModal'
 import { EnemyFilterPanel } from './EnemyFilterPanel'
 import { EnemyNumericFilter } from './EnemyNumericFilter'
@@ -16,10 +17,17 @@ import './EnemyAnalysis.css'
 import './EnemyDatabase2.css'
 
 const FILTERS_TITLE = '絞り込み'
+const PAGE = 'enemies-2'
 const INITIAL_FILTERS: EnemyFilters = { query: '', levelType: 'ALL' }
 const STAT_MODES = [['RATING', 'ゲーム内評価'], ['VALUE', '実数値']] as const
 type StatMode = typeof STAT_MODES[number][0]
 type Dialog = { kind: 'enemy'; enemy: EnemyRecord } | { kind: 'ratings' }
+
+function detailAddress(enemy: EnemyRecord, rows: readonly EnemyRecord[]) {
+  const sameName = enemy.index && rows.some(row => row.name === enemy.name && row.id !== enemy.id)
+  const label = sameName ? `${enemy.name}（図鑑番号 ${enemy.index}）` : enemy.name
+  return [STANDARD_PAGE_TITLES[PAGE], ENEMY_LIST_TITLE, label]
+}
 
 export function EnemyDatabase2() {
   const { rows, loading, error, retry } = useEnemyRecords()
@@ -68,7 +76,7 @@ export function EnemyDatabase2() {
     <EnemyNumericFilter legend="数値条件" conditions={conditions} onChange={setConditions} showHints={false} />
   </section>
 
-  return <PageLayout page="enemies-2" className="enemy-db2" settings={settings}>
+  return <PageLayout page={PAGE} className="enemy-db2" settings={settings}>
     <EnemyDataContent loading={loading} error={error} onRetry={retry}>
       <EnemyDatabase2Results rows={filteredRows} mode={mode} scopeLabel={scopeLabel}
         onOpenDetail={(enemy, trigger) => openDialog({ kind: 'enemy', enemy }, trigger)}>
@@ -81,7 +89,8 @@ export function EnemyDatabase2() {
     </EnemyDataContent>
     <EnemyDataNotes />
     <a className="enemy-db2-analysis-link" href="#/analysis/enemies">敵の統計分析へ</a>
-    {dialog?.kind === 'enemy' && <EnemyDetailModal enemy={dialog.enemy} onClose={closeDialog} />}
+    {dialog?.kind === 'enemy' && <EnemyDetailModal enemy={dialog.enemy} onClose={closeDialog}
+      locationSegments={detailAddress(dialog.enemy, rows)} />}
     {dialog?.kind === 'ratings' && <EnemyRatingReferenceDialog onClose={closeDialog} />}
   </PageLayout>
 }

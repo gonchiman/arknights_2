@@ -1,10 +1,12 @@
 import { useEffect, useId, useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import type { EnemyLevelType, EnemyRecord } from '../types/enemy'
+import { ElementLocationCopyButton } from './ElementLocationCopyButton'
 import './EnemyDetailModal.css'
 
 interface Props {
   enemy: EnemyRecord
   onClose: () => void
+  locationSegments?: readonly string[]
 }
 
 const LEVEL_LABELS: Record<EnemyLevelType, string> = {
@@ -34,7 +36,7 @@ const ATTACK_WAY_LABELS: Record<string, string> = {
 const INTEGER_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const DECIMAL_FORMATTER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 2 })
 
-export function EnemyDetailModal({ enemy, onClose }: Props) {
+export function EnemyDetailModal({ enemy, onClose, locationSegments }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const backdropPointerDownRef = useRef(false)
@@ -97,7 +99,10 @@ export function EnemyDetailModal({ enemy, onClose }: Props) {
             <h2 ref={titleRef} id={titleId} tabIndex={-1}>{enemy.name}</h2>
             <p>図鑑番号 {enemy.index || '—'} · {LEVEL_LABELS[enemy.levelType]}</p>
           </div>
-          <button type="button" aria-label="敵の詳細を閉じる" onClick={onClose}>×</button>
+          <div className="enemy-detail-header-actions">
+            {locationSegments && <ElementLocationCopyButton segments={locationSegments} />}
+            <button className="enemy-detail-close" type="button" aria-label="敵の詳細を閉じる" onClick={onClose}>×</button>
+          </div>
         </header>
 
         <div className="enemy-detail-modal-body">
