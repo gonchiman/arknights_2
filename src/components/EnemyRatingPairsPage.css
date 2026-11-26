@@ -1,0 +1,63 @@
+.enemy-rating-pairs-settings {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.enemy-rating-pairs-page h2,
+.enemy-rating-pairs-page summary {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.enemy-rating-pairs-settings .enemy-analysis-aggregation {
+  gap: 8px 16px;
+}
+
+.enemy-rating-pairs-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  border-bottom: 1px solid var(--border);
+}
+
+.enemy-rating-pairs-filters summary {
+  padding-block: 7px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.enemy-rating-pairs-filters summary span,
+.enemy-rating-pairs-population {
+  color: var(--text-soft);
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.enemy-rating-pairs-filters summary span {
+  margin-inline-start: 8px;
+}
+
+.enemy-rating-pairs-filters .enemy-analysis-filters {
+  border: 0;
+  padding-inline: 0;
+}
+
+.enemy-rating-pairs-heading,
+.enemy-rating-pairs-population {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+
+.enemy-rating-pairs-heading {
+  padding-block: 4px;
+}
+
+.enemy-rating-pairs-focus {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,4 +1,4 @@
-import { APP_NAV_ITEMS, ATTRIBUTE_EFFECTS_ITEM, DAMAGE_THREE_POWER_BY_YEAR_ITEM, DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM, SKILL_DPS_ANALYSIS_ITEM, SKILL_NUMERIC_STATISTICS_ITEM, SKILL_LEARNING_ITEMS, STANDARD_PAGE_TITLES } from '../lib/navigation'
+import { APP_NAV_ITEMS, ATTRIBUTE_EFFECTS_ITEM, ENEMY_RATING_PAIRS_ITEM, DAMAGE_THREE_POWER_BY_YEAR_ITEM, DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM, SKILL_DPS_ANALYSIS_ITEM, SKILL_NUMERIC_STATISTICS_ITEM, SKILL_LEARNING_ITEMS, STANDARD_PAGE_TITLES } from '../lib/navigation'
 import './HomePage.css'
 
 const HOME_PANELS = [
@@ -26,6 +26,7 @@ const HOME_PANELS = [
       { label: '敵データベース', href: '#/enemies' },
       { label: STANDARD_PAGE_TITLES['enemies-2'], href: '#/enemies-2' },
       { label: '敵の統計分析', href: '#/analysis/enemies' },
+      ENEMY_RATING_PAIRS_ITEM,
       { label: '敵の重回帰分析', href: '#/analysis/enemies/regression' },
     ],
   },
