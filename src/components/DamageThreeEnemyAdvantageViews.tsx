@@ -1,4 +1,4 @@
-import type { EnemySpawnAdvantageRow } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOperatorVotes, EnemySpawnAdvantageRow, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
@@ -34,26 +34,37 @@ export function getEnemyAdvantagePlotHeight(rowCount: number) {
   return rowCount * 80
 }
 
-export function DamageThreeEnemyAdvantagePlot({ rows, unit, width, height }: EnemyAdvantageViewProps & {
+interface PlotSize {
   width?: number
   height: number
+}
+
+interface VotePlotRow {
+  key: string
+  label: string
+  note?: string
+  votes: WeightedVotes
+}
+
+function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
+  rows: VotePlotRow[]
+  title: string
+  minWidth?: string
 }) {
   const rowHeight = height / Math.max(rows.length, 1)
   return <svg className="dc3-enemy-advantage-plot" width={width ?? '100%'} height={height}
-    aria-label="出現回数で重み付けした属性別の優勢率" role="img">
-    <desc>{rows.map(row => {
-      const votes = row[unit]
+    style={minWidth ? { minWidth } : undefined} aria-label={title} role="img">
+    <desc>{rows.map(({ label, note, votes }) => {
       const details = votes.count > 0 ? ADVANTAGE_OUTCOMES.map(({ key, label }) =>
         `${label} ${formatAdvantagePercentage(votes[key], votes.count)}%`).join('、') : '対象なし'
-      return `${row.label}、出現回数 ${INTEGER.format(row.spawnCount)}、${details}`
+      return [label, note, details].filter(Boolean).join('、')
     }).join('。')}</desc>
-    {rows.map((row, index) => {
-      const votes = row[unit]
+    {rows.map(({ key, label, note, votes }, index) => {
       const center = (index + 0.5) * rowHeight
       let offset = 0
-      return <g key={row.label} data-band={row.label} aria-hidden="true">
-        <text y={center - 15} fontWeight="600">{row.label === '全体' ? row.label : `防御力 ${row.label}`}</text>
-        <text x="100%" y={center - 15} textAnchor="end">出現回数 {INTEGER.format(row.spawnCount)}</text>
+      return <g key={key} data-band={key} aria-hidden="true">
+        <text y={center - 15} fontWeight="600">{label}</text>
+        {note && <text x="100%" y={center - 15} textAnchor="end">{note}</text>}
         {votes.count > 0 ? ADVANTAGE_OUTCOMES.map(({ series, key, label }, seriesIndex) => {
           const start = offset
           const share = votes[key] / votes.count
@@ -70,6 +81,32 @@ export function DamageThreeEnemyAdvantagePlot({ rows, unit, width, height }: Ene
       </g>
     })}
   </svg>
+}
+
+export function DamageThreeEnemyAdvantagePlot({ rows, unit, ...size }: EnemyAdvantageViewProps & PlotSize) {
+  const bands = rows.map(row => ({
+    key: row.label, label: row.label === '全体' ? row.label : `防御力 ${row.label}`,
+    note: `出現回数 ${INTEGER.format(row.spawnCount)}`, votes: row[unit],
+  }))
+  return <VoteSharePlot {...size} rows={bands} title="出現回数で重み付けした属性別の優勢率" />
+}
+
+export function OperatorSkillVotesPlot({ operator, ...size }: { operator: EnemyOperatorVotes } & PlotSize) {
+  const rows = operator.skills.map(skill => ({
+    key: skill.key, label: `S${skill.skillIndex} ${skill.skillName}`, votes: skill.votes,
+  }))
+  // The SVG uses a single line for each name and three columns for percentages.
+  const minWidth = size.width === undefined ? `${Math.max(23, ...rows.map(row => Array.from(row.label).length))}em` : undefined
+  return <VoteSharePlot {...size} rows={rows} title={`${operator.operatorName}のスキル別の得票率`} minWidth={minWidth} />
+}
+
+export function OperatorSkillVotesChart({ operator }: { operator: EnemyOperatorVotes }) {
+  return <figure className="dc3-stat-chart" aria-label="スキル別の得票率">
+    <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
+    <div className="dc3-skill-votes-plot-scroll" role="region" aria-label="スキル別の得票率グラフ" tabIndex={0}>
+      <OperatorSkillVotesPlot operator={operator} height={getEnemyAdvantagePlotHeight(operator.skills.length)} />
+    </div>
+  </figure>
 }
 
 export function DamageThreeEnemyAdvantageChart({ rows, unit }: EnemyAdvantageViewProps) {

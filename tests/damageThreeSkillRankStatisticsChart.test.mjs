@@ -253,3 +253,116 @@ test('画像の積み上げ棒に集計単位ごとの割合を使い、対象�
     assert.doesNotMatch(emptyRow, /<rect\b|NaN|Infinity/)
   }
 })
+
+test('スキル得票率の画像は割合を区間の中央に置き、両端の小さい区間に個別の引き出し線を付ける', async () => {
+  const { OperatorSkillVoteImagePlot } =
+    await server.ssrLoadModule('/src/components/OperatorSkillVoteImagePlot.tsx')
+  const { estimatedBarChartTextWidth } = await server.ssrLoadModule('/src/components/useBarChartTextWidths.ts')
+  const width = 928
+  function draw(physicalWins, ties, artsWins) {
+    const votes = { physicalWins, ties, artsWins, count: physicalWins + ties + artsWins }
+    const operator = { operatorName: 'スルト', skills: [{ key: 's1', skillIndex: 1, skillName: 'レーヴァテイン', votes }] }
+    return renderToStaticMarkup(createElement(OperatorSkillVoteImagePlot, { operator, width }))
+  }
+  for (const [counts, expectedCallouts] of [
+    [[7229, 901, 3279], []], [[0, 1, 999], ['physical', 'tie']], [[999, 1, 0], ['tie', 'arts']],
+  ]) {
+    const svg = draw(...counts)
+    const segments = [...svg.matchAll(/<rect data-series="([^"]+)" x="([^"]+)" y="([^"]+)" width="([^"]+)"[^>]*><\/rect>([\s\S]*?)<\/g>/g)]
+    assert.equal(segments.length, 3)
+    const total = counts.reduce((a, b) => a + b, 0)
+    let previousEnd = Number(segments[0][2])
+    segments.forEach(([, series, x, y, barWidth, content], i) => {
+      const [, labelX, labelY, value] = content.match(/<text x="([^"]+)" y="([^"]+)"[^>]*>([^<]+)<\/text>/)
+      assert.ok(value.endsWith((counts[i] / total * 100).toFixed(1) + '%'))
+      const center = Number(x) + Number(barWidth) / 2
+      if (expectedCallouts.includes(series)) {
+        const [, targetX] = content.match(/<line x1="([^"]+)"/)
+        assert.equal(Number(targetX), center)
+        assert.ok(Number(labelY) > Number(y))
+        const halfWidth = estimatedBarChartTextWidth(value) * 12 / 11 / 2
+        assert.ok(Number(labelX) - halfWidth >= previousEnd, '引き出した文字を隣のラベルに重ねない')
+        previousEnd = Number(labelX) + halfWidth
+        assert.ok(previousEnd <= width, '引き出した文字を右端に収める')
+      } else {
+        assert.doesNotMatch(content, /<line\b/)
+        assert.equal(Number(labelX), center)
+      }
+    })
+  }
+  const empty = draw(0, 0, 0)
+  assert.match(empty, />対象なし<\/text>/)
+  assert.doesNotMatch(empty, /<rect\b|NaN|Infinity/)
+})
+
+test('棒の直接表示では折り返したスキル名も棒と左揃えにし、次のスキルと重ねない', async () => {
+  const { OperatorSkillVoteImagePlot } = await server.ssrLoadModule('/src/components/OperatorSkillVoteImagePlot.tsx')
+  const votes = { physicalWins: 999, ties: 1, artsWins: 0, count: 1000 }
+  const skills = ['長いスキル名'.repeat(25), '短い名前'].map((skillName, index) => ({
+    key: 'skill' + index, skillIndex: index + 1, skillName, votes,
+  }))
+  const svg = renderToStaticMarkup(createElement(OperatorSkillVoteImagePlot, {
+    operator: { operatorName: 'スルト', skills }, width: 928, height: 400,
+  }))
+  const height = Number(svg.match(/<svg[^>]+height="([^"]+)"/)[1])
+  const rows = svg.split(/<g data-skill="[^"]+"[^>]*>/).slice(1)
+  assert.equal(rows.length, skills.length)
+  let previousBottom = 0
+  rows.forEach((row, index) => {
+    const names = [...row.matchAll(/<tspan[^>]*x="([^"]+)" y="([^"]+)"[^>]*>([^<]*)<\/tspan>/g)]
+    assert.equal(names.map(name => name[3]).join('').replace(/\s/g, ''), 'S' + (index + 1) + skills[index].skillName)
+    if (index === 0) assert.ok(names.length > 1, '長い名前は複数行に収める')
+    const [, barX, barY, barHeight] = row.match(/<rect data-series="physical" x="([^"]+)" y="([^"]+)"[^>]*height="([^"]+)"/)
+    let lastNameY = previousBottom
+    for (const [, x, y] of names) {
+      assert.equal(Number(x), Number(barX))
+      assert.ok(Number(y) > lastNameY && Number(y) < Number(barY))
+      lastNameY = Number(y)
+    }
+    // These two narrow shares have labels below the bar.
+    const outside = [...row.matchAll(/<text x="[^"]+" y="([^"]+)"[^>]*>(?:同じ|術) [\d.]+%<\/text>/g)]
+    assert.equal(outside.length, 2)
+    const barBottom = Number(barY) + Number(barHeight)
+    for (const [, y] of outside) assert.ok(Number(y) > barBottom && Number(y) <= height)
+    previousBottom = Math.max(...outside.map(label => Number(label[1])))
+  })
+})
+
+test('スキル別の得票は画像保存時だけ棒への直接表示を選べ、ファイル名でも区別できる', async () => {
+  const { DamageThreeOperatorVotes } = await server.ssrLoadModule('/src/components/DamageThreeOperatorVotes.tsx')
+  const { createOperatorVotesChartImage } = await server.ssrLoadModule('/src/components/OperatorVotesImageButton.tsx')
+  const { DamageCalculatorThreeAttributeChartImageDialog } =
+    await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributeChartImageDialog.tsx')
+  const { PageLayout } = await server.ssrLoadModule('/src/components/PageLayout.tsx')
+  const { createChartImageFilename } = await server.ssrLoadModule('/src/lib/chartImageFilename.ts')
+  const votes = { physicalWins: 6, ties: 1, artsWins: 3, count: 10 }
+  const operator = { operatorId: 'char_350_surtr', operatorName: 'スルト', votes,
+    skills: [{ key: 's1', skillIndex: 1, skillName: 'レーヴァテイン', votes }] }
+  const conditions = { aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
+    filters: { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' } }
+  const screen = renderToStaticMarkup(createElement(PageLayout, { page: 'damage-three-skill-attribute-matrix' },
+    createElement(DamageThreeOperatorVotes, { operators: [operator], professionOptions: [], operatorId: operator.operatorId,
+      statistics: { operators: [operator] }, population: { pairs: [], spawnCount: 10 }, imageConditions: conditions,
+      selection: [{ view: 'chart', operatorId: operator.operatorId, skillKey: null, pairKey: '' }, () => {}] })))
+  assert.match(screen, />物理 60\.0%<\/text>/)
+  assert.doesNotMatch(screen, /グラフのレイアウト|割合を棒に直接表示/)
+
+  const { snapshot, alternateLayout } = createOperatorVotesChartImage({ conditions, operator, spawnCount: 10 })
+  assert.equal(alternateLayout.label, '割合を棒に直接表示')
+  assert.deepEqual(alternateLayout.defaultAspect, { preset: '16:9', width: '16', height: '9' })
+  assert.equal(alternateLayout.snapshot.title, 'スルト｜物理・術の優勢率（スキル別）')
+  assert.deepEqual(alternateLayout.snapshot.conditions, ['主攻撃を物理・術に切り替えて比較'])
+  assert.match(alternateLayout.snapshot.footerNote, /^メインストーリー・(?:敵の)?出現回数 10/)
+  const dialog = renderToStaticMarkup(createElement(DamageCalculatorThreeAttributeChartImageDialog, {
+    snapshot, alternateLayout, onClose() {},
+  }))
+  assert.match(dialog, /<option value="standard" selected="">標準<\/option>/)
+  assert.match(dialog, /<option value="alternate">割合を棒に直接表示<\/option>/)
+  const size = { width: 928, height: 400 }
+  assert.match(renderToStaticMarkup(snapshot.chart(size)), />物理 60\.0%<\/text>/)
+  assert.match(renderToStaticMarkup(alternateLayout.snapshot.chart(size)), />60\.0%<\/text>/)
+  const filename = image => createChartImageFilename(image.title, image.filenameParts)
+  assert.match(filename(snapshot), /スキル別の得票_グラフ_スルト/)
+  assert.doesNotMatch(filename(snapshot), /割合を棒に直接表示/)
+  assert.match(filename(alternateLayout.snapshot), /^スルト｜物理・術の優勢率（スキル別）_グラフ_割合を棒に直接表示/)
+})

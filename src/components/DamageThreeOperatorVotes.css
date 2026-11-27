@@ -7,6 +7,7 @@
 .dc3-operator-votes-detail:not([hidden]) { margin-top: 6px; }
 .dc3-operator-votes h2,
 .dc3-operator-votes h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.dc3-vote-view-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
 .dc3-vote-detail-skill { display: inline-block; color: var(--text-soft); font-size: 12px; font-weight: 400; }
 .dc3-vote-picker,
 .dc3-vote-detail-controls {
