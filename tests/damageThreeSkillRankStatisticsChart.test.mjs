@@ -100,7 +100,7 @@ test('平均ダメージの表画像は比較可能な出現回数とスキル�
 
 test('平均ダメージのグラフ画像は有効な平均を共通目盛りで描き、欠測の帯とゼロを区別する', () => {
   for (const showBands of [false, true]) {
-    const options = { ...meanDamageOptions, showBands }
+    const options = { ...meanDamageOptions, showBands, breakdown: 'profession' }
     const table = createEnemyImage(options).snapshot
     const { view, snapshot, alternateLayout } = createEnemyImage({ ...options, meanDamageFormat: 'chart' })
     assert.equal(view, 'chart')
@@ -230,7 +230,7 @@ test('スキル別の分布は以前の段階単位・防御力帯の選択に�
     aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
     filters: { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: '6', query: '' },
   }
-  const image = createEnemyImage(options)
+  const image = createEnemyImage({ ...options, breakdown: 'rarity' })
   assert.equal(image.view, 'chart')
   const { snapshot } = image
   const normal = createEnemyImage({ ...options, advantageUnit: 'skill', showBands: false }).snapshot
@@ -251,6 +251,59 @@ test('スキル別の分布は以前の段階単位・防御力帯の選択に�
       bins.map(bin => [bin.lower, bin.count]))
     assert.match(markup, /90%以上100%以下、2スキル/)
     assert.doesNotMatch(markup, /NaN|Infinity/)
+  }
+})
+
+test('出現敵の職業別・レアリティ別の表とグラフは、全体と同じカテゴリの行・有効件数・得票率を保存する', async () => {
+  const { getEnemyAdvantageDisplayRows } = await server.ssrLoadModule('/src/components/enemyAdvantageBreakdown.ts')
+  const { DamageThreeEnemyAdvantageTable, DamageThreeEnemyAdvantageChart } =
+    await server.ssrLoadModule('/src/components/DamageThreeEnemyAdvantageViews.tsx')
+  const skill = { count: 20, physicalWins: 8, ties: 0, artsWins: 12 }
+  const stage = { count: 30, physicalWins: 20, ties: 0, artsWins: 10 }
+  const zero = { count: 0, physicalWins: 0, ties: 0, artsWins: 0 }
+  const active = { skill, stage, skillCount: 2, stageCount: 3 }
+  const empty = { skill: zero, stage: zero, skillCount: 0, stageCount: 0 }
+  const statistics = {
+    rows: [{ label: '全体', spawnCount: 10, skill, stage }], skillCount: 2, stageCount: 3,
+    professionRows: [{ ...active, key: 'WARRIOR', label: '前衛' }, { ...empty, key: 'MEDIC', label: '医療' }],
+    rarityRows: [{ ...active, key: '6', label: '★6' }, { ...empty, key: '5', label: '★5' }],
+  }
+  const filters = { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' }
+  for (const [breakdown, label, key, category, missingCategory] of [
+    ['profession', '職業', 'WARRIOR', '前衛', '医療'], ['rarity', 'レアリティ', '6', '★6', '★5'],
+  ]) {
+    for (const [unit, countLabel, count, physicalPercent] of [
+      ['skill', '有効スキル数', 2, '40.0'], ['stage', '有効段階数', 3, '66.7'],
+    ]) {
+      const options = { ...meanDamageOptions, filters, statistics, advantageUnit: unit, breakdown, format: 'table' }
+      const rows = getEnemyAdvantageDisplayRows(statistics, breakdown)
+      const props = { rows, unit, breakdown }
+      const table = renderToStaticMarkup(createElement(DamageThreeEnemyAdvantageTable, props))
+      const chart = renderToStaticMarkup(createElement(DamageThreeEnemyAdvantageChart, props))
+      assert.deepEqual(rows.map(row => row.label), ['全体', category, missingCategory])
+      assert.ok(table.includes('>' + label + '</th>') && table.includes('>' + countLabel + '</th>'))
+      assert.ok(table.includes('>' + category + '</th><td data-table-image-number="true">' + count + '</td>'))
+      assert.ok(table.includes('>' + physicalPercent + '</td>'))
+      assert.match(table, />0<\/td>(?:<td[^>]*>—<\/td>){3}/)
+      assert.ok(chart.includes(category + '、' + countLabel + ' ' + count + '、物理 ' + physicalPercent + '%'))
+      assert.ok(chart.includes(missingCategory + '、' + countLabel + ' 0、対象なし'))
+      assert.doesNotMatch(chart, /防御力 |NaN|Infinity/)
+
+      const savedTable = createEnemyImage(options).snapshot
+      assert.equal(renderToStaticMarkup(savedTable.table), table)
+      assert.ok(savedTable.conditions.includes(label + '別') && savedTable.filenameConditions.includes(label + '別'))
+      const savedChart = createEnemyImage({ ...options, format: 'chart' })
+      assert.equal(savedChart.alternateLayout, undefined)
+      assert.deepEqual(savedChart.snapshot.conditions, savedTable.conditions)
+      assert.ok(savedChart.snapshot.filenameParts.includes(label + '別'))
+      assert.ok(chart.includes(renderToStaticMarkup(savedChart.snapshot.chart({ height: savedChart.snapshot.naturalChartHeight }))))
+
+      const selected = { ...filters, [breakdown]: key }
+      const narrowed = getEnemyAdvantageDisplayRows(statistics, breakdown, selected.profession, selected.rarity)
+      assert.deepEqual(narrowed.map(row => row.label), ['全体', category])
+      const filteredChart = createEnemyImage({ ...options, filters: selected, format: 'chart' }).snapshot
+      assert.ok(!renderToStaticMarkup(filteredChart.chart({ height: 160 })).includes(missingCategory))
+    }
   }
 })
 

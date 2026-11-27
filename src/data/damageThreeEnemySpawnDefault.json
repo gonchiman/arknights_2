@@ -3,7 +3,7 @@
   "aggregationPayloadSha256": "f5e3c2ded9c19144541fae7093e0df2f11eba7a399bfcf7d73b277e5db012a77",
   "gameDataRevision": "270115d3ef5dc0e97530bedc168eb3ddb3d14bc6",
   "skillDataSha256": "cd70c1e641874c657bbe46ca80b35e8228640f30a58f93841d7a86e29ac000f4",
-  "calculationSha256": "672f4364ea3db3c9a721c24e3de15ae3babd28921c4935fbe91c44d5b10922da",
+  "calculationSha256": "b4841deb9b1b62f08073d963428541d572c3f0e1d230c60cf84473f86b606833",
   "statistics": {
     "rows": [
       {
@@ -109,6 +109,262 @@
           "physical": 532.5154624865835,
           "arts": 958.6242807590144,
           "spawnCount": 522
+        }
+      }
+    ],
+    "professionRows": [
+      {
+        "key": "PIONEER",
+        "label": "先鋒",
+        "skillCount": 62,
+        "stageCount": 66,
+        "skill": {
+          "physicalWins": 350003,
+          "ties": 55888,
+          "artsWins": 301467,
+          "count": 707358
+        },
+        "stage": {
+          "physicalWins": 367628,
+          "ties": 59492,
+          "artsWins": 325874,
+          "count": 752994
+        }
+      },
+      {
+        "key": "WARRIOR",
+        "label": "前衛",
+        "skillCount": 179,
+        "stageCount": 200,
+        "skill": {
+          "physicalWins": 1182197,
+          "ties": 193139.5,
+          "artsWins": 666874.5,
+          "count": 2042211
+        },
+        "stage": {
+          "physicalWins": 1312358,
+          "ties": 222871,
+          "artsWins": 746571,
+          "count": 2281800
+        }
+      },
+      {
+        "key": "TANK",
+        "label": "重装",
+        "skillCount": 78,
+        "stageCount": 87,
+        "skill": {
+          "physicalWins": 441142.3333333334,
+          "ties": 70395,
+          "artsWins": 378364.6666666666,
+          "count": 889902
+        },
+        "stage": {
+          "physicalWins": 491900,
+          "ties": 78504,
+          "artsWins": 422179,
+          "count": 992583
+        }
+      },
+      {
+        "key": "SNIPER",
+        "label": "狙撃",
+        "skillCount": 121,
+        "stageCount": 122,
+        "skill": {
+          "physicalWins": 804074.5,
+          "ties": 109249,
+          "artsWins": 467165.5,
+          "count": 1380489
+        },
+        "stage": {
+          "physicalWins": 811684,
+          "ties": 110150,
+          "artsWins": 470064,
+          "count": 1391898
+        }
+      },
+      {
+        "key": "CASTER",
+        "label": "術師",
+        "skillCount": 126,
+        "stageCount": 145,
+        "skill": {
+          "physicalWins": 747472.1666666667,
+          "ties": 113527,
+          "artsWins": 576534.8333333333,
+          "count": 1437534
+        },
+        "stage": {
+          "physicalWins": 858985,
+          "ties": 130646,
+          "artsWins": 664674,
+          "count": 1654305
+        }
+      },
+      {
+        "key": "MEDIC",
+        "label": "医療",
+        "skillCount": 15,
+        "stageCount": 20,
+        "skill": {
+          "physicalWins": 96181.16666666667,
+          "ties": 13515,
+          "artsWins": 61438.83333333333,
+          "count": 171135
+        },
+        "stage": {
+          "physicalWins": 127160,
+          "ties": 18020,
+          "artsWins": 83000,
+          "count": 228180
+        }
+      },
+      {
+        "key": "SUPPORT",
+        "label": "補助",
+        "skillCount": 69,
+        "stageCount": 87,
+        "skill": {
+          "physicalWins": 360886.8333333334,
+          "ties": 62660,
+          "artsWins": 363674.1666666666,
+          "count": 787221
+        },
+        "stage": {
+          "physicalWins": 457605,
+          "ties": 78878,
+          "artsWins": 456100,
+          "count": 992583
+        }
+      },
+      {
+        "key": "SPECIAL",
+        "label": "特殊",
+        "skillCount": 102,
+        "stageCount": 120,
+        "skill": {
+          "physicalWins": 636346.5,
+          "ties": 92082,
+          "artsWins": 435289.5,
+          "count": 1163718
+        },
+        "stage": {
+          "physicalWins": 745849,
+          "ties": 108301,
+          "artsWins": 514930,
+          "count": 1369080
+        }
+      }
+    ],
+    "rarityRows": [
+      {
+        "key": "6",
+        "label": "★6",
+        "skillCount": 342,
+        "stageCount": 404,
+        "skill": {
+          "physicalWins": 2206645,
+          "ties": 340493.5,
+          "artsWins": 1354739.5000000002,
+          "count": 3901878
+        },
+        "stage": {
+          "physicalWins": 2590976,
+          "ties": 407166,
+          "artsWins": 1611094,
+          "count": 4609236
+        }
+      },
+      {
+        "key": "5",
+        "label": "★5",
+        "skillCount": 302,
+        "stageCount": 333,
+        "skill": {
+          "physicalWins": 1802602.0000000002,
+          "ties": 272348,
+          "artsWins": 1370568,
+          "count": 3445518
+        },
+        "stage": {
+          "physicalWins": 1965845,
+          "ties": 300280,
+          "artsWins": 1533072,
+          "count": 3799197
+        }
+      },
+      {
+        "key": "4",
+        "label": "★4",
+        "skillCount": 96,
+        "stageCount": 98,
+        "skill": {
+          "physicalWins": 554309.5,
+          "ties": 86802,
+          "artsWins": 454152.5,
+          "count": 1095264
+        },
+        "stage": {
+          "physicalWins": 561601,
+          "ties": 88604,
+          "artsWins": 467877,
+          "count": 1118082
+        }
+      },
+      {
+        "key": "3",
+        "label": "★3",
+        "skillCount": 12,
+        "stageCount": 12,
+        "skill": {
+          "physicalWins": 54747,
+          "ties": 10812,
+          "artsWins": 71349,
+          "count": 136908
+        },
+        "stage": {
+          "physicalWins": 54747,
+          "ties": 10812,
+          "artsWins": 71349,
+          "count": 136908
+        }
+      },
+      {
+        "key": "2",
+        "label": "★2",
+        "skillCount": 0,
+        "stageCount": 0,
+        "skill": {
+          "physicalWins": 0,
+          "ties": 0,
+          "artsWins": 0,
+          "count": 0
+        },
+        "stage": {
+          "physicalWins": 0,
+          "ties": 0,
+          "artsWins": 0,
+          "count": 0
+        }
+      },
+      {
+        "key": "1",
+        "label": "★1",
+        "skillCount": 0,
+        "stageCount": 0,
+        "skill": {
+          "physicalWins": 0,
+          "ties": 0,
+          "artsWins": 0,
+          "count": 0
+        },
+        "stage": {
+          "physicalWins": 0,
+          "ties": 0,
+          "artsWins": 0,
+          "count": 0
         }
       }
     ],

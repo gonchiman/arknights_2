@@ -11,6 +11,7 @@ import {
 } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSICAL_RATE_TITLE } from './DamageThreeSkillPhysicalRateHistogram'
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
+import { getEnemyAdvantageDisplayRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
 import type { TableChartView } from './PageViewSwitch'
 
 export type EnemyAdvantageImage =
@@ -21,12 +22,13 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   statistics: Omit<EnemySpawnAdvantageStatistics, 'operators'>
   advantageUnit: AdvantageUnit
   showBands: boolean
+  breakdown?: EnemyAdvantageBreakdown
   format: TableChartView | 'meanDamage' | 'histogram'
   meanDamageFormat?: TableChartView
 }
 
 export function createDamageThreeEnemyAdvantageImage({
-  statistics, advantageUnit, showBands, format, meanDamageFormat = 'table', ...options
+  statistics, advantageUnit, showBands, breakdown, format, meanDamageFormat = 'table', ...options
 }: EnemyAdvantageImageOptions): EnemyAdvantageImage | null {
   const total = statistics.rows[0]
   const unit = format === 'meanDamage' || format === 'histogram' ? 'skill' : advantageUnit
@@ -46,14 +48,22 @@ export function createDamageThreeEnemyAdvantageImage({
       legend: null, chart: size => <DamageThreeSkillPhysicalRatePlot {...size} bins={bins} />,
     } }
   }
-  const rows = showBands ? statistics.rows : [total]
+  const bandMode = showBands ? 'defense' : 'all'
+  const mode = format === 'meanDamage' ? bandMode : breakdown ?? bandMode
   const unitLabel = unit === 'skill' ? 'スキル単位' : '段階単位'
-  const filenameParts = [...source, showBands ? '防御力帯別の内訳' : '全体のみ', unitLabel, ...settings]
+  const breakdownLabel = { all: '全体のみ', defense: '防御力帯別の内訳', profession: '職業別', rarity: 'レアリティ別' }[mode]
+  const filenameParts = [...source, breakdownLabel, unitLabel, ...settings]
   const count = unit === 'skill' ? `${statistics.skillCount.toLocaleString('ja-JP')}スキル` : `${statistics.stageCount.toLocaleString('ja-JP')}段階`
   const conditions = [...filenameParts, spawnCount, count]
   const title = format === 'meanDamage' ? ENEMY_MEAN_DAMAGE_TITLE : '出現敵での優勢率'
 
-  if (format === 'meanDamage' && meanDamageFormat === 'chart') {
+  if (format === 'meanDamage') {
+    const rows = showBands ? statistics.rows : [total]
+    if (meanDamageFormat === 'table') {
+      return { view: 'table', snapshot: {
+        title, conditions, filenameConditions: ['表', ...filenameParts], table: <DamageThreeEnemyMeanDamageTable rows={rows} />,
+      } }
+    }
     const meanDamage = total.meanDamage
     if (!showBands && meanDamage) {
       return { view: 'chart', snapshot: {
@@ -73,10 +83,11 @@ export function createDamageThreeEnemyAdvantageImage({
       chart: size => <DamageThreeEnemyMeanDamagePlot rows={rows} {...size} />,
     } }
   }
-  if (format === 'table' || format === 'meanDamage') {
+  const rows = getEnemyAdvantageDisplayRows(statistics, mode, options.filters.profession, options.filters.rarity)
+  if (format === 'table') {
     return { view: 'table', snapshot: {
       title, conditions, filenameConditions: ['表', ...filenameParts],
-      table: format === 'meanDamage' ? <DamageThreeEnemyMeanDamageTable rows={rows} /> : <DamageThreeEnemyAdvantageTable rows={rows} unit={unit} />,
+      table: <DamageThreeEnemyAdvantageTable rows={rows} unit={unit} breakdown={mode} />,
     } }
   }
   const snapshot: DamageCalculatorThreeAttributeChartImageSnapshot = {
@@ -84,9 +95,9 @@ export function createDamageThreeEnemyAdvantageImage({
     axisTitle: '出現回数で重み付けした優勢率（%）',
     naturalChartHeight: getEnemyAdvantagePlotHeight(rows.length),
     legend: <DamageThreeAdvantageImageLegend />,
-    chart: size => <DamageThreeEnemyAdvantagePlot rows={rows} unit={advantageUnit} {...size} />,
+    chart: size => <DamageThreeEnemyAdvantagePlot rows={rows} unit={unit} breakdown={mode} {...size} />,
   }
-  if (showBands) return { view: 'chart', snapshot }
+  if (mode !== 'all') return { view: 'chart', snapshot }
 
   return { view: 'chart', snapshot, alternateLayout: {
     label: '割合を棒の上に表示',

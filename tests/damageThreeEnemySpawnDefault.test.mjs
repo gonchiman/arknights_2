@@ -3,6 +3,7 @@ import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 import { getEnemySpawnSkillDataHash } from '../src/lib/damageThreeEnemySpawnInputs.ts'
 import { parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
+import { getEnemySpawnCalculationHash } from '../scripts/lib/enemySpawnCalculationHash.mjs'
 
 test('事前集計のスキル照合は並び順によらず、同数のスキルでも効果や育成データの変更を検出する', async () => {
   const skill = {
@@ -14,6 +15,9 @@ test('事前集計のスキル照合は並び順によらず、同数のスキ�
   const hash = await getEnemySpawnSkillDataHash([skill, other])
   assert.equal(await getEnemySpawnSkillDataHash([other, structuredClone(skill)]), hash)
   assert.equal(await getEnemySpawnSkillDataHash([{ ...skill, classification: { conditions: ['manual'] } }, other]), hash)
+  for (const category of [{ profession: 'MEDIC' }, { rarity: 5 }]) {
+    assert.notEqual(await getEnemySpawnSkillDataHash([{ ...skill, ...category }, other]), hash)
+  }
   assert.notEqual(await getEnemySpawnSkillDataHash([other, { ...skill,
     skillLevels: [{ blackboard: [{ key: 'atk', value: 2 }] }],
   }]), hash)
@@ -33,10 +37,23 @@ test('同梱の事前集計が敵の集計版と整合し、全体・防御力�
   const version = index.versions.find(version => version.id === saved.aggregationVersion)
   assert.equal(saved.aggregationPayloadSha256, version?.payloadSha256)
   assert.match(saved.skillDataSha256, /^[0-9a-f]{64}$/)
-  const { rows: [overall, ...bands], skillCount, stageCount, skillPhysicalRateBins } = saved.statistics
+  assert.equal(saved.calculationSha256, getEnemySpawnCalculationHash())
+  const { rows: [overall, ...bands], professionRows, rarityRows, skillCount, stageCount, skillPhysicalRateBins } = saved.statistics
   assert.ok(skillCount > 0 && stageCount >= skillCount)
   assert.equal(skillPhysicalRateBins.reduce((total, bin) => total + bin.count, 0), skillCount)
   assert.equal(bands.reduce((total, row) => total + row.spawnCount, 0), overall.spawnCount)
+  assert.deepEqual(professionRows.map(row => row.key), ['PIONEER', 'WARRIOR', 'TANK', 'SNIPER', 'CASTER', 'MEDIC', 'SUPPORT', 'SPECIAL'])
+  assert.deepEqual(rarityRows.map(row => row.key), ['6', '5', '4', '3', '2', '1'])
+  for (const rows of [professionRows, rarityRows]) {
+    assert.equal(rows.reduce((total, row) => total + row.skillCount, 0), skillCount)
+    assert.equal(rows.reduce((total, row) => total + row.stageCount, 0), stageCount)
+    for (const unit of ['skill', 'stage']) {
+      for (const key of ['physicalWins', 'ties', 'artsWins', 'count']) {
+        const total = rows.reduce((sum, row) => sum + row[unit][key], 0)
+        assert.ok(Math.abs(total - overall[unit][key]) < 1e-6)
+      }
+    }
+  }
   for (const unit of ['skill', 'stage']) {
     const votes = overall[unit]
     const sum = votes.physicalWins + votes.ties + votes.artsWins
