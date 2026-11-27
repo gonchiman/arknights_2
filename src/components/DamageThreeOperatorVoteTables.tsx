@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import type { EnemyOperatorVotes, EnemySkillVotes, getEnemySkillVoteDetails, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOperatorVoteSummary, EnemySkillVoteSummary, getEnemySkillVoteDetails, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
 import { ADVANTAGE_OUTCOMES } from '../lib/damageThreeAdvantageChart'
 
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 3 })
@@ -16,8 +16,8 @@ function VoteCells({ votes }: { votes: WeightedVotes }) {
 }
 
 export function OperatorVotesTable({ operator, detail }: {
-  operator: EnemyOperatorVotes
-  detail?: { id: string; skillKey?: string; trigger: RefObject<HTMLButtonElement | null>; toggle: (skill: EnemySkillVotes) => void }
+  operator: EnemyOperatorVoteSummary
+  detail?: { id: string; skillKey?: string; trigger: RefObject<HTMLButtonElement | null>; toggle: (skill: EnemySkillVoteSummary) => void }
 }) {
   return <table className={TABLE} aria-label="スキル別の得票">
     {COLUMNS}

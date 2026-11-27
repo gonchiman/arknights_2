@@ -1,6 +1,6 @@
 import { placeChartEndLabels } from '../lib/comparisonChartEndLabels'
 import { ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
-import type { EnemyOperatorVotes, EnemySkillVotes } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOperatorVoteSummary, EnemySkillVoteSummary } from '../lib/damageThreeEnemySpawnAdvantage'
 import { wrapText } from '../lib/slideComposer'
 import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
 import { estimatedBarChartTextWidth, useBarChartTextWidths } from './useBarChartTextWidths'
@@ -14,12 +14,12 @@ const CALLOUT_HEIGHT = 23
 const PADDING = 12
 const VERTICAL_PADDING = 6
 
-function skillNameLines(skill: EnemySkillVotes, width: number) {
+function skillNameLines(skill: EnemySkillVoteSummary, width: number) {
   const name = `S${skill.skillIndex} ${skill.skillName}`
   return wrapText({ font: '', measureText: text => ({ width: Array.from(text).length * FONT_SIZE }) }, name, width)
 }
 
-function skillSegments(skill: EnemySkillVotes) {
+function skillSegments(skill: EnemySkillVoteSummary) {
   let start = 0
   return ADVANTAGE_OUTCOMES.map(({ key, label, series }) => {
     const fraction = skill.votes.count > 0 ? skill.votes[key] / skill.votes.count : 0
@@ -30,7 +30,7 @@ function skillSegments(skill: EnemySkillVotes) {
   })
 }
 
-function getVotePlotLayout(operator: EnemyOperatorVotes, width: number, measure: (text: string) => number) {
+function getVotePlotLayout(operator: EnemyOperatorVoteSummary, width: number, measure: (text: string) => number) {
   const left = PADDING
   const right = width - PADDING
   const barWidth = right - left
@@ -55,12 +55,12 @@ function getVotePlotLayout(operator: EnemyOperatorVotes, width: number, measure:
   return { left, naturalHeight: contentHeight + 2 * VERTICAL_PADDING, rows }
 }
 
-export function getOperatorSkillVoteImageHeight(operator: EnemyOperatorVotes) {
+export function getOperatorSkillVoteImageHeight(operator: EnemyOperatorVoteSummary) {
   // Reserve room for callouts before fonts load at the narrowest export width.
   return getVotePlotLayout(operator, 928, text => estimatedBarChartTextWidth(text) + 4).naturalHeight
 }
 
-export function OperatorSkillVoteImagePlot({ operator, width, height }: { operator: EnemyOperatorVotes; width: number; height?: number }) {
+export function OperatorSkillVoteImagePlot({ operator, width, height }: { operator: EnemyOperatorVoteSummary; width: number; height?: number }) {
   const labels = operator.skills.flatMap(skill => skillSegments(skill).flatMap(({ text, callout }) => [text, callout]))
   const measure = useBarChartTextWidths(labels)
   const { left, naturalHeight, rows } = getVotePlotLayout(operator, width, measure)

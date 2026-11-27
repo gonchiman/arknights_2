@@ -1,0 +1,29 @@
+.dc3-vote-list { container-type: inline-size; }
+.dc3-vote-list > .page-output-header .page-output-heading { flex: 1 1 auto; }
+.dc3-vote-list-table > thead th[aria-sort] { padding: 0; }
+.dc3-vote-list-table > thead .skill-sort-button {
+  justify-content: center;
+  min-height: 30px;
+  gap: 4px;
+  padding: 4px 6px;
+  font-weight: inherit;
+}
+.dc3-vote-list-table > thead .skill-sort-button:focus-visible { outline-offset: -2px; }
+.damage-two-table.dc3-vote-list-table > tbody > tr > .dc3-vote-list-name { text-align: left; }
+.dc3-vote-list-table > tbody > tr > .dc3-vote-list-index { text-align: center; }
+.dc3-vote-list-table > tbody > .dc3-vote-list-selected > * { background: var(--surface-soft); }
+.dc3-vote-list-table > tbody > tr > .dc3-vote-list-expanded {
+  padding: 10px;
+  text-align: left;
+  white-space: normal;
+}
+.dc3-vote-list-detail { max-width: calc(100cqi - 22px); }
+.comparison-table-image-frame .dc3-vote-list-table { border-inline: 1px solid var(--border); }
+.comparison-table-image-frame .dc3-vote-list-table :is(th, .dc3-vote-list-name) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (pointer: coarse) {
+  .dc3-vote-list-table > thead .skill-sort-button,
+  .dc3-vote-list .dc3-matrix-table-heading nav button { min-height: 44px; }
+}

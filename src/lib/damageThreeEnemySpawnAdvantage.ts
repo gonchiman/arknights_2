@@ -39,19 +39,32 @@ export function buildEnemySpawnPopulation(rows: readonly EnemyRecord[], counts: 
 
 export type WeightedVotes = AdvantageVotes & { count: number }
 
-export interface EnemySkillVotes {
+export interface EnemySkillVoteSummary {
   key: string
   skillIndex: number
   skillName: string
   votes: WeightedVotes
+}
+
+export interface EnemySkillVotes extends EnemySkillVoteSummary {
   stages: readonly NamedSkillRankStageSample[]
 }
 
-export interface EnemyOperatorVotes {
+export interface EnemyOperatorVoteSummary {
   operatorId: string
   operatorName: string
-  skills: EnemySkillVotes[]
+  skills: EnemySkillVoteSummary[]
   votes: WeightedVotes
+}
+
+export interface EnemyOperatorVotes extends EnemyOperatorVoteSummary {
+  skills: EnemySkillVotes[]
+}
+
+export function summarizeOperatorVotes({ operatorId, operatorName, votes, skills }: EnemyOperatorVotes): EnemyOperatorVoteSummary {
+  return { operatorId, operatorName, votes, skills: skills.map(({ key, skillIndex, skillName, votes }) => ({
+    key, skillIndex, skillName, votes,
+  })) }
 }
 
 export function getEnemySkillVoteDetails(skill: EnemySkillVotes, pairIndex: number, spawnCount: number) {
@@ -99,6 +112,12 @@ function addVotes(target: WeightedVotes, source: WeightedVotes, weight = 1) {
   target.ties += source.ties * weight
   target.artsWins += source.artsWins * weight
   target.count += source.count * weight
+}
+
+export function sumEnemySkillVotes(skills: readonly EnemySkillVoteSummary[]): WeightedVotes {
+  const total = emptyVotes()
+  for (const skill of skills) addVotes(total, skill.votes)
+  return total
 }
 
 export function summarizeEnemySpawnAdvantage(

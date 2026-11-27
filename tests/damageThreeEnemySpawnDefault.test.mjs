@@ -33,10 +33,22 @@ test('同梱の事前集計が敵の集計版と整合し、全体・防御力�
   const version = index.versions.find(version => version.id === saved.aggregationVersion)
   assert.equal(saved.aggregationPayloadSha256, version?.payloadSha256)
   assert.match(saved.skillDataSha256, /^[0-9a-f]{64}$/)
-  const { rows: [overall, ...bands], skillCount, stageCount, skillPhysicalRateBins } = saved.statistics
+  const { rows: [overall, ...bands], skillCount, stageCount, skillPhysicalRateBins, operatorVotes } = saved.statistics
   assert.ok(skillCount > 0 && stageCount >= skillCount)
   assert.equal(skillPhysicalRateBins.reduce((total, bin) => total + bin.count, 0), skillCount)
   assert.equal(bands.reduce((total, row) => total + row.spawnCount, 0), overall.spawnCount)
+  const skills = operatorVotes.flatMap(op => op.skills)
+  assert.equal(new Set(operatorVotes.map(op => op.operatorId)).size, operatorVotes.length)
+  assert.equal(new Set(skills.map(skill => skill.key)).size, skillCount)
+  assert.equal(skills.length, skillCount)
+  assert.ok(skills.every(skill => skill.votes.count > 0 && !('stages' in skill)))
+  for (const key of ['physicalWins', 'ties', 'artsWins', 'count']) {
+    for (const op of operatorVotes) {
+      assert.equal(op.votes[key], op.skills.reduce((total, skill) => total + skill.votes[key], 0))
+    }
+    const sum = operatorVotes.reduce((total, op) => total + op.votes[key], 0)
+    assert.ok(Math.abs(sum - overall.skill[key]) < 1e-6)
+  }
   for (const unit of ['skill', 'stage']) {
     const votes = overall[unit]
     const sum = votes.physicalWins + votes.ties + votes.artsWins

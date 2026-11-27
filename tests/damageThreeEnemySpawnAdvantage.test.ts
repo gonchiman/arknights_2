@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
-import { buildEnemySpawnPopulation, getEnemySkillVoteDetails, summarizeEnemySpawnAdvantage } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
+import { buildEnemySpawnPopulation, getEnemySkillVoteDetails, summarizeEnemySpawnAdvantage, summarizeOperatorVotes } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
+import { projectEnemyOperatorVoteSummaries } from '../src/lib/damageThreeEnemySpawnVotesProjection.ts'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import type { NamedSkillRankStageSample } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import type { EnemyRecord } from '../src/types/enemy.ts'
@@ -113,6 +114,25 @@ test('オペレーター別の票と段階ごとの内訳を、同一スキルID
     { stageLabel: '召喚物', ...tie, outcome: 'ties', votesPerSpawn: 1, weightedVotes: 901 },
   ])
   assert.deepEqual(getEnemySkillVoteDetails(operatorB.skills[0], 1, 901), [])
+})
+
+test('一覧の絞り込みではスキル全体の得票を加算し、段階の一部だけを選んだら再集計する', () => {
+  const pairs = [{ defense: 0, resistance: 10, spawnCount: 3 }]
+  const win = { physical: 2, arts: 1 }, tie = { physical: 1, arts: 1 }
+  const a1 = sample('A', [win]), a2 = sample('A', [tie], '召喚物')
+  const aOther = sample('A', [tie], '通常', 2), b = sample('B', [win])
+  const stages = [a1, a2, aOther, b]
+  const summary = (samples: typeof stages) => summarizeEnemySpawnAdvantage(pairs, samples).operators.map(summarizeOperatorVotes)
+  const saved = summary(stages)
+  const entries = stages.map(({ skill }) => ({ skill, capability: { supported: true } }))
+  const unsupported = { skill: a1.skill, capability: { supported: false } }
+  const all = [...entries, unsupported]
+  assert.deepEqual(projectEnemyOperatorVoteSummaries(saved, all, entries), saved)
+  assert.deepEqual(projectEnemyOperatorVoteSummaries(saved, all, entries.slice(0, 2)), summary([a1, a2]))
+  assert.deepEqual(projectEnemyOperatorVoteSummaries(saved, all, [entries[2], entries[3]]), summary([aOther, b]))
+  assert.equal(projectEnemyOperatorVoteSummaries(saved, all, [entries[0], entries[3]]), null)
+  assert.deepEqual(projectEnemyOperatorVoteSummaries(saved, all, [unsupported]), [])
+  assert.deepEqual(projectEnemyOperatorVoteSummaries(saved, all, []), [])
 })
 
 test('丸め前の率を用い、スキルごとに比較不能な敵を分母から除く', () => {

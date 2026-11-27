@@ -1,4 +1,4 @@
-import type { EnemyOperatorVotes, EnemySpawnAdvantageRow, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOperatorVoteSummary, EnemySpawnAdvantageRow, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
@@ -111,7 +111,7 @@ export function DamageThreeEnemyAdvantagePlot({ rows, unit, ...size }: EnemyAdva
   return <VoteSharePlot {...size} rows={bands} title="出現回数で重み付けした属性別の優勢率" />
 }
 
-export function OperatorSkillVotesPlot({ operator, ...size }: { operator: EnemyOperatorVotes } & PlotSize) {
+export function OperatorSkillVotesPlot({ operator, ...size }: { operator: EnemyOperatorVoteSummary } & PlotSize) {
   const rows = operator.skills.map(skill => ({
     key: skill.key, label: `S${skill.skillIndex} ${skill.skillName}`, votes: skill.votes,
   }))
@@ -120,7 +120,7 @@ export function OperatorSkillVotesPlot({ operator, ...size }: { operator: EnemyO
   return <VoteSharePlot {...size} rows={rows} title={`${operator.operatorName}のスキル別の得票率`} minWidth={minWidth} />
 }
 
-export function OperatorSkillVotesChart({ operator }: { operator: EnemyOperatorVotes }) {
+export function OperatorSkillVotesChart({ operator }: { operator: EnemyOperatorVoteSummary }) {
   return <figure className="dc3-stat-chart" aria-label="スキル別の得票率">
     <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
     <div className="dc3-skill-votes-plot-scroll" role="region" aria-label="スキル別の得票率グラフ" tabIndex={0}>
