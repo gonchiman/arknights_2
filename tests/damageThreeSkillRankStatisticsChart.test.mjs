@@ -525,6 +525,25 @@ test('棒の直接表示では折り返したスキル名も棒と左揃えに�
   })
 })
 
+test('得票一覧の表示単位で行と掘り下げ先が変わり、展開前は内訳を描画しない', async () => {
+  const { DamageThreeVoteList } = await server.ssrLoadModule('/src/components/DamageThreeVoteList.tsx')
+  const { PageLayout } = await server.ssrLoadModule('/src/components/PageLayout.tsx')
+  const skill = { key: 's1', skillIndex: 1, skillName: 'レーヴァテイン', votes: { physicalWins: 6, ties: 1, artsWins: 3, count: 10 } }
+  const second = { ...skill, key: 's2', skillIndex: 2, skillName: '災厄の巨焔' }
+  const operator = { operatorId: 'char_350_surtr', operatorName: 'スルト', skills: [skill, second],
+    votes: { physicalWins: 12, ties: 2, artsWins: 6, count: 20 } }
+  const renderList = group => renderToStaticMarkup(createElement(PageLayout, { page: 'damage-three-skill-attribute-matrix' },
+    createElement(DamageThreeVoteList, { group, operators: [operator], spawnCount: 10, onGroupChange() {},
+      imageConditions: meanDamageOptions, renderDetail: () => assert.fail('展開前に内訳が描画された') })))
+  const operators = renderList('operator'), skills = renderList('skill')
+  assert.match(operators, /1–1 \/ 1件/)
+  assert.match(skills, /1–2 \/ 2件/)
+  assert.ok(labels(operators).includes('スルトのスキル別の得票'))
+  assert.ok(labels(skills).includes('スルト S2 災厄の巨焔の得票内訳'))
+  assert.ok(labels(operators).some(label => label.endsWith('オペレーター別の得票一覧の場所をコピー')))
+  assert.ok(labels(skills).some(label => label.endsWith('スキル別の得票一覧の場所をコピー')))
+})
+
 test('スキル別の得票は画像保存時だけ棒への直接表示を選べ、ファイル名でも区別できる', async () => {
   const { DamageThreeOperatorVotes, useOperatorVoteSelection } = await server.ssrLoadModule('/src/components/DamageThreeOperatorVotes.tsx')
   const { createOperatorVotesChartImage, getOperatorVotesSegments } = await server.ssrLoadModule('/src/components/OperatorVotesImageButton.tsx')
@@ -542,8 +561,8 @@ test('スキル別の得票は画像保存時だけ棒への直接表示を選�
   function VotesPanel({ view }) {
     const [state, setState] = useOperatorVoteSelection()
     return createElement(PageLayout, { page: 'damage-three-skill-attribute-matrix' },
-      createElement(DamageThreeOperatorVotes, { operators: [operator], professionOptions: [], operatorId: operator.operatorId,
-        statistics: { operators: [operator] }, population: { pairs: [], spawnCount: 10 }, imageConditions: conditions,
+      createElement(DamageThreeOperatorVotes, { operator, entries: [],
+        population: { pairs: [], spawnCount: 10 }, imageConditions: conditions,
         selection: [view ? { ...state, view } : state, setState] }))
   }
   const initial = renderToStaticMarkup(createElement(VotesPanel))

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { loadSkillRecords } from '../src/lib/arknightsData.ts'
 import { getOrderedDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { getEnemySpawnSkillDataHash } from '../src/lib/damageThreeEnemySpawnInputs.ts'
-import { buildEnemySpawnPopulation, summarizeEnemySpawnAdvantage } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
+import { buildEnemySpawnPopulation, summarizeEnemySpawnAdvantage, summarizeOperatorVotes } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
 import { evaluateSkillRankStatisticsStage } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import { LOCAL_GAME_DATA_RUNTIME_FILES } from '../src/lib/localGameDataContract.ts'
@@ -50,7 +50,7 @@ const snapshot = {
   gameDataRevision: game.revision,
   skillDataSha256: await getEnemySpawnSkillDataHash(skills),
   calculationSha256,
-  statistics,
+  statistics: { ...statistics, operatorVotes: operators.map(summarizeOperatorVotes) },
 }
 const temporary = output + '.' + randomUUID() + '.tmp'
 try {

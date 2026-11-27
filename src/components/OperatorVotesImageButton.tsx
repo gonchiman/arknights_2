@@ -1,6 +1,6 @@
 import { useState, type ReactElement } from 'react'
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES } from '../lib/damageThreeAdvantageChart'
-import type { EnemyOperatorVotes } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOperatorVoteSummary } from '../lib/damageThreeEnemySpawnAdvantage'
 import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
@@ -52,7 +52,7 @@ export function OperatorVotesImageButton({ conditions, operatorName, spawnCount,
 
 interface OperatorVotesChartImageProps {
   conditions: StatisticsImageConditions
-  operator: EnemyOperatorVotes
+  operator: EnemyOperatorVoteSummary
   spawnCount: number
 }
 

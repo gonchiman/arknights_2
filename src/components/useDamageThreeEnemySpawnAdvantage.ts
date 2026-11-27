@@ -3,10 +3,10 @@ import savedDefault from '../data/damageThreeEnemySpawnDefault.json'
 import type { SkillRecord } from '../types/skill'
 import type { DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import type { SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
-import { summarizeEnemySpawnAdvantage, type EnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
+import { summarizeEnemySpawnAdvantage, summarizeOperatorVotes, type EnemyOperatorVoteSummary, type EnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
 import { getEnemySpawnSkillDataHash } from '../lib/damageThreeEnemySpawnInputs'
 import type { EnemyAggregationVersion } from '../lib/enemyAggregationContract'
-import { useDamageThreeSkillStageSamples } from './useDamageThreeSkillRankStatistics'
+import { calculateStageSamples, runSkillCalculationBatches, useDamageThreeSkillStageSamples } from './useDamageThreeSkillRankStatistics'
 
 const EMPTY_PAIRS: EnemySpawnPopulation['pairs'] = []
 const skillDataHashes = new WeakMap<readonly SkillRecord[], Promise<string | null>>()
@@ -41,4 +41,42 @@ export function useDamageThreeEnemySpawnAdvantage(
   const stages = useDamageThreeSkillStageSamples(active, entries, population?.pairs ?? EMPTY_PAIRS, effectPolicy)
   return useMemo(() => active && population && stages ? summarizeEnemySpawnAdvantage(population.pairs, stages) : null,
     [active, population, stages])
+}
+
+function* calculateOperatorVoteSummaries(
+  entries: readonly DamageThreeAttributeEntry[], pairs: EnemySpawnPopulation['pairs'], policy: SkillRankEffectPolicy,
+): Generator<void, EnemyOperatorVoteSummary[]> {
+  const byOperator = new Map<string, DamageThreeAttributeEntry[]>()
+  for (const entry of entries) {
+    const id = entry.skill.operatorId
+    const group = byOperator.get(id)
+    if (group) group.push(entry)
+    else byOperator.set(id, [entry])
+  }
+  const summaries: EnemyOperatorVoteSummary[] = []
+  // Drop the stage-by-enemy matrices after each operator. Only expanded details need to retain them.
+  for (const group of byOperator.values()) {
+    const stages = yield* calculateStageSamples(group, pairs, policy)
+    const [operator] = summarizeEnemySpawnAdvantage(pairs, stages).operators
+    if (operator) summaries.push(summarizeOperatorVotes(operator))
+    yield
+  }
+  return summaries
+}
+
+export function useLiveEnemyOperatorVoteSummaries(
+  active: boolean, entries: readonly DamageThreeAttributeEntry[], population: EnemySpawnPopulation | null | undefined,
+  effectPolicy: SkillRankEffectPolicy,
+) {
+  const pairs = population?.pairs ?? EMPTY_PAIRS
+  const [result, setResult] = useState<{
+    entries: typeof entries; pairs: typeof pairs; policy: SkillRankEffectPolicy; summaries: EnemyOperatorVoteSummary[]
+  } | null>(null)
+  const current = result?.entries === entries && result.pairs === pairs && result.policy === effectPolicy ? result.summaries : null
+  useEffect(() => {
+    if (!active || current) return
+    return runSkillCalculationBatches(calculateOperatorVoteSummaries(entries, pairs, effectPolicy),
+      summaries => setResult({ entries, pairs, policy: effectPolicy, summaries }))
+  }, [active, current, entries, pairs, effectPolicy])
+  return current
 }

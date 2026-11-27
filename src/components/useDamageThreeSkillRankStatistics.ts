@@ -11,6 +11,51 @@ const EMPTY_THRESHOLDS: readonly EnemyResistanceThreshold[] = []
 const EMPTY_STAGES: readonly NamedSkillRankStageSample[] = []
 const PAIRS_PER_BATCH = 12
 
+type StageCache = WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>
+
+export function* calculateStageSamples(
+  entries: readonly DamageThreeAttributeEntry[], pairs: readonly EnemyDamageStatPair[],
+  effectPolicy: SkillRankEffectPolicy, cache?: StageCache,
+): Generator<void, NamedSkillRankStageSample[]> {
+  const stages: NamedSkillRankStageSample[] = []
+  for (const entry of entries) {
+    let cells = cache?.get(entry)
+    if (cells === undefined) {
+      cells = []
+      for (let start = 0; start < pairs.length; start += PAIRS_PER_BATCH) {
+        const chunk = pairs.length <= PAIRS_PER_BATCH ? pairs : pairs.slice(start, start + PAIRS_PER_BATCH)
+        const batch = evaluateSkillRankStatisticsStage(entry, chunk, effectPolicy)
+        if (!batch) {
+          cells = null
+          break
+        }
+        cells.push(...batch)
+        yield
+      }
+      cache?.set(entry, cells)
+    }
+    if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
+    yield
+  }
+  return stages
+}
+
+export function runSkillCalculationBatches<T>(calculation: Generator<void, T>, onComplete: (result: T) => void) {
+  function runBatch() {
+    const deadline = performance.now() + 10
+    do {
+      const step = calculation.next()
+      if (step.done) {
+        onComplete(step.value)
+        return
+      }
+    } while (performance.now() < deadline)
+    timer = window.setTimeout(runBatch, 0)
+  }
+  let timer = window.setTimeout(runBatch, 0)
+  return () => window.clearTimeout(timer)
+}
+
 export function useDamageThreeSkillRankStatistics(
   active: boolean, entries: readonly DamageThreeAttributeEntry[], pairs: readonly EnemyResistanceThreshold[] = EMPTY_THRESHOLDS,
   effectPolicy: SkillRankEffectPolicy,
@@ -33,38 +78,8 @@ export function useDamageThreeSkillStageSamples(
 
   useEffect(() => {
     if (!active || !entries.length || !pairs.length || current) return
-    let index = 0
-    let partialCells: DamageCell[] = []
-    const stages: NamedSkillRankStageSample[] = []
-    // Actual enemy populations can have hundreds of pairs even for a single stage.
-    function calculateBatch() {
-      const deadline = performance.now() + 10
-      do {
-        const entry = entries[index]
-        let cells = cache.get(entry)
-        if (cells === undefined) {
-          const start = partialCells.length
-          const chunk = pairs.length <= PAIRS_PER_BATCH ? pairs : pairs.slice(start, start + PAIRS_PER_BATCH)
-          cells = evaluateSkillRankStatisticsStage(entry, chunk, effectPolicy)
-          if (cells && chunk !== pairs) {
-            partialCells.push(...cells)
-            if (partialCells.length < pairs.length) continue
-            cells = partialCells
-          }
-          cache.set(entry, cells)
-        }
-        if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
-        partialCells = []
-        index++
-      } while (index < entries.length && performance.now() < deadline)
-      if (index < entries.length) {
-        timer = window.setTimeout(calculateBatch, 0)
-      } else {
-        setResult({ entries, cache, stages })
-      }
-    }
-    let timer = window.setTimeout(calculateBatch, 0)
-    return () => window.clearTimeout(timer)
+    return runSkillCalculationBatches(calculateStageSamples(entries, pairs, effectPolicy, cache),
+      stages => setResult({ entries, cache, stages }))
   }, [active, entries, pairs, cache, current, effectPolicy])
   return entries.length && pairs.length ? current : EMPTY_STAGES
 }
