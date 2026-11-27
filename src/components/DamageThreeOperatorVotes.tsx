@@ -2,13 +2,16 @@ import { useId, useMemo, useRef, useState } from 'react'
 import { getEnemySkillVoteDetails, type EnemySpawnAdvantageStatistics, type EnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
 import type { StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
 import { OperatorVoteDetailTable, OperatorVotesTable } from './DamageThreeOperatorVoteTables'
-import { getOperatorVotesSegments, OperatorVotesImageButton } from './OperatorVotesImageButton'
+import { OperatorSkillVotesChart } from './DamageThreeEnemyAdvantageViews'
+import { getOperatorVotesSegments, OperatorVotesChartImageButton, OperatorVotesImageButton } from './OperatorVotesImageButton'
 import { PageOutputHeader } from './PageLayout'
+import { PageViewSwitch, TABLE_CHART_VIEWS, type TableChartView } from './PageViewSwitch'
 import { OperatorNamePicker, type OperatorChoice } from './OperatorNamePicker'
 import type { FilterOption } from './Filters'
 import './DamageThreeOperatorVotes.css'
 
 interface VoteSelection {
+  view: TableChartView
   operatorId: string
   skillKey: string | null
   pairKey: string
@@ -19,7 +22,7 @@ function pairKey({ defense, resistance }: EnemySpawnPopulation['pairs'][number])
 }
 
 export function useOperatorVoteSelection() {
-  return useState<VoteSelection>({ operatorId: 'char_350_surtr', skillKey: null, pairKey: '100/20' })
+  return useState<VoteSelection>({ view: 'table', operatorId: 'char_350_surtr', skillKey: null, pairKey: '100/20' })
 }
 
 export function DamageThreeOperatorVotes({ operators, professionOptions, operatorId, statistics, population, imageConditions, selection }: {
@@ -35,7 +38,7 @@ export function DamageThreeOperatorVotes({ operators, professionOptions, operato
   const detailId = useId()
   const detailTrigger = useRef<HTMLButtonElement | null>(null)
   const operator = statistics?.operators.find(row => row.operatorId === operatorId)
-  const skill = operator?.skills.find(row => row.key === selected.skillKey)
+  const skill = selected.view === 'table' ? operator?.skills.find(row => row.key === selected.skillKey) : undefined
   const options = useMemo(() => population.pairs.map((pair, index) => ({ pair, key: pairKey(pair), index }))
     .sort((a, b) => a.pair.defense - b.pair.defense || a.pair.resistance - b.pair.resistance), [population.pairs])
   const current = options.find(option => option.key === selected.pairKey) ?? options[0]
@@ -50,16 +53,23 @@ export function DamageThreeOperatorVotes({ operators, professionOptions, operato
   </div>
   return <div className="dc3-operator-votes">
     {picker}
-    <PageOutputHeader segments={getOperatorVotesSegments()} actions={<OperatorVotesImageButton
-      conditions={imageConditions} operatorName={operator.operatorName} spawnCount={population.spawnCount} table={<OperatorVotesTable operator={operator} />} />}>
-      <h2>スキル別の得票</h2>
+    <PageOutputHeader segments={getOperatorVotesSegments(false, selected.view)} actions={selected.view === 'chart'
+      ? <OperatorVotesChartImageButton operator={operator} conditions={imageConditions} spawnCount={population.spawnCount} />
+      : <OperatorVotesImageButton conditions={imageConditions} operatorName={operator.operatorName} spawnCount={population.spawnCount}
+          table={<OperatorVotesTable operator={operator} />} />}>
+      <div className="dc3-vote-view-heading">
+        <h2>スキル別の得票</h2>
+        <PageViewSwitch views={TABLE_CHART_VIEWS} selected={selected.view} label="スキル別の得票の表示形式"
+          onChange={view => setSelected(previous => ({ ...previous, view }))} />
+      </div>
     </PageOutputHeader>
-    <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="スキル別の得票">
+    {selected.view === 'chart' ? <OperatorSkillVotesChart operator={operator} />
+      : <div className="damage-two-table-wrap" role="region" tabIndex={0} aria-label="スキル別の得票">
       <OperatorVotesTable operator={operator} detail={{
         id: detailId, skillKey: skill?.key, trigger: detailTrigger,
         toggle: row => setSelected({ ...selected, operatorId: operator.operatorId, skillKey: skill?.key === row.key ? null : row.key }),
       }} />
-    </div>
+    </div>}
     <section id={detailId} hidden={!skill} className="dc3-operator-votes-detail" aria-label="スキルの得票内訳">
       {skill && current && <>
         <PageOutputHeader segments={getOperatorVotesSegments(true)} actions={<>
