@@ -28,6 +28,7 @@
 
 .dc3-matrix-display-options { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 16px; }
 .dc3-matrix-display-options:empty { display: none; }
+.dc3-matrix-category-visibility { flex-basis: 100%; }
 .dc3-matrix-enemy-analysis .page-view-switch {
   display: flex;
   flex-wrap: wrap;

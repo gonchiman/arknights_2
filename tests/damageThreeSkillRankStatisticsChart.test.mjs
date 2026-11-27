@@ -307,6 +307,44 @@ test('出現敵の職業別・レアリティ別の表とグラフは、全体�
   }
 })
 
+test('優勢率のグラフ画像は選んだ行だけを元の順序で保存し、表と他の分析は全行を使う', async () => {
+  const { default: { statistics } } = await server.ssrLoadModule('/src/data/damageThreeEnemySpawnDefault.json')
+  const { createChartImageFilename } = await server.ssrLoadModule('/src/lib/chartImageFilename.ts')
+  const filters = { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' }
+  const options = { ...meanDamageOptions, statistics, filters, format: 'chart', breakdown: 'profession' }
+  const labels = ['全体', ...statistics.professionRows.map(row => row.label)]
+  const savedRows = snapshot => [...renderToStaticMarkup(snapshot.chart({ height: snapshot.naturalChartHeight }))
+    .matchAll(/data-band="([^"]+)"/g)].map(match => match[1])
+  const complete = createEnemyImage(options).snapshot
+  assert.deepEqual(savedRows(complete), labels)
+  for (const wanted of [labels.slice(1, 4), [labels[2]]]) {
+    const hiddenChartCategories = labels.filter(label => !wanted.includes(label)).reverse()
+    const image = createEnemyImage({ ...options, hiddenChartCategories })
+    assert.deepEqual(savedRows(image.snapshot), wanted)
+    assert.equal(image.snapshot.naturalChartHeight, 80 * wanted.length)
+    assert.equal(image.alternateLayout, undefined)
+    const selection = '表示 ' + wanted.join('・')
+    assert.ok(image.snapshot.conditions.includes(selection))
+    assert.ok(createChartImageFilename(image.snapshot.title, image.snapshot.filenameParts).includes(selection.replace(' ', '')))
+  }
+  assert.equal(createEnemyImage({ ...options, hiddenChartCategories: labels }), null)
+  assert.equal(createEnemyImage({ ...options, breakdown: 'all', hiddenChartCategories: ['全体'] }), null)
+  const [first, second] = statistics.professionRows
+  const limited = { ...options, filters: { ...filters, profession: first.key } }
+  const unaffected = createEnemyImage({ ...limited, hiddenChartCategories: [second.label] }).snapshot
+  assert.deepEqual(savedRows(unaffected), ['全体', first.label])
+  assert.deepEqual(unaffected.filenameParts, createEnemyImage(limited).snapshot.filenameParts)
+  assert.deepEqual(unaffected.conditions, createEnemyImage(limited).snapshot.conditions)
+  for (const format of ['table', 'meanDamage', 'histogram']) {
+    const normal = createEnemyImage({ ...options, format }).snapshot
+    const saved = createEnemyImage({ ...options, format, hiddenChartCategories: labels }).snapshot
+    assert.deepEqual(saved.conditions, normal.conditions)
+    assert.deepEqual(saved.filenameConditions ?? saved.filenameParts, normal.filenameConditions ?? normal.filenameParts)
+    const draw = snapshot => renderToStaticMarkup(snapshot.table ?? snapshot.chart({ width: 928, height: 400 }))
+    assert.equal(draw(saved), draw(normal))
+  }
+})
+
 const peakRow = { ...sample, resistance: 0, defense: 0, count: 20,
   histogram: sample.histogram.map(bin => ({ ...bin, physical: bin.lower === 0 ? 20 : 0, arts: bin.lower === 0 ? 20 : 0 })) }
 

@@ -133,7 +133,31 @@ export function OperatorSkillVotesChart({ operator }: { operator: EnemyOperatorV
   </figure>
 }
 
+export function EnemyAdvantageCategorySelector({ rows, hidden, onChange }: {
+  rows: readonly EnemyAdvantageDisplayRow[]
+  hidden: readonly string[]
+  onChange: (hidden: string[]) => void
+}) {
+  const labels = rows.map(row => row.label)
+  const hiddenCount = labels.filter(label => hidden.includes(label)).length
+  return <fieldset className="dc3-matrix-option-group enemy-chart-visibility dc3-matrix-category-visibility">
+    <legend>表示カテゴリ</legend>
+    <div>
+      {labels.map(label => <label key={label} className={hidden.includes(label) ? '' : 'active'}>
+        <input type="checkbox" checked={!hidden.includes(label)} onChange={event =>
+          onChange(event.target.checked ? hidden.filter(item => item !== label) : [...hidden, label])} />
+        {label}
+      </label>)}
+      <button type="button" className="filter-reset-button" disabled={hiddenCount === 0}
+        onClick={() => onChange(hidden.filter(label => !labels.includes(label)))}>全選択</button>
+      <button type="button" className="filter-reset-button" disabled={hiddenCount === labels.length}
+        onClick={() => onChange([...new Set([...hidden, ...labels])])}>すべて解除</button>
+    </div>
+  </fieldset>
+}
+
 export function DamageThreeEnemyAdvantageChart(props: EnemyAdvantageViewProps) {
+  if (!props.rows.length) return <p role="status">表示カテゴリを選択してください。</p>
   return <figure className="dc3-stat-chart" aria-label="出現敵での優勢率">
     <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
     <DamageThreeEnemyAdvantagePlot {...props} height={getEnemyAdvantagePlotHeight(props.rows.length)} />
