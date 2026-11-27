@@ -12,7 +12,8 @@ function enemy(id: string, defense: number | null, magicResistance: number | nul
 }
 
 function sample(operatorId: string, cells: NamedSkillRankStageSample['cells'], stageLabel = '通常', skillIndex = 1): NamedSkillRankStageSample {
-  return { skill: { operatorId, operatorName: operatorId, skillId: 'skill-' + skillIndex, skillIndex, skillName: 'S' + skillIndex },
+  return { skill: { operatorId, operatorName: operatorId, skillId: 'skill-' + skillIndex, skillIndex, skillName: 'S' + skillIndex,
+    profession: 'WARRIOR', rarity: 6 },
     stageLabel, cells }
 }
 
@@ -45,6 +46,33 @@ test('実敵ごとに有効段階で1票を分け、出現回数を掛けた後�
   // A: (8 × 1/2) / 11, B: 3 / 11. C has no comparable enemy.
   assert.deepEqual(stats.skillPhysicalRateBins.map(bin => bin.count), [0, 0, 1, 1, 0, 0, 0, 0, 0, 0])
   assert.equal(summarizeEnemySpawnAdvantage(pairs, []).rows[0].skill.count, 0)
+})
+
+test('職業別とレアリティ別の票は各カテゴリで個別に集計した票と両単位で一致する', () => {
+  const pairs = [{ defense: 0, resistance: 10, spawnCount: 9 }, { defense: 500, resistance: 30, spawnCount: 4 }]
+  const physical = { physical: 3, arts: 1 }, arts = { physical: 1, arts: 3 }
+  const tie = { physical: 0, arts: 0 }, missing = { physical: 1, arts: null }
+  const categorized = (id: string, cells: NamedSkillRankStageSample['cells'], profession: string, rarity: number) => {
+    const stage = sample(id, cells)
+    return { ...stage, skill: { ...stage.skill, profession, rarity } }
+  }
+  const stages = [
+    categorized('A', [physical, arts], 'WARRIOR', 6), categorized('A', [arts, missing], 'WARRIOR', 6),
+    categorized('B', [tie, physical], 'WARRIOR', 5), categorized('C', [arts, missing], 'MEDIC', 5),
+    categorized('D', [missing, missing], 'CASTER', 4), categorized('E', [tie, missing], '', 0),
+  ]
+  const stats = summarizeEnemySpawnAdvantage(pairs, stages)
+  assert.deepEqual(stats.professionRows.map(row => row.key), ['PIONEER', 'WARRIOR', 'TANK', 'SNIPER', 'CASTER', 'MEDIC', 'SUPPORT', 'SPECIAL', 'UNKNOWN'])
+  assert.deepEqual(stats.rarityRows.map(row => row.key), ['6', '5', '4', '3', '2', '1', 'UNKNOWN'])
+  for (const [field, rows] of [['profession', stats.professionRows], ['rarity', stats.rarityRows]] as const) {
+    for (const row of rows) {
+      const subset = stages.filter(({ skill }) => (skill[field] ? String(skill[field]) : 'UNKNOWN') === row.key)
+      const expected = summarizeEnemySpawnAdvantage(pairs, subset)
+      assert.deepEqual([row.skillCount, row.stageCount], [expected.skillCount, expected.stageCount])
+      assert.deepEqual(row.skill, expected.rows[0].skill)
+      assert.deepEqual(row.stage, expected.rows[0].stage)
+    }
+  }
 })
 
 test('物理優勢率は下限を含む10ポイント幅で数え、100%も最終階級に含める', () => {

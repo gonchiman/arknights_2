@@ -59,6 +59,7 @@ export interface SkillRankStageSample {
 
 export interface NamedSkillRankStageSample extends SkillRankStageSample {
   skill: SkillRankStageSample['skill'] & Pick<DamageThreeAttributeEntry['skill'], 'operatorName' | 'skillName'>
+    & Partial<Pick<DamageThreeAttributeEntry['skill'], 'profession' | 'rarity'>>
   stageLabel: string
 }
 

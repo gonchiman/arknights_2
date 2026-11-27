@@ -22,7 +22,8 @@ export function enemySpawnDefaultPlugin() {
         this.addWatchFile(file)
       })
       const saved = JSON.parse(source)
-      if (currentHash === saved.calculationSha256) return
+      if (currentHash === saved.calculationSha256 && Array.isArray(saved.statistics?.professionRows)
+        && Array.isArray(saved.statistics?.rarityRows)) return
       const message = 'DC3の事前集計を npm run generate:dc3-enemy-default で更新してください。'
       if (command === 'build') this.error(message)
       this.warn(message)

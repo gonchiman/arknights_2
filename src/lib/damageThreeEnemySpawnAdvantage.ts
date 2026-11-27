@@ -2,6 +2,7 @@ import type { EnemyRecord } from '../types/enemy.ts'
 import { getEnemyCountWeight, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
 import { getAdvantageOutcome, isComparableDamage, type AdvantageVotes, type NamedSkillRankStageSample } from './damageThreeSkillRankStatistics.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
+import { getProfessionLabel, PROFESSION_ORDER } from './operatorFilters.ts'
 
 interface EnemySpawnStatPair {
   defense: number
@@ -75,8 +76,19 @@ export interface EnemySpawnAdvantageRow {
 
 export type SkillPhysicalRateBin = { lower: number; upper: number; count: number }
 
+export interface EnemyAdvantageCategoryRow {
+  key: string
+  label: string
+  skillCount: number
+  stageCount: number
+  skill: WeightedVotes
+  stage: WeightedVotes
+}
+
 export interface EnemySpawnAdvantageStatistics {
   rows: EnemySpawnAdvantageRow[]
+  professionRows: EnemyAdvantageCategoryRow[]
+  rarityRows: EnemyAdvantageCategoryRow[]
   skillCount: number
   stageCount: number
   skillPhysicalRateBins: SkillPhysicalRateBin[]
@@ -92,6 +104,18 @@ const defenseBands = [
 
 function emptyVotes(): WeightedVotes {
   return { physicalWins: 0, ties: 0, artsWins: 0, count: 0 }
+}
+
+function createCategoryRow(key: string, label: string): EnemyAdvantageCategoryRow {
+  return { key, label, skillCount: 0, stageCount: 0, skill: emptyVotes(), stage: emptyVotes() }
+}
+
+function getCategoryRow(rows: Map<string, EnemyAdvantageCategoryRow>, key: string) {
+  const row = rows.get(key) ?? rows.get('UNKNOWN')
+  if (row) return row
+  const unknown = createCategoryRow('UNKNOWN', '不明')
+  rows.set(unknown.key, unknown)
+  return unknown
 }
 
 function addVotes(target: WeightedVotes, source: WeightedVotes, weight = 1) {
@@ -127,10 +151,15 @@ export function summarizeEnemySpawnAdvantage(
   }))
   let stageCount = 0
   const operators = new Map<string, EnemyOperatorVotes>()
+  const professions = new Map<string, EnemyAdvantageCategoryRow>(PROFESSION_ORDER.map(key =>
+    [key, createCategoryRow(key, getProfessionLabel(key))]))
+  const rarities = new Map([6, 5, 4, 3, 2, 1].map(rarity =>
+    [String(rarity), createCategoryRow(String(rarity), '★' + rarity)] as const))
   for (const [key, group] of skills) {
     stageCount += group.length
     const winsByStageCount = new Map<number, number>()
     const skillVotes = emptyVotes()
+    const stageVotes = emptyVotes()
     let comparableSpawns = 0
     pairs.forEach(({ spawnCount }, index) => {
       const votes = emptyVotes()
@@ -150,6 +179,7 @@ export function summarizeEnemySpawnAdvantage(
       pair.skillCount++
       const { band } = pair
       addVotes(band.stage, votes, spawnCount)
+      addVotes(stageVotes, votes, spawnCount)
       // Each skill shares one vote among the valid stages for this particular enemy.
       const stageWeight = spawnCount / votes.count
       addVotes(band.skill, votes, stageWeight)
@@ -159,13 +189,19 @@ export function summarizeEnemySpawnAdvantage(
       comparableSpawns += spawnCount
     })
     if (comparableSpawns > 0) {
-      const { operatorId, operatorName, skillIndex, skillName } = group[0].skill
+      const { operatorId, operatorName, skillIndex, skillName, profession, rarity } = group[0].skill
       let operator = operators.get(operatorId)
       if (!operator) {
         operator = { operatorId, operatorName, skills: [], votes: emptyVotes() }
         operators.set(operatorId, operator)
       }
       skillVotes.count = comparableSpawns
+      for (const row of [getCategoryRow(professions, profession ?? 'UNKNOWN'), getCategoryRow(rarities, String(rarity))]) {
+        row.skillCount++
+        row.stageCount += group.length
+        addVotes(row.skill, skillVotes)
+        addVotes(row.stage, stageVotes)
+      }
       operator.skills.push({ key, skillIndex, skillName, votes: skillVotes, stages: group })
       addVotes(operator.votes, skillVotes)
       // Combine the stage fractions before dividing so six 1/3 votes count as exactly two.
@@ -198,5 +234,8 @@ export function summarizeEnemySpawnAdvantage(
     const { physical, arts, spawnCount } = weightedDamage
     return { ...row, meanDamage: spawnCount > 0 ? { physical: physical / spawnCount, arts: arts / spawnCount, spawnCount } : null }
   })
-  return { rows: resultRows, skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()] }
+  return {
+    rows: resultRows, professionRows: [...professions.values()], rarityRows: [...rarities.values()],
+    skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()],
+  }
 }

@@ -2,11 +2,13 @@ import type { EnemyOperatorVotes, EnemySpawnAdvantageRow, WeightedVotes } from '
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
+import { getEnemyAdvantageCountLabel, getEnemyAdvantageRowCount, type EnemyAdvantageBreakdown, type EnemyAdvantageDisplayRow } from './enemyAdvantageBreakdown'
 import './DamageThreeEnemyAdvantageViews.css'
 
 interface EnemyAdvantageViewProps {
-  rows: readonly EnemySpawnAdvantageRow[]
+  rows: readonly EnemyAdvantageDisplayRow[]
   unit: AdvantageUnit
+  breakdown: EnemyAdvantageBreakdown
 }
 
 const INTEGER = new Intl.NumberFormat('ja-JP')
@@ -15,7 +17,7 @@ const DAMAGE = new Intl.NumberFormat('ja-JP', damagePrecision)
 const DAMAGE_DIFFERENCE = new Intl.NumberFormat('ja-JP', { ...damagePrecision, signDisplay: 'exceptZero' })
 export const ENEMY_MEAN_DAMAGE_TITLE = '主攻撃1回の平均ダメージ'
 
-export function DamageThreeEnemyMeanDamageTable({ rows }: Pick<EnemyAdvantageViewProps, 'rows'>) {
+export function DamageThreeEnemyMeanDamageTable({ rows }: { rows: readonly EnemySpawnAdvantageRow[] }) {
   return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label={ENEMY_MEAN_DAMAGE_TITLE}>
     <colgroup><col /><col /><col /><col /><col /></colgroup>
     <thead><tr>
@@ -31,17 +33,18 @@ export function DamageThreeEnemyMeanDamageTable({ rows }: Pick<EnemyAdvantageVie
   </table>
 }
 
-export function DamageThreeEnemyAdvantageTable({ rows, unit }: EnemyAdvantageViewProps) {
+export function DamageThreeEnemyAdvantageTable({ rows, unit, breakdown }: EnemyAdvantageViewProps) {
+  const categoryLabel = { all: '区分', defense: '防御力帯', profession: '職業', rarity: 'レアリティ' }[breakdown]
   return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label="出現敵での優勢率">
     <colgroup><col /><col />{ADVANTAGE_OUTCOMES.map(({ key }) => <col key={key} />)}</colgroup>
     <thead><tr>
-      <th scope="col">防御力帯</th><th scope="col">出現回数</th>
+      <th scope="col">{categoryLabel}</th><th scope="col">{getEnemyAdvantageCountLabel(breakdown, unit)}</th>
       {ADVANTAGE_OUTCOMES.map(({ key, label }) => <th scope="col" key={key}>{label} (%)</th>)}
     </tr></thead>
     <tbody>{rows.map(row => {
       const votes = row[unit]
       return <tr key={row.label}>
-        <th scope="row">{row.label}</th><td data-table-image-number>{INTEGER.format(row.spawnCount)}</td>
+        <th scope="row">{row.label}</th><td data-table-image-number>{INTEGER.format(getEnemyAdvantageRowCount(row, unit))}</td>
         {ADVANTAGE_OUTCOMES.map(({ key }) => <td key={key} data-table-image-number>
           {formatAdvantagePercentage(votes[key], votes.count)}
         </td>)}
@@ -103,10 +106,11 @@ function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
   </svg>
 }
 
-export function DamageThreeEnemyAdvantagePlot({ rows, unit, ...size }: EnemyAdvantageViewProps & PlotSize) {
+export function DamageThreeEnemyAdvantagePlot({ rows, unit, breakdown, ...size }: EnemyAdvantageViewProps & PlotSize) {
+  const countLabel = getEnemyAdvantageCountLabel(breakdown, unit)
   const bands = rows.map(row => ({
-    key: row.label, label: row.label === '全体' ? row.label : `防御力 ${row.label}`,
-    note: `出現回数 ${INTEGER.format(row.spawnCount)}`, votes: row[unit],
+    key: row.label, label: breakdown === 'defense' && row.label !== '全体' ? `防御力 ${row.label}` : row.label,
+    note: `${countLabel} ${INTEGER.format(getEnemyAdvantageRowCount(row, unit))}`, votes: row[unit],
   }))
   return <VoteSharePlot {...size} rows={bands} title="出現回数で重み付けした属性別の優勢率" />
 }
@@ -129,9 +133,9 @@ export function OperatorSkillVotesChart({ operator }: { operator: EnemyOperatorV
   </figure>
 }
 
-export function DamageThreeEnemyAdvantageChart({ rows, unit }: EnemyAdvantageViewProps) {
+export function DamageThreeEnemyAdvantageChart(props: EnemyAdvantageViewProps) {
   return <figure className="dc3-stat-chart" aria-label="出現敵での優勢率">
     <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
-    <DamageThreeEnemyAdvantagePlot rows={rows} unit={unit} height={getEnemyAdvantagePlotHeight(rows.length)} />
+    <DamageThreeEnemyAdvantagePlot {...props} height={getEnemyAdvantagePlotHeight(props.rows.length)} />
   </figure>
 }

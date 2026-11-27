@@ -40,7 +40,8 @@ for (const entry of entries) {
   const cells = evaluateSkillRankStatisticsStage(entry, population.pairs, 'excludeAttributeEffects')
   if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
 }
-const { rows, skillCount, stageCount, skillPhysicalRateBins } = summarizeEnemySpawnAdvantage(population.pairs, stages)
+const { operators, ...statistics } = summarizeEnemySpawnAdvantage(population.pairs, stages)
+const { rows, skillCount } = statistics
 if (!population.spawnCount || !skillCount || !rows[0]?.meanDamage) throw new Error('標準条件の集計結果が空です。')
 if (getEnemySpawnCalculationHash() !== calculationSha256) throw new Error('計算コードが変更されました。再実行してください。')
 const snapshot = {
@@ -49,7 +50,7 @@ const snapshot = {
   gameDataRevision: game.revision,
   skillDataSha256: await getEnemySpawnSkillDataHash(skills),
   calculationSha256,
-  statistics: { rows, skillCount, stageCount, skillPhysicalRateBins },
+  statistics,
 }
 const temporary = output + '.' + randomUUID() + '.tmp'
 try {
