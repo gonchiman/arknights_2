@@ -8,12 +8,13 @@ import { DamageCalculatorThreeAttributeChartImageDialog, type ChartImageAlternat
 import { DamageThreeAdvantageImageLegend } from './DamageThreeAdvantageChartImage'
 import { getEnemyAdvantagePlotHeight, OperatorSkillVotesPlot } from './DamageThreeEnemyAdvantageViews'
 import { DamageThreeStatisticsImageLegend } from './DamageThreeStatisticsImageLegend'
+import { ENEMY_ANALYSES, ENEMY_COMPARISON_TITLE } from './enemyComparisonViews'
 import { getOperatorSkillVoteImageHeight, OperatorSkillVoteImagePlot } from './OperatorSkillVoteImagePlot'
 import { OutputImageSaveButton } from './OutputImageSaveButton'
 import { TABLE_CHART_VIEWS, type TableChartView, viewLabel } from './PageViewSwitch'
 
 export function getOperatorVotesSegments(detail = false, view: TableChartView = 'table') {
-  const parent = ['出現敵での優勢率', 'オペレーター別の票']
+  const parent = [ENEMY_COMPARISON_TITLE, viewLabel(ENEMY_ANALYSES, 'operatorVotes')]
   if (detail) return [...parent, '段階ごとの判定']
   return [...parent, 'スキル別の得票', viewLabel(TABLE_CHART_VIEWS, view)]
 }

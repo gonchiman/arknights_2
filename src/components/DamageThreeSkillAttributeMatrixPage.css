@@ -27,6 +27,18 @@
 .dc3-matrix-table-heading nav button { padding: 4px 9px; min-height: 30px; font-size: 12px; }
 
 .dc3-matrix-display-options { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 16px; }
+.dc3-matrix-display-options:empty { display: none; }
+.dc3-matrix-enemy-analysis .page-view-switch {
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  gap: 4px;
+  border: 0;
+}
+.dc3-matrix-enemy-analysis .page-view-switch button {
+  border: 1px solid var(--border-strong);
+}
 .dc3-matrix-option-group { min-width: 0; max-width: 100%; margin: 0; border: 0; padding: 0; }
 .dc3-matrix-option-group legend,
 .dc3-matrix-option-label { display: block; margin-bottom: 4px; padding: 0; color: var(--text-soft); font-size: 12px; }

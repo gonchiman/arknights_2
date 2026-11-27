@@ -11,10 +11,7 @@ import {
 } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSICAL_RATE_TITLE } from './DamageThreeSkillPhysicalRateHistogram'
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
-import { TABLE_CHART_VIEWS, type TableChartView } from './PageViewSwitch'
-
-export const ENEMY_ADVANTAGE_VIEWS = [...TABLE_CHART_VIEWS, ['meanDamage', '平均ダメージ'], ['histogram', 'スキル別の分布'], ['operatorVotes', 'オペレーター別の票']] as const
-export type EnemyAdvantageView = typeof ENEMY_ADVANTAGE_VIEWS[number][0]
+import type { TableChartView } from './PageViewSwitch'
 
 export type EnemyAdvantageImage =
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot; alternateLayout?: ChartImageAlternateLayout }
@@ -24,7 +21,7 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   statistics: Omit<EnemySpawnAdvantageStatistics, 'operators'>
   advantageUnit: AdvantageUnit
   showBands: boolean
-  format: Exclude<EnemyAdvantageView, 'operatorVotes'>
+  format: TableChartView | 'meanDamage' | 'histogram'
   meanDamageFormat?: TableChartView
 }
 

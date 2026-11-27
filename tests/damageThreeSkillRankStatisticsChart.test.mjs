@@ -43,6 +43,26 @@ const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
 
+test('出現敵での比較は4つの分析を分け、各出力の形式をアドレスで区別する', async () => {
+  const { ENEMY_COMPARISON_TITLE, ENEMY_ANALYSES, getEnemyAnalysisSegments } =
+    await server.ssrLoadModule('/src/components/enemyComparisonViews.ts')
+  const { default: Page } = await server.ssrLoadModule('/src/components/DamageThreeSkillAttributeMatrixPage.tsx')
+  const page = renderToStaticMarkup(createElement(Page, { rows: [], loading: true }))
+  const tabs = [...page.matchAll(/<button\b[^>]+role="tab"[^>]*>([^<]+)<\/button>/g)].map(([, title]) => title)
+  assert.deepEqual(tabs, ['主攻撃の属性変更', '実際のダメージ内訳', '術耐性別の統計', '出現敵での比較'])
+  assert.equal(ENEMY_COMPARISON_TITLE, tabs.at(-1))
+  assert.deepEqual(ENEMY_ANALYSES, [
+    ['advantage', '属性別の優勢率'], ['meanDamage', '平均ダメージ'],
+    ['histogram', 'スキル別の物理優勢率分布'], ['operatorVotes', 'オペレーター別の票'],
+  ])
+  for (const [format, label] of [['table', '表'], ['chart', 'グラフ']]) {
+    assert.deepEqual(getEnemyAnalysisSegments('advantage', format), ['属性別の優勢率', label])
+    assert.deepEqual(getEnemyAnalysisSegments('meanDamage', format), ['平均ダメージ', label])
+    assert.deepEqual(getEnemyAnalysisSegments('histogram', format), ['スキル別の物理優勢率分布', 'ヒストグラム'])
+    assert.deepEqual(getEnemyAnalysisSegments('operatorVotes', format), ['オペレーター別の票'])
+  }
+})
+
 const meanDamageOptions = {
   statistics: { skillCount: 2, stageCount: 3, rows: [
     { label: '全体', spawnCount: 120, skill: { count: 200 }, meanDamage: { physical: 100.02, arts: 105.08, spawnCount: 100 } },
@@ -178,6 +198,7 @@ test('出現敵の棒上ラベルは全体グラフの保存時だけ選べ、�
   }
   for (const [advantageUnit, values] of [['skill', ['99.9', '0.1', '0.0']], ['stage', ['55.0', '10.0', '35.0']]]) {
     const { snapshot, alternateLayout } = createEnemyImage({ ...options, advantageUnit })
+    assert.equal(snapshot.title, '出現敵での優勢率')
     assert.equal(alternateLayout.label, '割合を棒の上に表示')
     assert.deepEqual(alternateLayout.defaultAspect, { preset: '16:9', width: '16', height: '9' })
     assert.equal(alternateLayout.snapshot.title, snapshot.title)
@@ -452,8 +473,8 @@ test('棒の直接表示では折り返したスキル名も棒と左揃えに�
 })
 
 test('スキル別の得票は画像保存時だけ棒への直接表示を選べ、ファイル名でも区別できる', async () => {
-  const { DamageThreeOperatorVotes } = await server.ssrLoadModule('/src/components/DamageThreeOperatorVotes.tsx')
-  const { createOperatorVotesChartImage } = await server.ssrLoadModule('/src/components/OperatorVotesImageButton.tsx')
+  const { DamageThreeOperatorVotes, useOperatorVoteSelection } = await server.ssrLoadModule('/src/components/DamageThreeOperatorVotes.tsx')
+  const { createOperatorVotesChartImage, getOperatorVotesSegments } = await server.ssrLoadModule('/src/components/OperatorVotesImageButton.tsx')
   const { DamageCalculatorThreeAttributeChartImageDialog } =
     await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributeChartImageDialog.tsx')
   const { PageLayout } = await server.ssrLoadModule('/src/components/PageLayout.tsx')
@@ -463,10 +484,21 @@ test('スキル別の得票は画像保存時だけ棒への直接表示を選�
     skills: [{ key: 's1', skillIndex: 1, skillName: 'レーヴァテイン', votes }] }
   const conditions = { aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'excludeAttributeEffects',
     filters: { kind: 'ALL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: '' } }
-  const screen = renderToStaticMarkup(createElement(PageLayout, { page: 'damage-three-skill-attribute-matrix' },
-    createElement(DamageThreeOperatorVotes, { operators: [operator], professionOptions: [], operatorId: operator.operatorId,
-      statistics: { operators: [operator] }, population: { pairs: [], spawnCount: 10 }, imageConditions: conditions,
-      selection: [{ view: 'chart', operatorId: operator.operatorId, skillKey: null, pairKey: '' }, () => {}] })))
+  const pageTitle = 'スキル別の物理・術ダメージ'
+  const voteAddress = pageTitle + ' / 出現敵での比較 / オペレーター別の票 / スキル別の得票'
+  function VotesPanel({ view }) {
+    const [state, setState] = useOperatorVoteSelection()
+    return createElement(PageLayout, { page: 'damage-three-skill-attribute-matrix' },
+      createElement(DamageThreeOperatorVotes, { operators: [operator], professionOptions: [], operatorId: operator.operatorId,
+        statistics: { operators: [operator] }, population: { pairs: [], spawnCount: 10 }, imageConditions: conditions,
+        selection: [view ? { ...state, view } : state, setState] }))
+  }
+  const initial = renderToStaticMarkup(createElement(VotesPanel))
+  assert.ok(labels(initial).includes(voteAddress + ' / 表の場所をコピー'))
+  assert.match(initial, /<table[^>]+aria-label="スキル別の得票"/)
+  const screen = renderToStaticMarkup(createElement(VotesPanel, { view: 'chart' }))
+  assert.ok(labels(screen).includes(voteAddress + ' / グラフの場所をコピー'))
+  assert.deepEqual(getOperatorVotesSegments(true), ['出現敵での比較', 'オペレーター別の票', '段階ごとの判定'])
   assert.match(screen, />物理 60\.0%<\/text>/)
   assert.doesNotMatch(screen, /グラフのレイアウト|割合を棒に直接表示/)
 
@@ -477,8 +509,9 @@ test('スキル別の得票は画像保存時だけ棒への直接表示を選�
   assert.deepEqual(alternateLayout.snapshot.conditions, ['主攻撃を物理・術に切り替えて比較'])
   assert.match(alternateLayout.snapshot.footerNote, /^メインストーリー・(?:敵の)?出現回数 10/)
   const dialog = renderToStaticMarkup(createElement(DamageCalculatorThreeAttributeChartImageDialog, {
-    snapshot, alternateLayout, onClose() {},
+    snapshot, alternateLayout, parentLocation: [pageTitle, ...getOperatorVotesSegments(false, 'chart')], onClose() {},
   }))
+  assert.ok(labels(dialog).includes(voteAddress + ' / グラフ / 画像を保存の場所をコピー'))
   assert.match(dialog, /<option value="standard" selected="">標準<\/option>/)
   assert.match(dialog, /<option value="alternate">割合を棒に直接表示<\/option>/)
   const size = { width: 928, height: 400 }
