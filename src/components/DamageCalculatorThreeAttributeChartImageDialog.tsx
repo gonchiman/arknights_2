@@ -11,6 +11,7 @@ import './DamageCalculatorThreeAttributeChartImageDialog.css'
 
 export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   title: string
+  defaultAspect?: ChartImageAspectSettings
   axisTitle?: string
   footerNote?: string
   className?: string
@@ -45,7 +46,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
   const [saveError, setSaveError] = useState(false)
   const saveInProgress = useRef(false)
   const layout = useAlternateLayout ? alternateLayout : undefined
-  const aspect = chosenAspect ?? layout?.defaultAspect ?? AUTO_ASPECT
+  const aspect = chosenAspect ?? layout?.defaultAspect ?? snapshot.defaultAspect ?? AUTO_ASPECT
   const parsedAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
   const invalidAspect = aspect.preset !== 'auto' && !parsedAspect
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined

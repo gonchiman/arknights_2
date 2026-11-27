@@ -43,6 +43,129 @@ const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
 
+const meanDamageOptions = {
+  statistics: { skillCount: 2, stageCount: 3, rows: [
+    { label: '全体', spawnCount: 120, skill: { count: 200 }, meanDamage: { physical: 100.02, arts: 105.08, spawnCount: 100 } },
+    { label: '200未満', meanDamage: { physical: 20, arts: 0, spawnCount: 30 } },
+    { label: '200〜499', meanDamage: null },
+  ] },
+  format: 'meanDamage', advantageUnit: 'stage', showBands: false,
+  aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'apply',
+  filters: { kind: 'NORMAL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: 'スルト' },
+}
+
+test('平均ダメージの表画像は比較可能な出現回数とスキル単位の条件を表示する', () => {
+  const options = meanDamageOptions
+  const [total] = options.statistics.rows
+  const { view, snapshot } = createEnemyImage(options)
+  assert.equal(view, 'table')
+  assert.equal(snapshot.title, '主攻撃1回の平均ダメージ')
+  assert.ok(snapshot.conditions.includes('出現回数 100'))
+  assert.ok(snapshot.conditions.includes('2スキル'))
+  for (const part of ['全体のみ', 'スキル単位', '通常攻撃型', '属性限定効果を適用', '検索「スルト」']) {
+    assert.ok(snapshot.conditions.includes(part) && snapshot.filenameConditions.includes(part), part)
+  }
+  const overall = renderToStaticMarkup(snapshot.table)
+  for (const value of ['出現回数', '物理平均', '術平均', '差（物理−術）', '100', '100.0', '105.1', '-5.1']) {
+    assert.ok(overall.includes(`>${value}<`), value)
+  }
+  assert.doesNotMatch(overall, /200未満/)
+  const bandSnapshot = createEnemyImage({ ...options, showBands: true }).snapshot
+  assert.ok(bandSnapshot.filenameConditions.includes('防御力帯別の内訳'))
+  const bands = renderToStaticMarkup(bandSnapshot.table)
+  assert.match(bands, /200未満.*?>0\.0<.*?>\+20\.0</)
+  assert.match(bands, /200〜499.*?>0<.*?>—<.*?>—<.*?>—</)
+  assert.equal(createEnemyImage({ ...options, statistics: { ...options.statistics, rows: [{ ...total, meanDamage: null }] } }), null)
+})
+
+test('平均ダメージのグラフ画像は有効な平均を共通目盛りで描き、欠測の帯とゼロを区別する', () => {
+  for (const showBands of [false, true]) {
+    const options = { ...meanDamageOptions, showBands }
+    const table = createEnemyImage(options).snapshot
+    const { view, snapshot, alternateLayout } = createEnemyImage({ ...options, meanDamageFormat: 'chart' })
+    assert.equal(view, 'chart')
+    assert.equal(alternateLayout, undefined)
+    assert.equal(snapshot.title, table.title)
+    assert.deepEqual(snapshot.filenameParts, ['グラフ', ...table.filenameConditions.slice(1)])
+    if (showBands) {
+      assert.deepEqual(snapshot.conditions, table.conditions)
+      assert.equal(snapshot.axisTitle, '平均ダメージ')
+      assert.ok(snapshot.legend)
+    }
+
+    const svg = renderToStaticMarkup(snapshot.chart({ width: 928, height: snapshot.naturalChartHeight }))
+    const bars = [...svg.matchAll(/<rect\b[^>]*>/g)].map(match => match[0]).filter(rect => rect.includes('data-series='))
+    const values = showBands ? [100.02, 105.08, 20, 0] : [100.02, 105.08]
+    assert.equal(bars.length, values.length)
+    const widths = bars.map(rect => parseFloat(rect.match(/\bwidth="([^"]+)"/)[1]))
+    assert.ok(widths[0] > 0)
+    values.forEach((value, index) => {
+      assert.ok(Math.abs(widths[index] / widths[0] - value / values[0]) < 1e-6)
+    })
+    assert.match(svg, />100\.0<\/text>/)
+    assert.match(svg, />105\.1<\/text>/)
+    if (showBands) {
+      assert.match(svg, />0\.0<\/text>/)
+      assert.match(svg, /対象なし/)
+    } else {
+      assert.doesNotMatch(svg, /200未満|対象なし/)
+    }
+    assert.doesNotMatch(svg, /NaN|Infinity/)
+  }
+})
+
+test('全体のみの平均ダメージ画像は属性と実数を各棒に直記し、その下に共通の目盛りを置く', () => {
+  const options = {
+    ...meanDamageOptions, meanDamageFormat: 'chart',
+    statistics: { ...meanDamageOptions.statistics, skillCount: 752, rows: [{
+      ...meanDamageOptions.statistics.rows[0], spawnCount: 12000,
+      meanDamage: { physical: 1725.7, arts: 1566, spawnCount: 11409 },
+    }] },
+  }
+  const { snapshot } = createEnemyImage(options)
+  assert.deepEqual(snapshot.conditions, ['メインストーリー', '出現11,409回', '752スキル'])
+  assert.equal(snapshot.defaultAspect.preset, '16:9')
+  for (const label of ['集計版 v12', 'スキル単位', '通常攻撃型', '属性限定効果を適用', '検索「スルト」']) {
+    assert.ok(snapshot.footerNote.includes(label), label)
+  }
+  assert.equal(snapshot.legend, null)
+  assert.equal(snapshot.axisTitle, '')
+  const height = 420
+  const svg = renderToStaticMarkup(snapshot.chart({ width: 928, height }))
+  assert.doesNotMatch(svg, />防御力帯<|>全体<|200未満/)
+  const attributes = tag => Object.fromEntries([...tag.matchAll(/([\w-]+)="([^"]*)"/g)].map(([, key, value]) => [key, value]))
+  const labels = new Map([...svg.matchAll(/<text\b([^>]*)>([^<]+)<\/text>/g)].map(([, tag, label]) => [label, attributes(tag)]))
+  const bars = [...svg.matchAll(/<rect\b[^>]+>/g)].map(([tag]) => attributes(tag)).filter(bar => bar['data-series'])
+  assert.deepEqual(bars.map(bar => bar['data-series']), ['physical', 'arts'])
+  const [physical, arts] = bars
+  assert.equal(physical.x, arts.x)
+  assert.ok(Math.abs(Number(physical.width) / Number(arts.width) - 1725.7 / 1566) < 1e-6)
+  for (const [index, [name, value]] of [['物理', '1,725.7'], ['術', '1,566.0']].entries()) {
+    const bar = bars[index]
+    const label = labels.get(name)
+    const amount = labels.get(value)
+    assert.ok(label && amount)
+    assert.ok(Number(label.x) < Number(bar.x))
+    assert.ok(Number(amount.x) >= Number(bar.x) + Number(bar.width) - 0.01)
+    assert.ok(Number(label.y) >= Number(bar.y) && Number(label.y) <= Number(bar.y) + Number(bar.height))
+  }
+  const bottom = Number(arts.y) + Number(arts.height)
+  for (const tick of ['0', '500', '1,000', '1,500', '2,000']) {
+    const y = Number(labels.get(tick)?.y)
+    assert.ok(y > bottom && y < Number(labels.get('平均ダメージ')?.y), tick)
+  }
+  const grid = [...svg.matchAll(/<line\b[^>]+>/g)].map(([tag]) => attributes(tag)).filter(line => line.x1 === line.x2)
+  assert.ok(grid.length >= 2)
+  assert.ok(grid.every(line => Number(line.y2) - Number(line.y1) < height / 2), '目盛線を2本の棒の周囲に収める')
+  const total = options.statistics.rows[0]
+  const zero = createEnemyImage({ ...options, statistics: { ...options.statistics,
+    rows: [{ ...total, meanDamage: { ...total.meanDamage, physical: 0, arts: 0 } }],
+  } })
+  const zeroSvg = renderToStaticMarkup(zero.snapshot.chart({ width: 928, height }))
+  assert.equal([...zeroSvg.matchAll(/>0\.0<\/text>/g)].length, 2)
+  assert.doesNotMatch(zeroSvg, /NaN|Infinity|対象なし/)
+})
+
 test('出現敵の棒上ラベルは全体グラフの保存時だけ選べ、集計単位ごとの割合を表示する', () => {
   const options = {
     statistics: { skillCount: 2, stageCount: 3, skillPhysicalRateBins: [],

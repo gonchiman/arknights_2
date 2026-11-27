@@ -58,6 +58,34 @@ test('物理優勢率は下限を含む10ポイント幅で数え、100%も最�
   })))
 })
 
+test('敵ごとに段階、スキルの順で等しく平均し、比較可能な出現回数で全体と防御力帯を加重平均する', () => {
+  const pairs = [
+    { defense: 200, resistance: 0, spawnCount: 2 },
+    { defense: 500, resistance: 20, spawnCount: 4 },
+    { defense: 250, resistance: 10, spawnCount: 1 },
+    { defense: 1000, resistance: 50, spawnCount: 2 },
+  ]
+  const noArts = { physical: 100, arts: null }, noPhysical = { physical: null, arts: 100 }
+  const zero = { physical: 0, arts: 0 }
+  const stages = [
+    sample('A', [{ physical: 0, arts: 20 }, noArts, noArts, zero]),
+    sample('A', [{ physical: 40, arts: 100 }, { physical: 30, arts: 60 }, noPhysical, noArts]),
+    sample('B', [{ physical: 100, arts: 0 }, noPhysical, noPhysical, noArts]),
+  ]
+  const { rows } = summarizeEnemySpawnAdvantage(pairs, stages)
+  assert.deepEqual(rows.map(row => row.spawnCount), [9, 0, 3, 4, 2])
+  // For DEF 200, A contributes (20, 60) and B contributes (100, 0).
+  // DEF 250 has no comparable stage; DEF 1000 has a valid zero for both attributes.
+  assert.deepEqual(rows.map(row => row.meanDamage), [
+    { physical: 30, arts: 37.5, spawnCount: 8 },
+    null,
+    { physical: 60, arts: 30, spawnCount: 2 },
+    { physical: 30, arts: 60, spawnCount: 4 },
+    { physical: 0, arts: 0, spawnCount: 2 },
+  ])
+  assert.ok(summarizeEnemySpawnAdvantage(pairs, []).rows.every(row => row.meanDamage === null))
+})
+
 test('オペレーター別の票と段階ごとの内訳を、同一スキルID・欠測を含む集計でも照合できる', () => {
   const pairs = [{ defense: 100, resistance: 20, spawnCount: 647 }, { defense: 0, resistance: 0, spawnCount: 901 }]
   const physical = { physical: 120, arts: 100 }, arts = { physical: 80, arts: 100 }

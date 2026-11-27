@@ -70,6 +70,7 @@ export interface EnemySpawnAdvantageRow {
   spawnCount: number
   skill: WeightedVotes
   stage: WeightedVotes
+  meanDamage: { physical: number; arts: number; spawnCount: number } | null
 }
 
 export type SkillPhysicalRateBin = { lower: number; upper: number; count: number }
@@ -105,11 +106,12 @@ export function summarizeEnemySpawnAdvantage(
 ): EnemySpawnAdvantageStatistics {
   const rows = ['全体', ...defenseBands.map(band => band.label)].map(label => ({
     label, spawnCount: 0, skill: emptyVotes(), stage: emptyVotes(),
+    weightedDamage: { physical: 0, arts: 0, spawnCount: 0 },
   }))
-  const bandRows = pairs.map(({ defense, spawnCount }) => {
-    const row = rows[1 + defenseBands.findIndex(band => defense < band.upper)]
-    row.spawnCount += spawnCount
-    return row
+  const pairTotals = pairs.map(({ defense, spawnCount }) => {
+    const band = rows[1 + defenseBands.findIndex(band => defense < band.upper)]
+    band.spawnCount += spawnCount
+    return { band, skillCount: 0, physicalSkillSum: 0, artsSkillSum: 0 }
   })
 
   const skills = new Map<string, NamedSkillRankStageSample[]>()
@@ -132,14 +134,21 @@ export function summarizeEnemySpawnAdvantage(
     let comparableSpawns = 0
     pairs.forEach(({ spawnCount }, index) => {
       const votes = emptyVotes()
+      let physical = 0, arts = 0
       for (const { cells } of group) {
         const cell = cells[index]
         if (!cell || !isComparableDamage(cell)) continue
         votes[getAdvantageOutcome(cell.physical, cell.arts)]++
         votes.count++
+        physical += cell.physical
+        arts += cell.arts
       }
       if (!votes.count) return
-      const band = bandRows[index]
+      const pair = pairTotals[index]
+      pair.physicalSkillSum += physical / votes.count
+      pair.artsSkillSum += arts / votes.count
+      pair.skillCount++
+      const { band } = pair
       addVotes(band.stage, votes, spawnCount)
       // Each skill shares one vote among the valid stages for this particular enemy.
       const stageWeight = spawnCount / votes.count
@@ -170,10 +179,24 @@ export function summarizeEnemySpawnAdvantage(
     }
   }
   const [overall, ...bands] = rows
+  pairTotals.forEach(({ band, skillCount, physicalSkillSum, artsSkillSum }, index) => {
+    if (!skillCount) return
+    const { spawnCount } = pairs[index]
+    // Average the skills for this enemy before weighting it by how often it appears.
+    for (const { weightedDamage } of [overall, band]) {
+      weightedDamage.physical += physicalSkillSum / skillCount * spawnCount
+      weightedDamage.arts += artsSkillSum / skillCount * spawnCount
+      weightedDamage.spawnCount += spawnCount
+    }
+  })
   for (const band of bands) {
     overall.spawnCount += band.spawnCount
     addVotes(overall.skill, band.skill)
     addVotes(overall.stage, band.stage)
   }
-  return { rows, skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()] }
+  const resultRows = rows.map(({ weightedDamage, ...row }) => {
+    const { physical, arts, spawnCount } = weightedDamage
+    return { ...row, meanDamage: spawnCount > 0 ? { physical: physical / spawnCount, arts: arts / spawnCount, spawnCount } : null }
+  })
+  return { rows: resultRows, skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()] }
 }
