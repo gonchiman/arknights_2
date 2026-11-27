@@ -24,6 +24,10 @@ export function getEnemyAdvantageDisplayRows(
   ]
 }
 
+export function getVisibleEnemyAdvantageRows(rows: readonly EnemyAdvantageDisplayRow[], hiddenLabels: readonly string[]) {
+  return rows.filter(row => !hiddenLabels.includes(row.label))
+}
+
 export function getEnemyAdvantageCountLabel(breakdown: EnemyAdvantageBreakdown, unit: AdvantageUnit) {
   if (breakdown === 'profession' || breakdown === 'rarity') return unit === 'skill' ? '有効スキル数' : '有効段階数'
   return '出現回数'

@@ -11,7 +11,7 @@ import {
 } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSICAL_RATE_TITLE } from './DamageThreeSkillPhysicalRateHistogram'
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
-import { getEnemyAdvantageDisplayRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
+import { getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
 import type { TableChartView } from './PageViewSwitch'
 
 export type EnemyAdvantageImage =
@@ -23,12 +23,13 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   advantageUnit: AdvantageUnit
   showBands: boolean
   breakdown?: EnemyAdvantageBreakdown
+  hiddenChartCategories?: readonly string[]
   format: TableChartView | 'meanDamage' | 'histogram'
   meanDamageFormat?: TableChartView
 }
 
 export function createDamageThreeEnemyAdvantageImage({
-  statistics, advantageUnit, showBands, breakdown, format, meanDamageFormat = 'table', ...options
+  statistics, advantageUnit, showBands, breakdown, hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
 }: EnemyAdvantageImageOptions): EnemyAdvantageImage | null {
   const total = statistics.rows[0]
   const unit = format === 'meanDamage' || format === 'histogram' ? 'skill' : advantageUnit
@@ -90,12 +91,15 @@ export function createDamageThreeEnemyAdvantageImage({
       table: <DamageThreeEnemyAdvantageTable rows={rows} unit={unit} breakdown={mode} />,
     } }
   }
+  const visibleRows = getVisibleEnemyAdvantageRows(rows, hiddenChartCategories)
+  if (!visibleRows.length) return null
+  const selection = visibleRows.length === rows.length ? [] : [`表示 ${visibleRows.map(row => row.label).join('・')}`]
   const snapshot: DamageCalculatorThreeAttributeChartImageSnapshot = {
-    title, conditions, filenameParts: ['グラフ', ...filenameParts],
+    title, conditions: [...conditions, ...selection], filenameParts: ['グラフ', ...selection, ...filenameParts],
     axisTitle: '出現回数で重み付けした優勢率（%）',
-    naturalChartHeight: getEnemyAdvantagePlotHeight(rows.length),
+    naturalChartHeight: getEnemyAdvantagePlotHeight(visibleRows.length),
     legend: <DamageThreeAdvantageImageLegend />,
-    chart: size => <DamageThreeEnemyAdvantagePlot rows={rows} unit={unit} breakdown={mode} {...size} />,
+    chart: size => <DamageThreeEnemyAdvantagePlot rows={visibleRows} unit={unit} breakdown={mode} {...size} />,
   }
   if (mode !== 'all') return { view: 'chart', snapshot }
 
