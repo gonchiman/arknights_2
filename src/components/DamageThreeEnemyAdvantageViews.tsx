@@ -10,6 +10,26 @@ interface EnemyAdvantageViewProps {
 }
 
 const INTEGER = new Intl.NumberFormat('ja-JP')
+const damagePrecision = { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+const DAMAGE = new Intl.NumberFormat('ja-JP', damagePrecision)
+const DAMAGE_DIFFERENCE = new Intl.NumberFormat('ja-JP', { ...damagePrecision, signDisplay: 'exceptZero' })
+export const ENEMY_MEAN_DAMAGE_TITLE = '主攻撃1回の平均ダメージ'
+
+export function DamageThreeEnemyMeanDamageTable({ rows }: Pick<EnemyAdvantageViewProps, 'rows'>) {
+  return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label={ENEMY_MEAN_DAMAGE_TITLE}>
+    <colgroup><col /><col /><col /><col /><col /></colgroup>
+    <thead><tr>
+      <th scope="col">防御力帯</th><th scope="col">出現回数</th>
+      <th scope="col">物理平均</th><th scope="col">術平均</th><th scope="col">差（物理−術）</th>
+    </tr></thead>
+    <tbody>{rows.map(({ label, meanDamage }) => <tr key={label}>
+      <th scope="row">{label}</th><td data-table-image-number>{INTEGER.format(meanDamage?.spawnCount ?? 0)}</td>
+      <td data-table-image-number>{meanDamage ? DAMAGE.format(meanDamage.physical) : '—'}</td>
+      <td data-table-image-number>{meanDamage ? DAMAGE.format(meanDamage.arts) : '—'}</td>
+      <td data-table-image-number>{meanDamage ? DAMAGE_DIFFERENCE.format(meanDamage.physical - meanDamage.arts) : '—'}</td>
+    </tr>)}</tbody>
+  </table>
+}
 
 export function DamageThreeEnemyAdvantageTable({ rows, unit }: EnemyAdvantageViewProps) {
   return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label="出現敵での優勢率">
