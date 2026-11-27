@@ -19,6 +19,7 @@
     "generate:td-roster": "node --experimental-strip-types scripts/generateTdDeploymentRoster.mjs",
     "generate:roguelike": "node --use-system-ca scripts/generateRoguelikeDatabase.mjs",
     "generate:main-enemy-trends": "node --experimental-strip-types scripts/generate-main-enemy-trends.mjs",
+    "generate:dc3-enemy-default": "node --experimental-strip-types scripts/generateDamageThreeEnemySpawnDefault.mjs",
     "refresh:operator-wiki-roster": "node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiRoster.mjs",
     "refresh:operator-wiki-views": "node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiViews.mjs",
     "refresh:operator-wiki-comments": "node --use-system-ca --experimental-strip-types scripts/refreshOperatorWikiComments.mjs",

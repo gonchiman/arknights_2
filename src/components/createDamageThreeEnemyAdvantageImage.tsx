@@ -21,7 +21,7 @@ export type EnemyAdvantageImage =
   | { view: 'table'; snapshot: ComparisonTableImageSnapshot }
 
 interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
-  statistics: EnemySpawnAdvantageStatistics
+  statistics: Omit<EnemySpawnAdvantageStatistics, 'operators'>
   advantageUnit: AdvantageUnit
   showBands: boolean
   format: Exclude<EnemyAdvantageView, 'operatorVotes'>

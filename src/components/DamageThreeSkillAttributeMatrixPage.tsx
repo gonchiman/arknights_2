@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react'
-import { getDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
+import { getOrderedDamageThreeAttributeEntries, type DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import { evaluateDamageThreeSkillRankRow, getDamageDifference, type DamageThreeSkillRankMode, type SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { ADVANTAGE_POLICIES, ADVANTAGE_UNITS, NO_CORRESPONDENCE_DATA } from '../lib/damageThreeAdvantageChart'
@@ -19,7 +19,7 @@ import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageT
 import { DamageThreeEnemyMeanDamageChart } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeOperatorVotes, useOperatorVoteSelection } from './DamageThreeOperatorVotes'
 import { DamageThreeSkillPhysicalRateHistogram } from './DamageThreeSkillPhysicalRateHistogram'
-import { useDamageThreeEnemySpawnAdvantage } from './useDamageThreeEnemySpawnAdvantage'
+import { useDamageThreeEnemySpawnAdvantage, useEnemySpawnDefaultSummary } from './useDamageThreeEnemySpawnAdvantage'
 import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { EnemyAggregationScopeSelector, type EnemyAggregationScope } from './EnemyAggregationScopeSelector'
 import { EnemyAggregationSelector } from './EnemyAggregationSelector'
@@ -51,7 +51,6 @@ const EMPTY_ENTRIES: readonly DamageThreeAttributeEntry[] = []
 const DEFAULT_SORT: MatrixSort = { key: 'operator', direction: 'asc' }
 const NUMBER = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 })
 const SIGNED_DIFFERENCE = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 1, signDisplay: 'exceptZero' })
-const OPERATOR_ORDER = new Intl.Collator('ja', { numeric: true })
 const UNIT = { NORMAL: '1攻撃', NEXT_ATTACK: '強化攻撃1回', COUNTER: '反撃1回', SKILL_ACTION: '1発動' } as const
 
 function formatValue(value: number | null, formatter = NUMBER) {
@@ -113,9 +112,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const distribution = useMemo(() => scoped && !unavailable
     ? buildEnemyDefenseResistanceBands(scoped.rows, scoped.counts) : null, [scoped, unavailable])
   const selectedPair = distribution?.resistanceThresholds.find(pair => pair.resistance === selectedResistance)
-  const entries = useMemo(() => getDamageThreeAttributeEntries(rows).sort((left, right) =>
-    OPERATOR_ORDER.compare(left.skill.operatorName, right.skill.operatorName)
-    || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex), [rows])
+  const entries = useMemo(() => getOrderedDamageThreeAttributeEntries(rows), [rows])
   const statsActive = mode === 'statistics'
   const enemyActive = mode === 'enemies'
   const enemyOverviewActive = enemyActive && (enemyFormat === 'table' || enemyFormat === 'chart')
@@ -153,7 +150,12 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
-  const enemyStats = useDamageThreeEnemySpawnAdvantage(enemyActive, enemyEntries, enemyPopulation, comparisonPolicy)
+  const enemyReady = enemyActive && !loading && !!enemyPopulation && enemyEntries.length > 0
+  const defaultEligible = enemyReady && !operatorVotesActive && scope === 'main' && !canReset
+    && comparisonPolicy === 'excludeAttributeEffects' && (!enemyOverviewActive || advantageUnit === 'skill')
+  const defaultSummary = useEnemySpawnDefaultSummary(defaultEligible, rows, aggregation.version)
+  const liveEnemyStats = useDamageThreeEnemySpawnAdvantage(enemyReady && defaultSummary === null, enemyEntries, enemyPopulation, comparisonPolicy)
+  const enemyStats = defaultSummary === 'checking' ? null : defaultSummary ?? liveEnemyStats
   const enemyRows = showDefenseBands ? enemyStats?.rows : enemyStats?.rows.slice(0, 1)
   const imageConditions = { aggregationVersion: aggregation.selectedId, scope, comparisonPolicy, filters: activeFilters }
   const rankImage = statsActive && statisticFormat === 'chart' && statistics
@@ -294,7 +296,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
               !filtered.length ? <p role="status">該当するスキルはありません。</p>
                 : operatorVotesActive && enemyPopulation ? <DamageThreeOperatorVotes
                     operators={voteOperators} professionOptions={professionOptions} operatorId={voteOperatorId}
-                    statistics={enemyStats} population={enemyPopulation}
+                    statistics={liveEnemyStats} population={enemyPopulation}
                     imageConditions={imageConditions} selection={operatorVoteSelection} />
                 : !enemyPopulation || !enemyStats || !enemyRows ? <p role="status">出現敵ごとの主攻撃ダメージを集計中…</p>
                 : !enemyStats.skillCount ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>

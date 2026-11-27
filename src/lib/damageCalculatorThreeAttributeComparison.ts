@@ -46,6 +46,14 @@ export function getDamageThreeAttributeEntries(rows: readonly SkillRecord[]): Da
   }))
 }
 
+const operatorOrder = new Intl.Collator('ja', { numeric: true })
+
+export function getOrderedDamageThreeAttributeEntries(rows: readonly SkillRecord[]): DamageThreeAttributeEntry[] {
+  return getDamageThreeAttributeEntries(rows).sort((left, right) =>
+    operatorOrder.compare(left.skill.operatorName, right.skill.operatorName)
+    || left.skill.skillIndex - right.skill.skillIndex || left.levelIndex - right.levelIndex)
+}
+
 function metrics(result: DamageThreeComparisonResult | null): DamageThreeAttributeMetrics {
   if (!result || result.errors.length) return { perAttack: null, dps: null, combinedDps: null }
   const finite = (value: number | null) => value !== null && Number.isFinite(value) ? value : null

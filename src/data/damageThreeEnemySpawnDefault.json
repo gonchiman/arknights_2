@@ -1,0 +1,170 @@
+{
+  "aggregationVersion": "v12",
+  "aggregationPayloadSha256": "f5e3c2ded9c19144541fae7093e0df2f11eba7a399bfcf7d73b277e5db012a77",
+  "gameDataRevision": "270115d3ef5dc0e97530bedc168eb3ddb3d14bc6",
+  "skillDataSha256": "cd70c1e641874c657bbe46ca80b35e8228640f30a58f93841d7a86e29ac000f4",
+  "calculationSha256": "672f4364ea3db3c9a721c24e3de15ae3babd28921c4935fbe91c44d5b10922da",
+  "statistics": {
+    "rows": [
+      {
+        "label": "全体",
+        "spawnCount": 11409,
+        "skill": {
+          "physicalWins": 4618303.5,
+          "ties": 710455.5,
+          "artsWins": 3250808.9999999995,
+          "count": 8579568
+        },
+        "stage": {
+          "physicalWins": 5173169,
+          "ties": 806862,
+          "artsWins": 3683392,
+          "count": 9663423
+        },
+        "meanDamage": {
+          "physical": 1725.7052784148736,
+          "arts": 1566.0308311653487,
+          "spawnCount": 11409
+        }
+      },
+      {
+        "label": "200未満",
+        "spawnCount": 7384,
+        "skill": {
+          "physicalWins": 3145008.333333333,
+          "ties": 697875.5,
+          "artsWins": 1709884.1666666665,
+          "count": 5552768
+        },
+        "stage": {
+          "physicalWins": 3526304,
+          "ties": 790199,
+          "artsWins": 1937745,
+          "count": 6254248
+        },
+        "meanDamage": {
+          "physical": 1882.712026574789,
+          "arts": 1656.9793129039342,
+          "spawnCount": 7384
+        }
+      },
+      {
+        "label": "200〜499",
+        "spawnCount": 2834,
+        "skill": {
+          "physicalWins": 1312532.166666667,
+          "ties": 8507,
+          "artsWins": 810128.8333333335,
+          "count": 2131168
+        },
+        "stage": {
+          "physicalWins": 1464244,
+          "ties": 11341,
+          "artsWins": 924813,
+          "count": 2400398
+        },
+        "meanDamage": {
+          "physical": 1662.804766407959,
+          "arts": 1464.9492632219435,
+          "spawnCount": 2834
+        }
+      },
+      {
+        "label": "500〜999",
+        "spawnCount": 669,
+        "skill": {
+          "physicalWins": 121016.00000000007,
+          "ties": 2010,
+          "artsWins": 380061.9999999997,
+          "count": 503088
+        },
+        "stage": {
+          "physicalWins": 136322,
+          "ties": 2680,
+          "artsWins": 427641,
+          "count": 566643
+        },
+        "meanDamage": {
+          "physical": 1190.2304002823562,
+          "arts": 1464.3384450756628,
+          "spawnCount": 669
+        }
+      },
+      {
+        "label": "1,000以上",
+        "spawnCount": 522,
+        "skill": {
+          "physicalWins": 39747,
+          "ties": 2063,
+          "artsWins": 350734,
+          "count": 392544
+        },
+        "stage": {
+          "physicalWins": 46299,
+          "ties": 2642,
+          "artsWins": 393193,
+          "count": 442134
+        },
+        "meanDamage": {
+          "physical": 532.5154624865835,
+          "arts": 958.6242807590144,
+          "spawnCount": 522
+        }
+      }
+    ],
+    "skillCount": 752,
+    "stageCount": 847,
+    "skillPhysicalRateBins": [
+      {
+        "lower": 0,
+        "upper": 10,
+        "count": 5
+      },
+      {
+        "lower": 10,
+        "upper": 20,
+        "count": 18
+      },
+      {
+        "lower": 20,
+        "upper": 30,
+        "count": 17
+      },
+      {
+        "lower": 30,
+        "upper": 40,
+        "count": 97
+      },
+      {
+        "lower": 40,
+        "upper": 50,
+        "count": 79
+      },
+      {
+        "lower": 50,
+        "upper": 60,
+        "count": 234
+      },
+      {
+        "lower": 60,
+        "upper": 70,
+        "count": 302
+      },
+      {
+        "lower": 70,
+        "upper": 80,
+        "count": 0
+      },
+      {
+        "lower": 80,
+        "upper": 90,
+        "count": 0
+      },
+      {
+        "lower": 90,
+        "upper": 100,
+        "count": 0
+      }
+    ]
+  }
+}
