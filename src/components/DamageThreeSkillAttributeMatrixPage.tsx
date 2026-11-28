@@ -25,6 +25,7 @@ import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculat
 import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageThreeEnemyAttackQuartileTable, DamageThreeEnemyMeanDamageTable, EnemyAdvantageCategorySelector, ENEMY_MEAN_DAMAGE_TITLE } from './DamageThreeEnemyAdvantageViews'
 import { DamageThreeEnemyMeanDamageChart } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeEnemySpawnComposition } from './DamageThreeEnemySpawnComposition'
+import { DamageThreeEnemyAttackQuartileChart } from './DamageThreeEnemyAttackQuartileChart'
 import { DamageThreeOperatorVotes, SkillVoteBreakdown, useOperatorVoteSelection } from './DamageThreeOperatorVotes'
 import { DamageThreeVoteList, type VoteListGroup } from './DamageThreeVoteList'
 import { DamageThreeSkillPhysicalRateHistogram } from './DamageThreeSkillPhysicalRateHistogram'
@@ -109,7 +110,9 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const advantageView = useState<TableChartView>('chart')
   const outlierView = useState<TableChartView>('table')
   const meanDamageView = useState<TableChartView>('table')
+  const attackQuartileView = useState<TableChartView>('table')
   const [enemyFormat, setEnemyFormat] = enemyAnalysis === 'meanDamage' ? meanDamageView
+    : enemyAnalysis === 'attackQuartiles' ? attackQuartileView
     : advantageBreakdown === 'outlier' ? outlierView : advantageView
   const operatorVoteSelection = useOperatorVoteSelection()
   const [voteListGroup, setVoteListGroup] = useState<VoteListGroup>('operator')
@@ -187,7 +190,8 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyAnalysis !== 'operatorVotes' && enemyAnalysis !== 'spawnComposition'
     ? createDamageThreeEnemyAdvantageImage({
         statistics: enemyStats, format: enemyAnalysis === 'advantage' ? enemyFormat : enemyAnalysis,
-        breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, attackQuartiles, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
+        breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, attackQuartiles,
+        showBands: showMeanDamageBands, advantageUnit, analysisFormat: enemyFormat,
         ...imageConditions,
       })
     : rankImage && { view: 'chart', snapshot: rankImage }
@@ -298,7 +302,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 }} />
                 ダメージ差を表示
               </label>}
-              {(enemyOverviewActive || enemyMeanActive) && <div className="dc3-matrix-option-group">
+              {(enemyOverviewActive || enemyMeanActive || quartilesActive) && <div className="dc3-matrix-option-group">
                 <span className="dc3-matrix-option-label">表示形式</span>
                 <PageViewSwitch views={TABLE_CHART_VIEWS} selected={enemyFormat} onChange={setEnemyFormat} label="表示形式" />
               </div>}
@@ -345,11 +349,12 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                       <span>集計対象 {NUMBER.format(attackQuartiles.includedStageCount)}段階</span>
                       <span>単一の最終攻撃力を特定できず除外 {NUMBER.format(attackQuartiles.excludedStageCount)}段階</span>
                     </div>
-                    {attackQuartiles.includedStageCount > 0
-                      ? <div className="damage-two-table-wrap" role="region" aria-label={ENEMY_ATTACK_QUARTILES_TITLE} tabIndex={0}>
+                    {attackQuartiles.includedStageCount === 0
+                      ? <p role="status">集計対象の段階はありません。</p>
+                      : enemyFormat === 'chart' ? <DamageThreeEnemyAttackQuartileChart rows={attackQuartiles.rows} />
+                      : <div className="damage-two-table-wrap" role="region" aria-label={ENEMY_ATTACK_QUARTILES_TITLE} tabIndex={0}>
                           <DamageThreeEnemyAttackQuartileTable rows={attackQuartiles.rows} />
-                        </div>
-                      : <p role="status">集計対象の段階はありません。</p>}
+                        </div>}
                   </>
                 : !enemyStats.skillCount && !outliersActive ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>
                 : <>

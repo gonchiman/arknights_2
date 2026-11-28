@@ -16,6 +16,5 @@ export type EnemyAnalysis = typeof ENEMY_ANALYSES[number][0]
 export function getEnemyAnalysisSegments(analysis: EnemyAnalysis, format: TableChartView) {
   const label = viewLabel(ENEMY_ANALYSES, analysis)
   if (analysis === 'operatorVotes' || analysis === 'spawnComposition') return [label]
-  if (analysis === 'attackQuartiles') return [label, viewLabel(TABLE_CHART_VIEWS, 'table')]
   return [label, analysis === 'histogram' ? 'ヒストグラム' : viewLabel(TABLE_CHART_VIEWS, format)]
 }

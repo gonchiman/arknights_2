@@ -4,6 +4,7 @@ import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import type { ChartImageAlternateLayout, DamageCalculatorThreeAttributeChartImageSnapshot } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeAdvantageImageLegend } from './DamageThreeAdvantageChartImage'
 import { DamageThreeEnemyAdvantageLabeledPlot, ENEMY_ADVANTAGE_LABELED_PLOT_HEIGHT } from './DamageThreeEnemyAdvantageLabeledPlot'
+import { DamageThreeEnemyAttackQuartilePlot, ENEMY_ATTACK_QUARTILE_AXIS, ENEMY_ATTACK_QUARTILE_PLOT_HEIGHT } from './DamageThreeEnemyAttackQuartileChart'
 import {
   DamageThreeEnemyAdvantagePlot, DamageThreeEnemyAdvantageTable, DamageThreeEnemyAttackQuartileTable,
   DamageThreeEnemyMeanDamageTable, ENEMY_MEAN_DAMAGE_TITLE, ENEMY_OUTLIER_PLOT_TITLE, getEnemyAdvantagePlotHeight,
@@ -31,23 +32,37 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   attackQuartiles?: EnemyAttackQuartileStatistics
   hiddenChartCategories?: readonly string[]
   format: TableChartView | 'meanDamage' | 'histogram' | 'attackQuartiles'
-  meanDamageFormat?: TableChartView
+  analysisFormat?: TableChartView
 }
 
 export function createDamageThreeEnemyAdvantageImage({
   statistics, advantageUnit, showBands, breakdown, outlierScope = 'all', attackQuartiles = statistics.attackQuartiles,
-  hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
+  hiddenChartCategories = [], format, analysisFormat = 'table', ...options
 }: EnemyAdvantageImageOptions): EnemyAdvantageImage | null {
   const total = statistics.rows[0]
   const { source, settings } = getDamageThreeStatisticsImageConditions(options)
   if (format === 'attackQuartiles') {
     if (!total?.spawnCount || !attackQuartiles.includedStageCount) return null
     const filenameParts = [...source, '段階単位', ...settings]
+    const counts = [
+      `出現回数 ${total.spawnCount.toLocaleString('ja-JP')}`,
+      `集計対象 ${attackQuartiles.includedStageCount.toLocaleString('ja-JP')}段階`,
+      `単一の最終攻撃力を特定できず除外 ${attackQuartiles.excludedStageCount.toLocaleString('ja-JP')}段階`,
+    ]
+    if (analysisFormat === 'chart') {
+      const [versionLabel, scopeLabel] = source
+      return { view: 'chart', snapshot: {
+        title: ENEMY_ATTACK_QUARTILES_TITLE, filenameParts: ['グラフ', ...filenameParts],
+        conditions: [scopeLabel, ...counts], footerNote: [versionLabel, '段階単位', ...settings].join('・'),
+        axisTitle: ENEMY_ATTACK_QUARTILE_AXIS, legend: null,
+        naturalChartHeight: ENEMY_ATTACK_QUARTILE_PLOT_HEIGHT,
+        defaultAspect: { preset: '16:9', width: '16', height: '9' }, outputWidth: 1920,
+        chart: size => <DamageThreeEnemyAttackQuartilePlot rows={attackQuartiles.rows} {...size} />,
+      } }
+    }
     return { view: 'table', snapshot: {
       title: ENEMY_ATTACK_QUARTILES_TITLE, filenameConditions: ['表', ...filenameParts],
-      conditions: [...filenameParts, `出現回数 ${total.spawnCount.toLocaleString('ja-JP')}`,
-        `集計対象 ${attackQuartiles.includedStageCount.toLocaleString('ja-JP')}段階`,
-        `単一の最終攻撃力を特定できず除外 ${attackQuartiles.excludedStageCount.toLocaleString('ja-JP')}段階`],
+      conditions: [...filenameParts, ...counts],
       table: <DamageThreeEnemyAttackQuartileTable rows={attackQuartiles.rows} />,
     } }
   }
@@ -86,7 +101,7 @@ export function createDamageThreeEnemyAdvantageImage({
 
   if (format === 'meanDamage') {
     const rows = showBands ? statistics.rows : [total]
-    if (meanDamageFormat === 'table') {
+    if (analysisFormat === 'table') {
       return { view: 'table', snapshot: {
         title, conditions, filenameConditions: ['表', ...filenameParts], table: <DamageThreeEnemyMeanDamageTable rows={rows} />,
       } }

@@ -58,7 +58,7 @@ test('出現敵での比較は分析内容と出力形式をアドレスで区�
   ])
   for (const [format, label] of [['table', '表'], ['chart', 'グラフ']]) {
     assert.deepEqual(getEnemyAnalysisSegments('advantage', format), ['属性別の優勢率', label])
-    assert.deepEqual(getEnemyAnalysisSegments('attackQuartiles', format), ['最終攻撃力別の優勢率', '表'])
+    assert.deepEqual(getEnemyAnalysisSegments('attackQuartiles', format), ['最終攻撃力別の優勢率', label])
     assert.deepEqual(getEnemyAnalysisSegments('meanDamage', format), ['平均ダメージ', label])
     assert.deepEqual(getEnemyAnalysisSegments('histogram', format), ['スキル別の物理優勢率分布', 'ヒストグラム'])
     assert.deepEqual(getEnemyAnalysisSegments('operatorVotes', format), ['オペレーター別の票'])
@@ -108,6 +108,39 @@ test('最終攻撃力別の表画像は表示中の四分位と絞り込み条�
   assert.equal(createEnemyImage({ ...options, attackQuartiles: { ...attackQuartiles, includedStageCount: 0 } }), null)
 })
 
+test('最終攻撃力別の横棒は表示中の4群を共有し、空群・0%・100%を区別してフルHDに保存する', async () => {
+  const empty = { minAttack: null, maxAttack: null, stageCount: 0, meanPhysicalRate: null }
+  const rows = [
+    { label: '下位25%', minAttack: 250, maxAttack: 250, stageCount: 1, meanPhysicalRate: 0 },
+    { ...empty, label: '25～50%' },
+    { label: '50～75%', minAttack: 1500, maxAttack: 1500, stageCount: 1, meanPhysicalRate: 0.625 },
+    { label: '上位25%', minAttack: 2600, maxAttack: 2700, stageCount: 2, meanPhysicalRate: 1 },
+  ]
+  const attackQuartiles = { includedStageCount: 4, excludedStageCount: 1, rows }
+  const options = { ...meanDamageOptions, format: 'attackQuartiles', attackQuartiles }
+  const table = createEnemyImage(options).snapshot
+  const { view, snapshot } = createEnemyImage({ ...options, analysisFormat: 'chart' })
+  assert.equal(view, 'chart')
+  assert.equal(snapshot.title, table.title)
+  assert.equal(snapshot.outputWidth, 1920)
+  assert.equal(snapshot.defaultAspect.preset, '16:9')
+  for (const condition of table.conditions) {
+    assert.ok([snapshot.conditions.join('・'), snapshot.footerNote ?? ''].join('・').includes(condition), condition)
+  }
+  assert.deepEqual(snapshot.filenameParts, ['グラフ', ...table.filenameConditions.slice(1)])
+
+  const { DamageThreeEnemyAttackQuartileChart } = await server.ssrLoadModule('/src/components/DamageThreeEnemyAttackQuartileChart.tsx')
+  const screen = renderToStaticMarkup(createElement(DamageThreeEnemyAttackQuartileChart, { rows }))
+  const image = renderToStaticMarkup(snapshot.chart({ width: 928, height: snapshot.naturalChartHeight }))
+  for (const markup of [screen, image]) {
+    assert.deepEqual([...markup.matchAll(/data-quartile="([^"]+)"/g)].map(match => match[1]), rows.map(row => row.label))
+    assert.deepEqual([...markup.matchAll(/data-value="([^"]+)"/g)].map(match => Number(match[1])), [0, 0.625, 1])
+    for (const value of ['0.0%', '62.5%', '100.0%', '対象なし']) assert.ok(markup.includes(value), value)
+    assert.match(markup, /data-reference="50%"/)
+  }
+  assert.equal(createEnemyImage({ ...options, analysisFormat: 'chart', attackQuartiles: { ...attackQuartiles, includedStageCount: 0 } }), null)
+})
+
 test('平均ダメージの表画像は比較可能な出現回数とスキル単位の条件を表示する', () => {
   const options = meanDamageOptions
   const [total] = options.statistics.rows
@@ -136,7 +169,7 @@ test('平均ダメージのグラフ画像は有効な平均を共通目盛り�
   for (const showBands of [false, true]) {
     const options = { ...meanDamageOptions, showBands, breakdown: 'profession' }
     const table = createEnemyImage(options).snapshot
-    const { view, snapshot, alternateLayout } = createEnemyImage({ ...options, meanDamageFormat: 'chart' })
+    const { view, snapshot, alternateLayout } = createEnemyImage({ ...options, analysisFormat: 'chart' })
     assert.equal(view, 'chart')
     assert.equal(alternateLayout, undefined)
     assert.equal(snapshot.title, table.title)
@@ -170,7 +203,7 @@ test('平均ダメージのグラフ画像は有効な平均を共通目盛り�
 
 test('全体のみの平均ダメージ画像は属性と実数を各棒に直記し、その下に共通の目盛りを置く', () => {
   const options = {
-    ...meanDamageOptions, meanDamageFormat: 'chart',
+    ...meanDamageOptions, analysisFormat: 'chart',
     statistics: { ...meanDamageOptions.statistics, skillCount: 752, rows: [{
       ...meanDamageOptions.statistics.rows[0], spawnCount: 12000,
       meanDamage: { physical: 1725.7, arts: 1566, spawnCount: 11409 },
