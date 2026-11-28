@@ -1,12 +1,14 @@
 import { useLayoutEffect, useRef, useState, type ComponentProps } from 'react'
 import { getChartImageLayout } from '../lib/chartImageLayout'
+import { getChartImageRasterSize, type ChartImageRasterOutput } from '../lib/chartImageRasterSize'
 import { CategoryGroupedBarChart } from './CategoryGroupedBarChart'
 import './GoldenglowGroupedBarImagePreview.css'
 
 /** Scale the same completed chart used by PNG export, retaining its output dimensions. */
-export function CategoryGroupedBarImagePreview({ chartProps, aspectRatio }: {
+export function CategoryGroupedBarImagePreview({ chartProps, aspectRatio, output }: {
   chartProps: ComponentProps<typeof CategoryGroupedBarChart>
   aspectRatio?: number
+  output?: ChartImageRasterOutput
 }) {
   const previewRef = useRef<HTMLDivElement>(null)
   const [availableWidth, setAvailableWidth] = useState(600)
@@ -22,8 +24,7 @@ export function CategoryGroupedBarImagePreview({ chartProps, aspectRatio }: {
     return () => observer.disconnect()
   }, [])
   const scale = Math.min(availableWidth / size.width, 380 / size.height, 1)
-  const pixelRatio = Math.min(2, 16_000 / size.width, 16_000 / size.height,
-    Math.sqrt(32_000_000 / size.width / size.height))
+  const rasterSize = getChartImageRasterSize(size, output)
   return <div className="gg-grouped-image-preview">
     <div className="gg-grouped-image-preview-heading"><span>プレビュー</span><span>PNG</span></div>
     <div ref={previewRef} className="gg-grouped-image-preview-frame" style={{ height: Math.ceil(size.height * scale) }}>
@@ -33,7 +34,7 @@ export function CategoryGroupedBarImagePreview({ chartProps, aspectRatio }: {
       </div>
     </div>
     <span className="gg-grouped-image-preview-size" aria-live="polite">
-      {Math.floor(size.width * pixelRatio).toLocaleString('ja-JP')} × {Math.floor(size.height * pixelRatio).toLocaleString('ja-JP')} px
+      {rasterSize.width.toLocaleString('ja-JP')} × {rasterSize.height.toLocaleString('ja-JP')} px
     </span>
   </div>
 }

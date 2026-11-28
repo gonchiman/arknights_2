@@ -51,6 +51,18 @@ export interface MainStorySpawnSort {
   direction: 'asc' | 'desc'
 }
 
+export interface MainStorySpawnChapterRow {
+  chapter: number
+  count: number
+  stageCount: number
+  partialStageCount: number
+}
+
+export interface MainStorySpawnChapterSort {
+  key: 'chapter' | 'count'
+  direction: 'asc' | 'desc'
+}
+
 export interface MainStorySpawnJumpTarget {
   kind: 'rank' | 'stat'
   value: number
@@ -206,6 +218,29 @@ export function buildMainStorySpawnList(
 
 const normalizeName = (value: string) => value.trim().normalize('NFKC').toLocaleLowerCase('ja-JP')
 
+function matchingGroups(groups: SpawnGroup[], term: string) {
+  return term ? groups.filter(group => normalizeName(group.enemyName).includes(term)) : groups
+}
+
+export function getMainStorySpawnChapterRows(
+  lists: readonly MainStorySpawnList[], query: string,
+  sort: MainStorySpawnChapterSort = { key: 'chapter', direction: 'asc' },
+): MainStorySpawnChapterRow[] {
+  const term = normalizeName(query)
+  const byChapter = new Map<number, MainStorySpawnChapterRow>()
+  for (const { stage: { chapter }, status, groups } of lists) {
+    const row = byChapter.get(chapter) ?? { chapter, count: 0, stageCount: 0, partialStageCount: 0 }
+    row.stageCount++
+    if (status !== 'confirmed') row.partialStageCount++
+    for (const group of matchingGroups(groups, term)) row.count += group.count
+    byChapter.set(chapter, row)
+  }
+  const rows = [...byChapter.values()]
+  if (term && !rows.some(row => row.count > 0)) return []
+  const direction = sort.direction === 'asc' ? 1 : -1
+  return rows.sort((a, b) => (a[sort.key] - b[sort.key]) * direction || a.chapter - b.chapter)
+}
+
 function compareSpawnRows(left: MainStorySpawnRow, right: MainStorySpawnRow, sort: MainStorySpawnSort): number {
   const direction = sort.direction === 'asc' ? 1 : -1
   switch (sort.key) {
@@ -252,7 +287,7 @@ function getSpawnEntries(
   const term = normalizeName(query)
   const entries: MainStorySpawnRow[] = []
   for (const { stage, groups } of lists) {
-    let visibleGroups = term ? groups.filter(group => normalizeName(group.enemyName).includes(term)) : groups
+    let visibleGroups = matchingGroups(groups, term)
     if (mode === 'counts') {
       const byEnemy = new Map<string, SpawnGroup>()
       for (const group of visibleGroups) {

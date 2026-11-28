@@ -1,12 +1,8 @@
-.main-story-spawns-page .main-story-spawns-intro {
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-}
-
-.main-story-spawns-intro > span {
+.main-story-spawns-intro,
+.main-story-chapter-note {
   color: var(--text-soft);
   font-size: 13px;
+  margin: 0;
 }
 
 .main-story-spawns-panel {
@@ -169,6 +165,50 @@
 .main-story-spawns-table .main-story-spawns-empty {
   height: 64px;
   text-align: center;
+}
+
+.main-story-chapter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 16px;
+}
+
+.main-story-chapter-controls .main-story-spawns-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  max-width: 100%;
+}
+
+.main-story-chapter-controls .main-story-spawns-filters label:first-child {
+  width: min(100%, 240px);
+}
+
+.main-story-chapter-controls .main-story-spawns-total { margin-inline-start: auto; }
+
+.main-story-chapter-table {
+  width: 100%;
+  min-width: 0;
+}
+
+.main-story-chapter-table thead th {
+  padding-inline: 8px;
+  white-space: normal;
+}
+
+.main-story-chapter-table th:first-child { text-align: left; }
+.main-story-chapter-table tbody th { min-width: 0; white-space: nowrap; }
+.main-story-chapter-table th:has(.skill-sort-button) { padding: 0; }
+.main-story-chapter-table th:not(:first-child) .skill-sort-button { justify-content: end; }
+.main-story-chapter-table .skill-sort-button { padding: 6px 8px; }
+
+.main-story-chapter-table[data-image] {
+  border: 1px solid var(--border);
+}
+
+.main-story-chapter-table[data-image] :is(th, td) {
+  padding-block: 2px;
 }
 
 .main-story-spawns-table .main-story-spawns-empty,
