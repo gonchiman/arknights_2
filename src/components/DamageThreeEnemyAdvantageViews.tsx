@@ -1,7 +1,8 @@
-import type { EnemyOperatorVoteSummary, EnemySpawnAdvantageRow, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyAttackQuartileRow, EnemyOperatorVoteSummary, EnemySpawnAdvantageRow, WeightedVotes } from '../lib/damageThreeEnemySpawnAdvantage'
 import { ADVANTAGE_LEGEND, ADVANTAGE_OUTCOMES, DAMAGE_THREE_STATISTIC_COLORS } from '../lib/damageThreeAdvantageChart'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { formatAdvantagePercentage } from './DamageThreeSkillRankStatisticsTable'
+import { ENEMY_ATTACK_QUARTILES_TITLE } from './enemyComparisonViews'
 import { getEnemyAdvantageCountLabel, getEnemyAdvantageRowCount, type EnemyAdvantageBreakdown, type EnemyAdvantageDisplayRow } from './enemyAdvantageBreakdown'
 import './DamageThreeEnemyAdvantageViews.css'
 
@@ -16,6 +17,26 @@ const damagePrecision = { minimumFractionDigits: 1, maximumFractionDigits: 1 }
 const DAMAGE = new Intl.NumberFormat('ja-JP', damagePrecision)
 const DAMAGE_DIFFERENCE = new Intl.NumberFormat('ja-JP', { ...damagePrecision, signDisplay: 'exceptZero' })
 export const ENEMY_MEAN_DAMAGE_TITLE = '主攻撃1回の平均ダメージ'
+
+export function DamageThreeEnemyAttackQuartileTable({ rows }: { rows: readonly EnemyAttackQuartileRow[] }) {
+  return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label={ENEMY_ATTACK_QUARTILES_TITLE}>
+    <colgroup><col /></colgroup><colgroup><col /><col /></colgroup><colgroup><col /><col /></colgroup>
+    <thead>
+      <tr>
+        <th scope="col" rowSpan={2}>攻撃力順</th><th scope="colgroup" colSpan={2}>最終攻撃力</th>
+        <th scope="col" rowSpan={2}>段階数</th><th scope="col" rowSpan={2}>物理優勢率の平均 (%)</th>
+      </tr>
+      <tr><th scope="col">最小</th><th scope="col">最大</th></tr>
+    </thead>
+    <tbody>{rows.map(row => <tr key={row.label}>
+      <th scope="row">{row.label}</th>
+      <td data-table-image-number>{row.minAttack === null ? '—' : INTEGER.format(row.minAttack)}</td>
+      <td data-table-image-number>{row.maxAttack === null ? '—' : INTEGER.format(row.maxAttack)}</td>
+      <td data-table-image-number>{INTEGER.format(row.stageCount)}</td>
+      <td data-table-image-number>{row.meanPhysicalRate === null ? '—' : (row.meanPhysicalRate * 100).toFixed(1)}</td>
+    </tr>)}</tbody>
+  </table>
+}
 
 export function DamageThreeEnemyMeanDamageTable({ rows }: { rows: readonly EnemySpawnAdvantageRow[] }) {
   return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label={ENEMY_MEAN_DAMAGE_TITLE}>

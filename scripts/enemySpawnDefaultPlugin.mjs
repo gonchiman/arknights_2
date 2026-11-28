@@ -12,6 +12,16 @@ function hasOutlierSummary(outliers) {
       && finiteOrNull(row.spawnShare) && hasVoteCounts(row.skill) && hasVoteCounts(row.stage)))
 }
 
+function hasAttackQuartiles({ attackQuartileStages: stages, attackQuartiles: summary, stageCount }) {
+  return Array.isArray(stages) && stages.length === stageCount
+    && stages.every(stage => typeof stage?.key === 'string' && finiteOrNull(stage.finalAttack)
+      && Number.isFinite(stage.physicalRate) && stage.physicalRate >= 0 && stage.physicalRate <= 1)
+    && Array.isArray(summary?.rows) && summary.rows.length === 4
+    && summary.includedStageCount + summary.excludedStageCount === stageCount
+    && summary.rows.every(row => typeof row?.label === 'string' && Number.isSafeInteger(row.stageCount)
+      && finiteOrNull(row.minAttack) && finiteOrNull(row.maxAttack) && finiteOrNull(row.meanPhysicalRate))
+}
+
 /** A saved summary can only be served with the calculator that produced it. */
 export function enemySpawnDefaultPlugin() {
   let root, command, artifact
@@ -34,7 +44,7 @@ export function enemySpawnDefaultPlugin() {
       const saved = JSON.parse(source)
       if (currentHash === saved.calculationSha256 && Array.isArray(saved.statistics?.professionRows)
         && Array.isArray(saved.statistics?.rarityRows) && Array.isArray(saved.statistics?.operatorVotes)
-        && hasOutlierSummary(saved.statistics.outliers)) return
+        && hasOutlierSummary(saved.statistics.outliers) && hasAttackQuartiles(saved.statistics)) return
       const message = 'DC3の事前集計を npm run generate:dc3-enemy-default で更新してください。'
       if (command === 'build') this.error(message)
       this.warn(message)

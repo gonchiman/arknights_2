@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { normalizePath } from 'vite'
 import { getEnemySpawnSkillDataHash } from '../src/lib/damageThreeEnemySpawnInputs.ts'
+import { projectEnemyAttackQuartiles } from '../src/lib/damageThreeEnemyAttackQuartiles.ts'
 import { parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
 import { enemySpawnDefaultPlugin } from '../scripts/enemySpawnDefaultPlugin.mjs'
 import { getEnemySpawnCalculationHash } from '../scripts/lib/enemySpawnCalculationHash.mjs'
@@ -81,6 +82,21 @@ test('同梱の事前集計が敵の集計版と整合し、全体・防御力�
   for (const type of ['physical', 'arts']) {
     const weightedMean = means.reduce((total, mean) => total + mean[type] * mean.spawnCount, 0) / count
     assert.ok(Math.abs(weightedMean - overall.meanDamage[type]) < 1e-8)
+  }
+})
+
+test('標準条件の四分位群と段階別の保存値から同じ集計を再現できる', async () => {
+  const saved = JSON.parse(await readFile(new URL('../src/data/damageThreeEnemySpawnDefault.json', import.meta.url), 'utf8'))
+  const { attackQuartiles, attackQuartileStages, stageCount } = saved.statistics
+  assert.equal(attackQuartileStages.length, stageCount)
+  assert.equal(new Set(attackQuartileStages.map(stage => stage.key)).size, stageCount)
+  assert.deepEqual(projectEnemyAttackQuartiles(attackQuartileStages, attackQuartileStages), attackQuartiles)
+  if (saved.aggregationVersion === 'v12' && saved.gameDataRevision.startsWith('270115d3')) {
+    assert.deepEqual([attackQuartiles.includedStageCount, attackQuartiles.excludedStageCount], [786, 61])
+    assert.deepEqual(attackQuartiles.rows.map(row =>
+      [row.stageCount, Number(row.minAttack.toFixed(1)), row.maxAttack, Number((row.meanPhysicalRate * 100).toFixed(2))]), [
+      [197, 90.9, 839, 35.94], [196, 844, 1364, 54.83], [196, 1364.4, 2104, 60.58], [197, 2111.4, 9497.6, 64.33],
+    ])
   }
 })
 

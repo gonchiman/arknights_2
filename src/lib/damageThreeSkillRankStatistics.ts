@@ -1,6 +1,6 @@
 import type { DamageThreeAttributeEntry } from './damageCalculatorThreeAttributeComparison.ts'
-import type { EnemyDamageStatPair } from './damageCalculatorThreeAttributeTables.ts'
-import { evaluateDamageThreeSkillRankRow, type DamageCell, type SkillRankEffectPolicy } from './damageThreeSkillRankMatrix.ts'
+import { getDamageThreeMainAttackDetails, type EnemyDamageStatPair } from './damageCalculatorThreeAttributeTables.ts'
+import { evaluateVirtualSkillRankRow, type DamageCell, type SkillRankEffectPolicy } from './damageThreeSkillRankMatrix.ts'
 import type { EnemyResistanceThreshold } from './enemyDefenseResistance.ts'
 import { calculateBoxPlotStatistics } from './enemyStatistics.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
@@ -58,6 +58,8 @@ export interface SkillRankStageSample {
 }
 
 export interface NamedSkillRankStageSample extends SkillRankStageSample {
+  key?: string
+  finalAttack?: number | null
   skill: SkillRankStageSample['skill'] & Pick<DamageThreeAttributeEntry['skill'], 'operatorName' | 'skillName'>
     & Partial<Pick<DamageThreeAttributeEntry['skill'], 'profession' | 'rarity'>>
   stageLabel: string
@@ -85,7 +87,27 @@ export function evaluateSkillRankStatisticsStage(
   effectPolicy: SkillRankEffectPolicy | boolean = 'apply',
 ) {
   if (!entry.capability.supported) return null
-  return evaluateDamageThreeSkillRankRow(entry, pairs, 'virtual', effectPolicy).cells
+  return evaluateVirtualSkillRankRow(entry, pairs, effectPolicy).cells
+}
+
+/** Use the evaluated main hit(s) at the shared DEF/RES zero reference, before mitigation. */
+export function evaluateSkillRankStageSample(
+  entry: DamageThreeAttributeEntry, pairs: readonly EnemyDamageStatPair[], effectPolicy: SkillRankEffectPolicy | boolean,
+): NamedSkillRankStageSample | null {
+  if (!entry.capability.supported) return null
+  const { reference, cells } = evaluateVirtualSkillRankRow(entry, pairs, effectPolicy)
+  let finalAttack: number | null = null
+  if (!reference.errors.length) {
+    try {
+      const hits = getDamageThreeMainAttackDetails(reference).filter(hit => hit.expectedHitCount > 0)
+      const attack = hits[0]?.attack
+      if (attack != null && Number.isFinite(attack) && hits.every(hit => hit.attack === attack)) finalAttack = attack
+    } catch (error) {
+      // An unresolved main hit removes only the attack value; comparable enemy cells still count.
+      if (!(error instanceof RangeError)) throw error
+    }
+  }
+  return { key: entry.key, skill: entry.skill, stageLabel: entry.stageLabel, cells, finalAttack }
 }
 
 export function summarizeSkillRankStatistics(

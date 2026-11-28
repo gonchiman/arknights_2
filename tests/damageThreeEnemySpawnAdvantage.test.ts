@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { buildEnemySpawnPopulation, getEnemySkillVoteDetails, summarizeEnemySpawnAdvantage, summarizeOperatorVotes } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
 import { projectEnemyOperatorVoteSummaries } from '../src/lib/damageThreeEnemySpawnVotesProjection.ts'
+import { projectEnemyAttackQuartiles } from '../src/lib/damageThreeEnemyAttackQuartiles.ts'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import type { NamedSkillRankStageSample } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import type { EnemyRecord } from '../src/types/enemy.ts'
@@ -48,6 +49,29 @@ test('実敵ごとに有効段階で1票を分け、出現回数を掛けた後�
   // A: (8 × 1/2) / 11, B: 3 / 11. C has no comparable enemy.
   assert.deepEqual(stats.skillPhysicalRateBins.map(bin => bin.count), [0, 0, 1, 1, 0, 0, 0, 0, 0, 0])
   assert.equal(summarizeEnemySpawnAdvantage(pairs, []).rows[0].skill.count, 0)
+})
+
+test('攻撃力四分位は敵の出現で各段階の率を求め、同じ攻撃力を分割せず段階を等しく平均する', () => {
+  const pairs = [{ defense: 100, resistance: 0, spawnCount: 8 }, { defense: 0, resistance: 0, spawnCount: 2 }]
+  const win = { physical: 2, arts: 1 }, tie = { physical: 1, arts: 1 }, missing = { physical: 1, arts: null }
+  const stage = (key: string, finalAttack: number | null, cells: NamedSkillRankStageSample['cells']) =>
+    ({ ...sample('A', cells, key), key, finalAttack })
+  const stages = [stage('a', 0, [win, tie]), stage('b', 0, [missing, tie]), stage('c', 50, [win, win]),
+    stage('d', 100, [win, missing]), stage('e', 200, [tie, tie]), stage('f', null, [tie, tie]),
+    stage('g', 800, [missing, missing])]
+  const { attackQuartiles: result, attackQuartileStages } = summarizeEnemySpawnAdvantage(pairs, stages)
+  assert.deepEqual([result.includedStageCount, result.excludedStageCount], [5, 1])
+  assert.deepEqual(result.rows.map(row => [row.minAttack, row.maxAttack, row.stageCount, row.meanPhysicalRate]), [
+    [0, 0, 2, 0.4], [50, 50, 1, 1], [100, 100, 1, 1], [200, 200, 1, 0],
+  ])
+  const filtered = [stages[0], stages[1], stages[5]]
+  const projection = projectEnemyAttackQuartiles(attackQuartileStages, filtered)
+  assert.deepEqual(projection, summarizeEnemySpawnAdvantage(pairs, filtered).attackQuartiles)
+  assert.deepEqual(projection.rows.map(row => row.meanPhysicalRate), [0.4, null, null, null])
+  assert.deepEqual(projectEnemyAttackQuartiles(attackQuartileStages, [stages[3]]).rows.map(row => row.stageCount), [1, 0, 0, 0])
+  const empty = projectEnemyAttackQuartiles(attackQuartileStages, [])
+  assert.equal(empty.includedStageCount + empty.excludedStageCount, 0)
+  assert.ok(empty.rows.every(row => row.minAttack === null && row.maxAttack === null && row.meanPhysicalRate === null))
 })
 
 test('職業別とレアリティ別の票は各カテゴリで個別に集計した票と両単位で一致する', () => {

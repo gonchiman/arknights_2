@@ -4,6 +4,8 @@ import { calculateWeightedPercentile } from './enemyWeightedHistogram.ts'
 import { getAdvantageOutcome, isComparableDamage, type AdvantageVotes, type NamedSkillRankStageSample } from './damageThreeSkillRankStatistics.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
 import { getProfessionLabel, PROFESSION_ORDER } from './operatorFilters.ts'
+import { summarizeEnemyAttackQuartiles, type EnemyAttackQuartileStage, type EnemyAttackQuartileStatistics } from './damageThreeEnemyAttackQuartiles.ts'
+export type { EnemyAttackQuartileRow, EnemyAttackQuartileStatistics } from './damageThreeEnemyAttackQuartiles.ts'
 
 interface EnemySpawnStatPair {
   defense: number
@@ -115,6 +117,8 @@ export interface EnemyAdvantageCategoryRow {
 
 export interface EnemySpawnAdvantageStatistics {
   rows: EnemySpawnAdvantageRow[]
+  attackQuartileStages: EnemyAttackQuartileStage[]
+  attackQuartiles: EnemyAttackQuartileStatistics
   outliers: EnemyOutlierStatistics
   professionRows: EnemyAdvantageCategoryRow[]
   rarityRows: EnemyAdvantageCategoryRow[]
@@ -228,6 +232,7 @@ export function summarizeEnemySpawnAdvantage(
     lower: index * SKILL_RATE_BIN_WIDTH, upper: (index + 1) * SKILL_RATE_BIN_WIDTH, count: 0,
   }))
   let stageCount = 0
+  const attackQuartileStages: EnemyAttackQuartileStage[] = []
   const operators = new Map<string, EnemyOperatorVotes>()
   const professions = new Map<string, EnemyAdvantageCategoryRow>(PROFESSION_ORDER.map(key =>
     [key, createCategoryRow(key, getProfessionLabel(key))]))
@@ -238,14 +243,19 @@ export function summarizeEnemySpawnAdvantage(
     const winsByStageCount = new Map<number, number>()
     const skillVotes = emptyVotes()
     const stageVotes = emptyVotes()
+    const stageRates = group.map(() => ({ physicalWins: 0, comparableSpawns: 0 }))
     let comparableSpawns = 0
     pairs.forEach(({ spawnCount }, index) => {
       const votes = emptyVotes()
       let physical = 0, arts = 0
-      for (const { cells } of group) {
+      for (const [stageIndex, { cells }] of group.entries()) {
         const cell = cells[index]
         if (!cell || !isComparableDamage(cell)) continue
-        votes[getAdvantageOutcome(cell.physical, cell.arts)]++
+        const outcome = getAdvantageOutcome(cell.physical, cell.arts)
+        votes[outcome]++
+        const rate = stageRates[stageIndex]
+        rate.comparableSpawns += spawnCount
+        if (outcome === 'physicalWins') rate.physicalWins += spawnCount
         votes.count++
         physical += cell.physical
         arts += cell.arts
@@ -268,6 +278,13 @@ export function summarizeEnemySpawnAdvantage(
       const weightedWins = spawnCount * votes.physicalWins
       winsByStageCount.set(votes.count, (winsByStageCount.get(votes.count) ?? 0) + weightedWins)
       comparableSpawns += spawnCount
+    })
+    group.forEach((stage, index) => {
+      const { comparableSpawns, physicalWins } = stageRates[index]
+      if (comparableSpawns > 0) attackQuartileStages.push({
+        key: stage.key ?? JSON.stringify([key, stage.stageLabel]),
+        finalAttack: stage.finalAttack ?? null, physicalRate: physicalWins / comparableSpawns,
+      })
     })
     if (comparableSpawns > 0) {
       const { operatorId, operatorName, skillIndex, skillName, profession, rarity } = group[0].skill
@@ -317,6 +334,7 @@ export function summarizeEnemySpawnAdvantage(
   })
   return {
     rows: resultRows, outliers: summarizeOutliers(pairs, pairTotals),
+    attackQuartileStages, attackQuartiles: summarizeEnemyAttackQuartiles(attackQuartileStages),
     professionRows: [...professions.values()], rarityRows: [...rarities.values()],
     skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()],
   }

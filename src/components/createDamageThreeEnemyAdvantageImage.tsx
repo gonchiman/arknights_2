@@ -1,10 +1,10 @@
-import type { EnemyOutlierScope, EnemySpawnAdvantageStatistics } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyAttackQuartileStatistics, EnemyOutlierScope, EnemySpawnAdvantageStatistics } from '../lib/damageThreeEnemySpawnAdvantage'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import type { ChartImageAlternateLayout, DamageCalculatorThreeAttributeChartImageSnapshot } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeAdvantageImageLegend } from './DamageThreeAdvantageChartImage'
 import { DamageThreeEnemyAdvantageLabeledPlot, ENEMY_ADVANTAGE_LABELED_PLOT_HEIGHT } from './DamageThreeEnemyAdvantageLabeledPlot'
-import { DamageThreeEnemyAdvantagePlot, DamageThreeEnemyAdvantageTable, DamageThreeEnemyMeanDamageTable, ENEMY_MEAN_DAMAGE_TITLE, getEnemyAdvantagePlotHeight } from './DamageThreeEnemyAdvantageViews'
+import { DamageThreeEnemyAdvantagePlot, DamageThreeEnemyAdvantageTable, DamageThreeEnemyAttackQuartileTable, DamageThreeEnemyMeanDamageTable, ENEMY_MEAN_DAMAGE_TITLE, getEnemyAdvantagePlotHeight } from './DamageThreeEnemyAdvantageViews'
 import {
   DamageThreeEnemyMeanDamageLegend, DamageThreeEnemyMeanDamageOverallPlot, DamageThreeEnemyMeanDamagePlot,
   ENEMY_MEAN_DAMAGE_AXIS, ENEMY_MEAN_DAMAGE_OVERALL_HEIGHT, getEnemyMeanDamagePlotHeight,
@@ -13,6 +13,7 @@ import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSI
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
 import { ENEMY_ADVANTAGE_BREAKDOWNS, ENEMY_OUTLIER_SCOPES, formatEnemyOutlierFences, getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
 import { viewLabel, type TableChartView } from './PageViewSwitch'
+import { ENEMY_ATTACK_QUARTILES_TITLE } from './enemyComparisonViews'
 
 export type EnemyAdvantageImage =
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot; alternateLayout?: ChartImageAlternateLayout }
@@ -24,20 +25,33 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   showBands: boolean
   breakdown?: EnemyAdvantageBreakdown
   outlierScope?: EnemyOutlierScope
+  attackQuartiles?: EnemyAttackQuartileStatistics
   hiddenChartCategories?: readonly string[]
-  format: TableChartView | 'meanDamage' | 'histogram'
+  format: TableChartView | 'meanDamage' | 'histogram' | 'attackQuartiles'
   meanDamageFormat?: TableChartView
 }
 
 export function createDamageThreeEnemyAdvantageImage({
-  statistics, advantageUnit, showBands, breakdown, outlierScope = 'all', hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
+  statistics, advantageUnit, showBands, breakdown, outlierScope = 'all', attackQuartiles = statistics.attackQuartiles,
+  hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
 }: EnemyAdvantageImageOptions): EnemyAdvantageImage | null {
+  const total = statistics.rows[0]
+  const { source, settings } = getDamageThreeStatisticsImageConditions(options)
+  if (format === 'attackQuartiles') {
+    if (!total?.spawnCount || !attackQuartiles.includedStageCount) return null
+    const filenameParts = [...source, '段階単位', ...settings]
+    return { view: 'table', snapshot: {
+      title: ENEMY_ATTACK_QUARTILES_TITLE, filenameConditions: ['表', ...filenameParts],
+      conditions: [...filenameParts, `出現回数 ${total.spawnCount.toLocaleString('ja-JP')}`,
+        `集計対象 ${attackQuartiles.includedStageCount.toLocaleString('ja-JP')}段階`,
+        `単一の最終攻撃力を特定できず除外 ${attackQuartiles.excludedStageCount.toLocaleString('ja-JP')}段階`],
+      table: <DamageThreeEnemyAttackQuartileTable rows={attackQuartiles.rows} />,
+    } }
+  }
   const outlierRows = (format === 'chart' || format === 'table') && breakdown === 'outlier'
     ? statistics.outliers[outlierScope] : null
-  const total = statistics.rows[0]
   const unit = format === 'meanDamage' || format === 'histogram' ? 'skill' : advantageUnit
   if (!total || (!outlierRows && !total[unit].count)) return null
-  const { source, settings } = getDamageThreeStatisticsImageConditions(options)
   const [versionLabel, scopeLabel] = source
   const totalSpawns = format === 'meanDamage' ? total.meanDamage?.spawnCount : (outlierRows?.[0] ?? total).spawnCount
   if (totalSpawns === undefined || (!outlierRows && !totalSpawns)) return null

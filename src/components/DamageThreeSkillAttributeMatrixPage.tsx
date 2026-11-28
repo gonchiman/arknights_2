@@ -7,6 +7,7 @@ import { filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type Da
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
 import { buildEnemySpawnPopulation, type EnemyOutlierScope } from '../lib/damageThreeEnemySpawnAdvantage'
 import { projectEnemyOperatorVoteSummaries } from '../lib/damageThreeEnemySpawnVotesProjection'
+import { projectEnemyAttackQuartiles } from '../lib/damageThreeEnemyAttackQuartiles'
 import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 import { useEnemyAggregation } from '../lib/useEnemyAggregation'
@@ -14,14 +15,14 @@ import type { SkillRecord } from '../types/skill'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { createDamageThreeStatisticsChartImage } from './createDamageThreeStatisticsChartImage'
 import { createDamageThreeEnemyAdvantageImage, type EnemyAdvantageImage } from './createDamageThreeEnemyAdvantageImage'
-import { ENEMY_ANALYSES, ENEMY_COMPARISON_TITLE, getEnemyAnalysisSegments, type EnemyAnalysis } from './enemyComparisonViews'
+import { ENEMY_ANALYSES, ENEMY_ATTACK_QUARTILES_TITLE, ENEMY_COMPARISON_TITLE, getEnemyAnalysisSegments, type EnemyAnalysis } from './enemyComparisonViews'
 import {
   ENEMY_ADVANTAGE_BREAKDOWNS, ENEMY_OUTLIER_SCOPES, formatEnemyOutlierFences,
   getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown,
 } from './enemyAdvantageBreakdown'
 import { ComparisonTableImageDialog } from './ComparisonTableImageDialog'
 import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculatorThreeAttributeChartImageDialog'
-import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageThreeEnemyMeanDamageTable, EnemyAdvantageCategorySelector, ENEMY_MEAN_DAMAGE_TITLE } from './DamageThreeEnemyAdvantageViews'
+import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageThreeEnemyAttackQuartileTable, DamageThreeEnemyMeanDamageTable, EnemyAdvantageCategorySelector, ENEMY_MEAN_DAMAGE_TITLE } from './DamageThreeEnemyAdvantageViews'
 import { DamageThreeEnemyMeanDamageChart } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeOperatorVotes, SkillVoteBreakdown, useOperatorVoteSelection } from './DamageThreeOperatorVotes'
 import { DamageThreeVoteList, type VoteListGroup } from './DamageThreeVoteList'
@@ -129,6 +130,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const statsActive = mode === 'statistics'
   const enemyActive = mode === 'enemies'
   const enemyOverviewActive = enemyActive && enemyAnalysis === 'advantage'
+  const quartilesActive = enemyActive && enemyAnalysis === 'attackQuartiles'
   const outliersActive = enemyOverviewActive && advantageBreakdown === 'outlier'
   const enemyMeanActive = enemyActive && enemyAnalysis === 'meanDamage'
   const operatorVotesActive = enemyActive && enemyAnalysis === 'operatorVotes'
@@ -151,7 +153,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
   const enemyReady = enemyActive && !loading && !!enemyPopulation && matching !== null && (filtered.length > 0 || outliersActive)
-  const defaultEligible = enemyReady && scope === 'main' && (!canReset || operatorVotesActive)
+  const defaultEligible = enemyReady && scope === 'main' && (!canReset || operatorVotesActive || quartilesActive)
     && comparisonPolicy === 'excludeAttributeEffects'
   const defaultSummary = useEnemySpawnDefaultSummary(defaultEligible, rows, aggregation.version)
   const liveEnemyStats = useDamageThreeEnemySpawnAdvantage(enemyReady && !operatorVotesActive && defaultSummary === null, filtered, enemyPopulation, comparisonPolicy)
@@ -162,6 +164,12 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     filtered, enemyPopulation, comparisonPolicy)
   const voteList = defaultSummary === 'checking' ? null : savedVoteList ?? liveVoteList
   const enemyStats = defaultSummary === 'checking' ? null : defaultSummary ?? liveEnemyStats
+  const attackQuartiles = useMemo(() => {
+    if (!quartilesActive) return undefined
+    if (canReset && defaultSummary && defaultSummary !== 'checking')
+      return projectEnemyAttackQuartiles(defaultSummary.attackQuartileStages, filtered)
+    return enemyStats?.attackQuartiles
+  }, [quartilesActive, canReset, defaultSummary, enemyStats, filtered])
   const advantageRows = enemyOverviewActive && enemyStats
     ? getEnemyAdvantageDisplayRows(enemyStats, advantageBreakdown, activeFilters.profession, activeFilters.rarity, outlierScope) : []
   const hiddenChartCategories = hiddenCategoriesByBreakdown[advantageBreakdown] ?? []
@@ -177,7 +185,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyAnalysis !== 'operatorVotes'
     ? createDamageThreeEnemyAdvantageImage({
         statistics: enemyStats, format: enemyAnalysis === 'advantage' ? enemyFormat : enemyAnalysis,
-        breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
+        breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, attackQuartiles, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
         ...imageConditions,
       })
     : rankImage && { view: 'chart', snapshot: rankImage }
@@ -326,6 +334,17 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                           imageConditions={imageConditions} selection={operatorVoteSelection} />} />
                 : !filtered.length && !outliersActive ? <p role="status">該当するスキルはありません。</p>
                 : !enemyPopulation || !enemyStats ? <p role="status">出現敵ごとの主攻撃ダメージを集計中…</p>
+                : quartilesActive && attackQuartiles ? <>
+                    <div className="dc3-matrix-conditions">
+                      <span>集計対象 {NUMBER.format(attackQuartiles.includedStageCount)}段階</span>
+                      <span>単一の最終攻撃力を特定できず除外 {NUMBER.format(attackQuartiles.excludedStageCount)}段階</span>
+                    </div>
+                    {attackQuartiles.includedStageCount > 0
+                      ? <div className="damage-two-table-wrap" role="region" aria-label={ENEMY_ATTACK_QUARTILES_TITLE} tabIndex={0}>
+                          <DamageThreeEnemyAttackQuartileTable rows={attackQuartiles.rows} />
+                        </div>
+                      : <p role="status">集計対象の段階はありません。</p>}
+                  </>
                 : !enemyStats.skillCount && !outliersActive ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>
                 : <>
                     {enemyMeanActive && <div className="dc3-matrix-table-heading"><h2>{ENEMY_MEAN_DAMAGE_TITLE}</h2></div>}

@@ -15,6 +15,15 @@ export function getDamageDifference({ physical, arts }: DamageCell): number | nu
   return Number.isFinite(difference) ? difference : null
 }
 
+export function evaluateVirtualSkillRankRow(
+  entry: DamageThreeAttributeEntry, pairs: readonly EnemyDamageStatPair[], effectPolicy: SkillRankEffectPolicy | boolean,
+) {
+  return evaluateDamageThreePairedAttacks({
+    entry, enemyCount: 1, disablePenetration: effectPolicy === true || effectPolicy === 'excludePenetration',
+    excludeAttributeEffects: effectPolicy === 'excludeAttributeEffects',
+  }, pairs)
+}
+
 /** Evaluate only the skill stages currently visible, at one attack/action against one target. */
 export function evaluateDamageThreeSkillRankRow(
   entry: DamageThreeAttributeEntry, pairs: readonly EnemyDamageStatPair[], mode: DamageThreeSkillRankMode,
@@ -23,9 +32,7 @@ export function evaluateDamageThreeSkillRankRow(
   // Boolean inputs reproduce the v1 penetration-only comparison.
   const disablePenetration = effectPolicy === true || effectPolicy === 'excludePenetration'
   if (mode === 'virtual') {
-    const { cells, errors, hasProbabilisticMainAttack } = evaluateDamageThreePairedAttacks(
-      { entry, enemyCount: 1, disablePenetration, excludeAttributeEffects: effectPolicy === 'excludeAttributeEffects' }, pairs,
-    )
+    const { cells, errors, hasProbabilisticMainAttack } = evaluateVirtualSkillRankRow(entry, pairs, effectPolicy)
     return {
       cells,
       errors,
