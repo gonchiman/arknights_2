@@ -1,4 +1,4 @@
-import type { EnemySpawnAdvantageStatistics } from '../lib/damageThreeEnemySpawnAdvantage'
+import type { EnemyOutlierScope, EnemySpawnAdvantageStatistics } from '../lib/damageThreeEnemySpawnAdvantage'
 import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import type { ChartImageAlternateLayout, DamageCalculatorThreeAttributeChartImageSnapshot } from './DamageCalculatorThreeAttributeChartImageDialog'
@@ -11,8 +11,8 @@ import {
 } from './DamageThreeEnemyMeanDamageChart'
 import { DamageThreeSkillPhysicalRatePlot, SKILL_PHYSICAL_RATE_AXIS, SKILL_PHYSICAL_RATE_TITLE } from './DamageThreeSkillPhysicalRateHistogram'
 import { getDamageThreeStatisticsImageConditions, type StatisticsImageConditions } from './createDamageThreeStatisticsChartImage'
-import { getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
-import type { TableChartView } from './PageViewSwitch'
+import { ENEMY_ADVANTAGE_BREAKDOWNS, ENEMY_OUTLIER_SCOPES, formatEnemyOutlierFences, getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
+import { viewLabel, type TableChartView } from './PageViewSwitch'
 
 export type EnemyAdvantageImage =
   | { view: 'chart'; snapshot: DamageCalculatorThreeAttributeChartImageSnapshot; alternateLayout?: ChartImageAlternateLayout }
@@ -23,21 +23,24 @@ interface EnemyAdvantageImageOptions extends StatisticsImageConditions {
   advantageUnit: AdvantageUnit
   showBands: boolean
   breakdown?: EnemyAdvantageBreakdown
+  outlierScope?: EnemyOutlierScope
   hiddenChartCategories?: readonly string[]
   format: TableChartView | 'meanDamage' | 'histogram'
   meanDamageFormat?: TableChartView
 }
 
 export function createDamageThreeEnemyAdvantageImage({
-  statistics, advantageUnit, showBands, breakdown, hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
+  statistics, advantageUnit, showBands, breakdown, outlierScope = 'all', hiddenChartCategories = [], format, meanDamageFormat = 'table', ...options
 }: EnemyAdvantageImageOptions): EnemyAdvantageImage | null {
+  const outlierRows = (format === 'chart' || format === 'table') && breakdown === 'outlier'
+    ? statistics.outliers[outlierScope] : null
   const total = statistics.rows[0]
   const unit = format === 'meanDamage' || format === 'histogram' ? 'skill' : advantageUnit
-  if (!total?.[unit].count) return null
+  if (!total || (!outlierRows && !total[unit].count)) return null
   const { source, settings } = getDamageThreeStatisticsImageConditions(options)
   const [versionLabel, scopeLabel] = source
-  const totalSpawns = format === 'meanDamage' ? total.meanDamage?.spawnCount : total.spawnCount
-  if (!totalSpawns) return null
+  const totalSpawns = format === 'meanDamage' ? total.meanDamage?.spawnCount : (outlierRows?.[0] ?? total).spawnCount
+  if (totalSpawns === undefined || (!outlierRows && !totalSpawns)) return null
   const spawnCountNumber = totalSpawns.toLocaleString('ja-JP')
   const spawnCount = `出現回数 ${spawnCountNumber}`
   if (format === 'histogram') {
@@ -52,10 +55,16 @@ export function createDamageThreeEnemyAdvantageImage({
   const bandMode = showBands ? 'defense' : 'all'
   const mode = format === 'meanDamage' ? bandMode : breakdown ?? bandMode
   const unitLabel = unit === 'skill' ? 'スキル単位' : '段階単位'
-  const breakdownLabel = { all: '全体のみ', defense: '防御力帯別の内訳', profession: '職業別', rarity: 'レアリティ別' }[mode]
-  const filenameParts = [...source, breakdownLabel, unitLabel, ...settings]
+  const breakdownLabel = mode === 'all' ? '全体のみ' : mode === 'defense' ? '防御力帯別の内訳' : viewLabel(ENEMY_ADVANTAGE_BREAKDOWNS, mode)
+  const target = outlierRows ? [viewLabel(ENEMY_OUTLIER_SCOPES, outlierScope)] : []
+  const comparisonSettings = [unitLabel, ...settings]
+  const filenameParts = outlierRows
+    ? [...source, '外れ値別', ...target, formatEnemyOutlierFences(statistics.outliers, true), ...comparisonSettings]
+    : [...source, breakdownLabel, ...comparisonSettings]
   const count = unit === 'skill' ? `${statistics.skillCount.toLocaleString('ja-JP')}スキル` : `${statistics.stageCount.toLocaleString('ja-JP')}段階`
-  const conditions = [...filenameParts, spawnCount, count]
+  const conditions = [...source, breakdownLabel, ...target, ...comparisonSettings, spawnCount,
+    outlierRows && outlierScope !== 'all' ? `全敵で有効 ${count}` : count]
+  if (outlierRows) conditions.push(formatEnemyOutlierFences(statistics.outliers))
   const title = format === 'meanDamage' ? ENEMY_MEAN_DAMAGE_TITLE : '出現敵での優勢率'
 
   if (format === 'meanDamage') {
@@ -84,7 +93,7 @@ export function createDamageThreeEnemyAdvantageImage({
       chart: size => <DamageThreeEnemyMeanDamagePlot rows={rows} {...size} />,
     } }
   }
-  const rows = getEnemyAdvantageDisplayRows(statistics, mode, options.filters.profession, options.filters.rarity)
+  const rows = outlierRows ?? getEnemyAdvantageDisplayRows(statistics, mode, options.filters.profession, options.filters.rarity)
   if (format === 'table') {
     return { view: 'table', snapshot: {
       title, conditions, filenameConditions: ['表', ...filenameParts],
@@ -95,7 +104,8 @@ export function createDamageThreeEnemyAdvantageImage({
   if (!visibleRows.length) return null
   const selection = visibleRows.length === rows.length ? [] : [`表示 ${visibleRows.map(row => row.label).join('・')}`]
   const snapshot: DamageCalculatorThreeAttributeChartImageSnapshot = {
-    title, conditions: [...conditions, ...selection], filenameParts: ['グラフ', ...selection, ...filenameParts],
+    title, conditions: [...conditions, ...selection],
+    filenameParts: outlierRows ? ['グラフ', ...filenameParts, ...selection] : ['グラフ', ...selection, ...filenameParts],
     axisTitle: '出現回数で重み付けした優勢率（%）',
     naturalChartHeight: getEnemyAdvantagePlotHeight(visibleRows.length),
     legend: <DamageThreeAdvantageImageLegend />,

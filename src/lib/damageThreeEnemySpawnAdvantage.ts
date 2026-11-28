@@ -1,5 +1,6 @@
 import type { EnemyRecord } from '../types/enemy.ts'
 import { getEnemyCountWeight, type EnemyHistogramCounts } from './enemyHistogramCounts.ts'
+import { calculateWeightedPercentile } from './enemyWeightedHistogram.ts'
 import { getAdvantageOutcome, isComparableDamage, type AdvantageVotes, type NamedSkillRankStageSample } from './damageThreeSkillRankStatistics.ts'
 import { createSkillJsonSelectionKey } from './skillJsonAnalysis.ts'
 import { getProfessionLabel, PROFESSION_ORDER } from './operatorFilters.ts'
@@ -8,6 +9,7 @@ interface EnemySpawnStatPair {
   defense: number
   resistance: number
   spawnCount: number
+  eliteBossSpawnCount?: number
 }
 
 export interface EnemySpawnPopulation {
@@ -20,7 +22,7 @@ export interface EnemySpawnPopulation {
 export function buildEnemySpawnPopulation(rows: readonly EnemyRecord[], counts: EnemyHistogramCounts | null): EnemySpawnPopulation {
   const pairsByStats = new Map<string, EnemySpawnStatPair>()
   let enemyCount = 0, spawnCount = 0, missingSpawnCount = 0
-  for (const { id, stats } of rows) {
+  for (const { id, stats, levelType } of rows) {
     const weight = getEnemyCountWeight(id, 'SPAWNS', counts)
     if (weight <= 0) continue
     const { defense, magicResistance: resistance } = stats
@@ -31,9 +33,12 @@ export function buildEnemySpawnPopulation(rows: readonly EnemyRecord[], counts: 
     enemyCount++
     spawnCount += weight
     const key = JSON.stringify([defense, resistance])
-    const pair = pairsByStats.get(key)
-    if (pair) pair.spawnCount += weight
-    else pairsByStats.set(key, { defense, resistance, spawnCount: weight })
+    const pair = pairsByStats.get(key) ?? { defense, resistance, spawnCount: 0, eliteBossSpawnCount: 0 }
+    pair.spawnCount += weight
+    if (levelType === 'ELITE' || levelType === 'BOSS') {
+      pair.eliteBossSpawnCount = (pair.eliteBossSpawnCount ?? 0) + weight
+    }
+    pairsByStats.set(key, pair)
   }
   return { pairs: [...pairsByStats.values()], enemyCount, spawnCount, missingSpawnCount }
 }
@@ -87,6 +92,16 @@ export interface EnemySpawnAdvantageRow {
   meanDamage: { physical: number; arts: number; spawnCount: number } | null
 }
 
+export type EnemyOutlierScope = 'all' | 'eliteBoss'
+export interface EnemyOutlierRow extends Pick<EnemySpawnAdvantageRow, 'label' | 'spawnCount' | 'skill' | 'stage'> {
+  spawnShare: number | null
+}
+
+interface EnemyOutlierStatistics extends Record<EnemyOutlierScope, EnemyOutlierRow[]> {
+  defenseFence: number | null
+  resistanceFence: number | null
+}
+
 export type SkillPhysicalRateBin = { lower: number; upper: number; count: number }
 
 export interface EnemyAdvantageCategoryRow {
@@ -100,6 +115,7 @@ export interface EnemyAdvantageCategoryRow {
 
 export interface EnemySpawnAdvantageStatistics {
   rows: EnemySpawnAdvantageRow[]
+  outliers: EnemyOutlierStatistics
   professionRows: EnemyAdvantageCategoryRow[]
   rarityRows: EnemyAdvantageCategoryRow[]
   skillCount: number
@@ -144,6 +160,49 @@ export function sumEnemySkillVotes(skills: readonly EnemySkillVoteSummary[]): We
   return total
 }
 
+function upperOutlierFence(pairs: readonly EnemySpawnStatPair[], field: 'defense' | 'resistance') {
+  const observations = pairs.map(pair => ({ value: pair[field], weight: pair.spawnCount }))
+  const q1 = calculateWeightedPercentile(observations, 25)
+  const q3 = calculateWeightedPercentile(observations, 75)
+  return q1 === null || q3 === null ? null : q3 + 1.5 * (q3 - q1)
+}
+
+function summarizeOutliers(
+  pairs: readonly EnemySpawnStatPair[], pairVotes: readonly { skill: WeightedVotes; stage: WeightedVotes }[],
+): EnemyOutlierStatistics {
+  const defenseFence = upperOutlierFence(pairs, 'defense')
+  const resistanceFence = upperOutlierFence(pairs, 'resistance')
+  const labels = ['全体', '① 両方', '② 防御力のみ', '③ 術耐性のみ', '④ どちらも該当せず']
+  const createRows = (): EnemyOutlierRow[] => labels.map(label => ({
+    label, spawnCount: 0, spawnShare: null, skill: emptyVotes(), stage: emptyVotes(),
+  }))
+  const all = createRows(), eliteBoss = createRows()
+  if (defenseFence !== null && resistanceFence !== null) {
+    pairs.forEach((pair, index) => {
+      const highDefense = pair.defense > defenseFence
+      const highResistance = pair.resistance > resistanceFence
+      const rowIndex = highDefense ? (highResistance ? 1 : 2) : (highResistance ? 3 : 4)
+      const votes = pairVotes[index]
+      for (const [row, weight] of [[all[rowIndex], pair.spawnCount], [eliteBoss[rowIndex], pair.eliteBossSpawnCount ?? 0]] as const) {
+        row.spawnCount += weight
+        addVotes(row.skill, votes.skill, weight)
+        addVotes(row.stage, votes.stage, weight)
+      }
+    })
+    for (const [total, ...groups] of [all, eliteBoss]) {
+      for (const row of groups) {
+        total.spawnCount += row.spawnCount
+        addVotes(total.skill, row.skill)
+        addVotes(total.stage, row.stage)
+      }
+      if (total.spawnCount > 0) {
+        for (const row of [total, ...groups]) row.spawnShare = row.spawnCount / total.spawnCount
+      }
+    }
+  }
+  return { defenseFence, resistanceFence, all, eliteBoss }
+}
+
 export function summarizeEnemySpawnAdvantage(
   pairs: readonly EnemySpawnStatPair[], stages: readonly NamedSkillRankStageSample[],
 ): EnemySpawnAdvantageStatistics {
@@ -154,7 +213,7 @@ export function summarizeEnemySpawnAdvantage(
   const pairTotals = pairs.map(({ defense, spawnCount }) => {
     const band = rows[1 + defenseBands.findIndex(band => defense < band.upper)]
     band.spawnCount += spawnCount
-    return { band, skillCount: 0, physicalSkillSum: 0, artsSkillSum: 0 }
+    return { band, skillCount: 0, physicalSkillSum: 0, artsSkillSum: 0, skill: emptyVotes(), stage: emptyVotes() }
   })
 
   const skills = new Map<string, NamedSkillRankStageSample[]>()
@@ -193,6 +252,9 @@ export function summarizeEnemySpawnAdvantage(
       }
       if (!votes.count) return
       const pair = pairTotals[index]
+      // Keep one spawn's votes so both enemy scopes can reuse the same stage comparisons.
+      addVotes(pair.stage, votes)
+      addVotes(pair.skill, votes, 1 / votes.count)
       pair.physicalSkillSum += physical / votes.count
       pair.artsSkillSum += arts / votes.count
       pair.skillCount++
@@ -254,7 +316,8 @@ export function summarizeEnemySpawnAdvantage(
     return { ...row, meanDamage: spawnCount > 0 ? { physical: physical / spawnCount, arts: arts / spawnCount, spawnCount } : null }
   })
   return {
-    rows: resultRows, professionRows: [...professions.values()], rarityRows: [...rarities.values()],
+    rows: resultRows, outliers: summarizeOutliers(pairs, pairTotals),
+    professionRows: [...professions.values()], rarityRows: [...rarities.values()],
     skillCount: skills.size, stageCount, skillPhysicalRateBins, operators: [...operators.values()],
   }
 }

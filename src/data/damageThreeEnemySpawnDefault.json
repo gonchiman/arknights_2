@@ -3,7 +3,7 @@
   "aggregationPayloadSha256": "f5e3c2ded9c19144541fae7093e0df2f11eba7a399bfcf7d73b277e5db012a77",
   "gameDataRevision": "270115d3ef5dc0e97530bedc168eb3ddb3d14bc6",
   "skillDataSha256": "cd70c1e641874c657bbe46ca80b35e8228640f30a58f93841d7a86e29ac000f4",
-  "calculationSha256": "b662a39e7be6234df159035b0c60a3be992872a1fdd5745befedef0af9289552",
+  "calculationSha256": "308c75acbf039abc7b0a3a5f9694f3727c044fd7190db87d153845780bb10320",
   "statistics": {
     "rows": [
       {
@@ -112,6 +112,184 @@
         }
       }
     ],
+    "outliers": {
+      "defenseFence": 422.5,
+      "resistanceFence": 75,
+      "all": [
+        {
+          "label": "全体",
+          "spawnCount": 11409,
+          "spawnShare": 1,
+          "skill": {
+            "physicalWins": 4618303.5,
+            "ties": 710455.5,
+            "artsWins": 3250809.000000001,
+            "count": 8579568
+          },
+          "stage": {
+            "physicalWins": 5173169,
+            "ties": 806862,
+            "artsWins": 3683392,
+            "count": 9663423
+          }
+        },
+        {
+          "label": "① 両方",
+          "spawnCount": 114,
+          "spawnShare": 0.009992111490928214,
+          "skill": {
+            "physicalWins": 4741.833333333333,
+            "ties": 798,
+            "artsWins": 80188.16666666667,
+            "count": 85728
+          },
+          "stage": {
+            "physicalWins": 5583,
+            "ties": 968,
+            "artsWins": 90007,
+            "count": 96558
+          }
+        },
+        {
+          "label": "② 防御力のみ",
+          "spawnCount": 1143,
+          "spawnShare": 0.100184065211675,
+          "skill": {
+            "physicalWins": 187666.33333333326,
+            "ties": 3473,
+            "artsWins": 668396.6666666667,
+            "count": 859536
+          },
+          "stage": {
+            "physicalWins": 212213,
+            "ties": 4618,
+            "artsWins": 751290,
+            "count": 968121
+          }
+        },
+        {
+          "label": "③ 術耐性のみ",
+          "spawnCount": 0,
+          "spawnShare": 0,
+          "skill": {
+            "physicalWins": 0,
+            "ties": 0,
+            "artsWins": 0,
+            "count": 0
+          },
+          "stage": {
+            "physicalWins": 0,
+            "ties": 0,
+            "artsWins": 0,
+            "count": 0
+          }
+        },
+        {
+          "label": "④ どちらも該当せず",
+          "spawnCount": 10152,
+          "spawnShare": 0.8898238232973968,
+          "skill": {
+            "physicalWins": 4425895.333333333,
+            "ties": 706184.5,
+            "artsWins": 2502224.1666666674,
+            "count": 7634304
+          },
+          "stage": {
+            "physicalWins": 4955373,
+            "ties": 801276,
+            "artsWins": 2842095,
+            "count": 8598744
+          }
+        }
+      ],
+      "eliteBoss": [
+        {
+          "label": "全体",
+          "spawnCount": 1756,
+          "spawnShare": 1,
+          "skill": {
+            "physicalWins": 630989.3333333334,
+            "ties": 22014.5,
+            "artsWins": 667508.1666666667,
+            "count": 1320512
+          },
+          "stage": {
+            "physicalWins": 707119,
+            "ties": 25873,
+            "artsWins": 754340,
+            "count": 1487332
+          }
+        },
+        {
+          "label": "① 両方",
+          "spawnCount": 51,
+          "spawnShare": 0.029043280182232345,
+          "skill": {
+            "physicalWins": 2021,
+            "ties": 334.5,
+            "artsWins": 35996.5,
+            "count": 38352
+          },
+          "stage": {
+            "physicalWins": 2416,
+            "ties": 411,
+            "artsWins": 40370,
+            "count": 43197
+          }
+        },
+        {
+          "label": "② 防御力のみ",
+          "spawnCount": 924,
+          "spawnShare": 0.5261958997722096,
+          "skill": {
+            "physicalWins": 160665.5,
+            "ties": 2816,
+            "artsWins": 531366.5000000001,
+            "count": 694848
+          },
+          "stage": {
+            "physicalWins": 181634,
+            "ties": 3742,
+            "artsWins": 597252,
+            "count": 782628
+          }
+        },
+        {
+          "label": "③ 術耐性のみ",
+          "spawnCount": 0,
+          "spawnShare": 0,
+          "skill": {
+            "physicalWins": 0,
+            "ties": 0,
+            "artsWins": 0,
+            "count": 0
+          },
+          "stage": {
+            "physicalWins": 0,
+            "ties": 0,
+            "artsWins": 0,
+            "count": 0
+          }
+        },
+        {
+          "label": "④ どちらも該当せず",
+          "spawnCount": 781,
+          "spawnShare": 0.4447608200455581,
+          "skill": {
+            "physicalWins": 468302.8333333334,
+            "ties": 18864,
+            "artsWins": 100145.16666666666,
+            "count": 587312
+          },
+          "stage": {
+            "physicalWins": 523069,
+            "ties": 21720,
+            "artsWins": 116718,
+            "count": 661507
+          }
+        }
+      ]
+    },
     "professionRows": [
       {
         "key": "PIONEER",

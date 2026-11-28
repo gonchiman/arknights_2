@@ -13,7 +13,7 @@
   min-width: 320px;
 }
 
-.damage-two-table.dc3-enemy-advantage-table :is(thead, tbody) th:first-child {
+.damage-two-table.dc3-enemy-advantage-table :is(thead tr:first-child, tbody tr) > th:first-child {
   text-align: left;
 }
 

@@ -132,6 +132,8 @@
 .dc3-statistics-table tbody:last-of-type [rowspan] { border-bottom: 0; }
 
 @media (max-width: 460px) {
+  .dc3-matrix-breakdown .page-view-switch { flex-wrap: wrap; gap: 4px; border: 0; }
+  .dc3-matrix-breakdown .page-view-switch button { border: 1px solid var(--border-strong); }
   .dc3-matrix {
     --matrix-operator-width: 4.25rem;
     --matrix-number-width: 2.125rem;

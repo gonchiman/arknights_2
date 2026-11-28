@@ -307,6 +307,44 @@ test('出現敵の職業別・レアリティ別の表とグラフは、全体�
   }
 })
 
+test('外れ値別の画面と画像は選択対象の出現割合を保持し、0票と0回を区別する', async () => {
+  const { getEnemyAdvantageDisplayRows } = await server.ssrLoadModule('/src/components/enemyAdvantageBreakdown.ts')
+  const { DamageThreeEnemyAdvantageTable } = await server.ssrLoadModule('/src/components/DamageThreeEnemyAdvantageViews.tsx')
+  const zeroVotes = { physicalWins: 0, ties: 0, artsWins: 0, count: 0 }
+  const noVotes = { skill: zeroVotes, stage: zeroVotes }
+  const eliteBoss = [
+    { label: '全体', spawnCount: 5, spawnShare: 1, ...noVotes },
+    { label: '② 防御力のみ', spawnCount: 2, spawnShare: .4, ...noVotes },
+    { label: '③ 術耐性のみ', spawnCount: 0, spawnShare: 0, ...noVotes },
+  ]
+  const statistics = { skillCount: 0, stageCount: 0, rows: [{ label: '全体', spawnCount: 200, ...noVotes }],
+    outliers: { defenseFence: 422.5, resistanceFence: 75, all: [], eliteBoss } }
+  const options = { ...meanDamageOptions, format: 'table', statistics, breakdown: 'outlier', outlierScope: 'eliteBoss', advantageUnit: 'skill' }
+  const rows = getEnemyAdvantageDisplayRows(statistics, 'outlier', 'ALL', 'ALL', 'eliteBoss')
+  const props = { rows, unit: 'skill', breakdown: 'outlier' }
+  const table = renderToStaticMarkup(createElement(DamageThreeEnemyAdvantageTable, props))
+  const savedTable = createEnemyImage(options).snapshot
+  assert.equal(renderToStaticMarkup(savedTable.table), table)
+  assert.match(table, /出現割合 \(%\)/)
+  assert.match(table, />2<\/td><td[^>]*>40\.0<\/td>(?:<td[^>]*>—<\/td>){3}/)
+  assert.match(table, />0<\/td><td[^>]*>0\.0<\/td>(?:<td[^>]*>—<\/td>){3}/)
+  const savedChart = createEnemyImage({ ...options, format: 'chart', hiddenChartCategories: ['全体'] }).snapshot
+  const chart = renderToStaticMarkup(savedChart.chart({ height: savedChart.naturalChartHeight }))
+  assert.match(chart, /② 防御力のみ、出現回数 2 · 出現割合 40\.0%、比較票なし/)
+  assert.match(chart, /③ 術耐性のみ、出現回数 0 · 出現割合 0\.0%、対象なし/)
+  for (const snapshot of [savedTable, savedChart]) {
+    assert.ok(snapshot.conditions.includes('出現回数 5'))
+    assert.ok(snapshot.conditions.includes('上側外れ値の基準（全敵） 防御力 422.5超・術耐性 75超'))
+    const filename = snapshot.filenameConditions ?? snapshot.filenameParts
+    assert.ok(filename.includes('エリート＋ボス') && filename.includes('防御力 422.5超・術耐性 75超'))
+  }
+  const empty = { ...statistics, outliers: { ...statistics.outliers,
+    eliteBoss: eliteBoss.map(row => ({ ...row, spawnCount: 0, spawnShare: null })) } }
+  const emptyTable = createEnemyImage({ ...options, statistics: empty }).snapshot
+  assert.ok(emptyTable.conditions.includes('出現回数 0'))
+  assert.match(renderToStaticMarkup(emptyTable.table), />0<\/td>(?:<td[^>]*>—<\/td>){4}/)
+})
+
 test('優勢率のグラフ画像は選んだ行だけを元の順序で保存し、表と他の分析は全行を使う', async () => {
   const { default: { statistics } } = await server.ssrLoadModule('/src/data/damageThreeEnemySpawnDefault.json')
   const { createChartImageFilename } = await server.ssrLoadModule('/src/lib/chartImageFilename.ts')

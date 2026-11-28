@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { normalizePath } from 'vite'
 import { getEnemySpawnSkillDataHash } from '../src/lib/damageThreeEnemySpawnInputs.ts'
 import { parseEnemyAggregationIndex } from '../src/lib/enemyAggregationContract.ts'
+import { enemySpawnDefaultPlugin } from '../scripts/enemySpawnDefaultPlugin.mjs'
 import { getEnemySpawnCalculationHash } from '../scripts/lib/enemySpawnCalculationHash.mjs'
 
 test('事前集計のスキル照合は並び順によらず、同数のスキルでも効果や育成データの変更を検出する', async () => {
@@ -79,4 +82,52 @@ test('同梱の事前集計が敵の集計版と整合し、全体・防御力�
     const weightedMean = means.reduce((total, mean) => total + mean[type] * mean.spawnCount, 0) / count
     assert.ok(Math.abs(weightedMean - overall.meanDamage[type]) < 1e-8)
   }
+})
+
+test('標準条件の外れ値4区分が対象敵の出現と得票を過不足なく分ける', async () => {
+  const saved = JSON.parse(await readFile(new URL('../src/data/damageThreeEnemySpawnDefault.json', import.meta.url), 'utf8'))
+  const { outliers, rows: [overall] } = saved.statistics
+  const totals = ['physicalWins', 'ties', 'artsWins', 'count']
+  for (const scope of ['all', 'eliteBoss']) {
+    const [total, ...groups] = outliers[scope]
+    assert.equal(groups.length, 4)
+    assert.equal(groups.reduce((sum, group) => sum + group.spawnCount, 0), total.spawnCount)
+    for (const row of [total, ...groups]) {
+      assert.equal(row.spawnShare, total.spawnCount ? row.spawnCount / total.spawnCount : null)
+    }
+    for (const unit of ['skill', 'stage']) {
+      for (const key of totals) {
+        const sum = groups.reduce((sum, group) => sum + group[unit][key], 0)
+        assert.ok(Math.abs(sum - total[unit][key]) < 1e-6)
+        if (scope === 'all') assert.ok(Math.abs(total[unit][key] - overall[unit][key]) < 1e-6)
+      }
+    }
+  }
+  if (saved.aggregationVersion === 'v12') {
+    assert.equal(outliers.defenseFence, 422.5)
+    assert.equal(outliers.resistanceFence, 75)
+    assert.deepEqual(outliers.all.map(row => row.spawnCount), [11409, 114, 1143, 0, 10152])
+    assert.deepEqual(outliers.eliteBoss.map(row => row.spawnCount), [1756, 51, 924, 0, 781])
+  }
+})
+
+test('外れ値内訳が欠けた事前集計は同じ計算ハッシュでも開発時に無効にし、公開ビルドを止める', async () => {
+  const file = new URL('../src/data/damageThreeEnemySpawnDefault.json', import.meta.url)
+  const root = fileURLToPath(new URL('../', import.meta.url))
+  const id = normalizePath(fileURLToPath(file))
+  const saved = JSON.parse(await readFile(file, 'utf8'))
+  const plugin = enemySpawnDefaultPlugin()
+  const warnings = []
+  const context = { addWatchFile() {}, warn: message => warnings.push(message), error: message => { throw new Error(message) } }
+  const transform = () => plugin.transform.call(context, JSON.stringify(saved), id)
+  plugin.configResolved({ root, command: 'serve' })
+  assert.equal(transform(), undefined)
+  const { outliers } = saved.statistics
+  delete saved.statistics.outliers
+  assert.equal(JSON.parse(transform().code).skillDataSha256, '')
+  assert.equal(warnings.length, 1)
+  plugin.configResolved({ root, command: 'build' })
+  saved.statistics.outliers = outliers
+  delete outliers.eliteBoss[2].skill
+  assert.throws(transform, /generate:dc3-enemy-default/)
 })
