@@ -170,6 +170,7 @@ function VoteListResults({ group, unit, operators, spawnCount, imageConditions, 
     const conditions = [viewLabel(UNITS, unit), ...source, 'スキル単位', ...settings, sortLabel]
     setSnapshot({ title, filenameConditions: [...conditions, `${start + 1}–${start + pageRows.length}件目`],
       conditions: [...conditions, `出現回数 ${NUMBER.format(spawnCount)}`, range],
+      defaultOutput: { width: 1920, aspect: { preset: '16:9', width: '16', height: '9' } },
       table: <VoteTable rows={pageRows} group={group} title={title} unit={unit} /> })
   }
   return <>
