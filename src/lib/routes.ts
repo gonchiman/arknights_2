@@ -2,6 +2,8 @@ export type OperatorDetailSource = 'goldenglow-home' | 'surtr-home' | 'damage-th
 
 export type AppRoute =
   | { view: 'home' }
+  | { view: 'physical-arts-lab' }
+  | { view: 'archive' }
   | { view: 'skills' }
   | { view: 'skill-classification' }
   | { view: 'skill-dps-analysis' }
@@ -182,6 +184,8 @@ function createSkillSelectionHash(route: string, selection: SkillRouteSelection)
 
 export function parseHashRoute(hash: string): AppRoute {
   if (hash === '' || hash === '#' || hash === '#/') return { view: 'home' }
+  if (hash === '#/labs/physical-arts') return { view: 'physical-arts-lab' }
+  if (hash === '#/archive') return { view: 'archive' }
   if (hash === '#/structure-coverage') return { view: 'structure-coverage' }
   if (hash === TRAIT_STRUCTURE_ROUTE) return { view: 'trait-structure' }
   if (hash.startsWith(`${TRAIT_STRUCTURE_ROUTE}?`)) {

@@ -124,24 +124,23 @@
 .sidebar-section-label {
   margin: 0 8px 8px;
   color: var(--text-muted);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .17em;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .sidebar-nav-group + .sidebar-nav-group { margin-top: 18px; }
 
 .sidebar-nav-link {
   min-width: 0;
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: start;
-  gap: 9px;
+  display: flex;
+  align-items: center;
   margin-bottom: 3px;
   border-left: 3px solid transparent;
   background: transparent;
   color: var(--text-soft);
   padding: 11px 9px;
+  font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
 }
 
@@ -155,45 +154,6 @@
   border-left-color: #222;
   background: #222;
   color: #fff;
-}
-
-.sidebar-nav-index {
-  padding-top: 1px;
-  color: var(--text-muted);
-  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-  font-size: 9px;
-  line-height: 1.4;
-}
-
-.sidebar-nav-link.active .sidebar-nav-index,
-.sidebar-nav-link.active .sidebar-nav-description {
-  color: #cfcfcf;
-}
-
-.sidebar-nav-copy,
-.sidebar-nav-title,
-.sidebar-nav-description {
-  min-width: 0;
-  display: block;
-}
-
-.sidebar-nav-title {
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 750;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-nav-description {
-  margin-top: 4px;
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sidebar-meta {

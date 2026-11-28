@@ -9,8 +9,10 @@ import {
 import type { OperatorTalentRecord, SkillRecord } from '../types/skill'
 import { ATTRIBUTE_EFFECT_CATALOG_VERSIONS } from '../lib/attributeEffectCatalogVersions'
 import { compareAttributeEffectCatalogVersions } from '../lib/attributeEffectCatalogDiff'
+import { ATTRIBUTE_EFFECTS_ITEM, HOME_LINK, PHYSICAL_ARTS_LAB_ITEM } from '../lib/navigation'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
+import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { PageLayout, PageOutputHeader, PageOutputTabs } from './PageLayout'
 import './SkillDirectory.css'
 import './DamageThreeSkillFilters.css'
@@ -65,7 +67,8 @@ export function AttributeEffectCatalogPage({ rows, operators, loading }: { rows:
     document.getElementById(`${tabs.idPrefix}-tab-details`)?.focus()
   }
 
-  return <PageLayout page="attribute-effects" className="attribute-catalog" settings={
+  return <PageLayout page="attribute-effects" className="attribute-catalog" settings={<>
+    <PageBreadcrumbs parents={[HOME_LINK, PHYSICAL_ARTS_LAB_ITEM]} current={ATTRIBUTE_EFFECTS_ITEM.label} />
     <section className="dc3-skill-filters" aria-label="絞り込み">
       <PageOutputHeader segments={['絞り込み']}>
         <div className="dc3-skill-filters-heading">
@@ -108,7 +111,7 @@ export function AttributeEffectCatalogPage({ rows, operators, loading }: { rows:
         </label>
       </div>
     </section>
-  }>
+  </>}>
     <PageOutputTabs {...tabs} tabs={TABS} label="一覧の切り替え" onChange={next => {
       if (next !== tab) {
         setSelection(null)

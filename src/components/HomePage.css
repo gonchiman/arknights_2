@@ -1,95 +1,98 @@
-.home-page {
-  min-width: 0;
-  padding: 12px 10px 20px;
-  color: var(--text);
-  line-height: 1.6;
-}
-
-.home-page-heading {
-  margin-bottom: 26px;
-}
-
-.home-page-eyebrow {
-  margin-bottom: 3px;
-  color: var(--text-muted);
-  font-size: 11px;
-  letter-spacing: .16em;
-}
-
-.home-page-heading h1 {
-  margin: 0;
-  font-size: 27px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.home-panel-grid {
+.page-directory {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  gap: 16px 32px;
 }
 
-.home-panel {
+.page-directory-archive {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  align-items: start;
+}
+
+.page-directory-group {
   min-width: 0;
-  border: 1px solid var(--border);
-  background: var(--surface);
 }
 
-.home-panel-heading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface-soft);
-  padding: 12px 18px;
-}
-
-.home-panel-heading h2 {
-  min-width: 0;
-  margin: 0;
+.page-directory-group h2 {
+  margin: 0 0 4px;
   font-size: 17px;
   font-weight: 600;
   line-height: 1.5;
-  overflow-wrap: anywhere;
 }
 
-.home-panel-number {
-  flex: none;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+.page-directory-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.home-panel-body {
-  padding: 2px 18px;
+.physical-arts-lab .page-directory-group h2 {
+  margin: 0 0 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
 }
 
-.home-panel-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  min-height: 46px;
-  color: inherit;
-  padding: 12px 0;
-  text-decoration: none;
-  overflow-wrap: anywhere;
+.page-directory-group li > ul {
+  margin-inline-start: 8px;
 }
 
-.home-panel-link + .home-panel-link {
+.page-directory-group li > ul > li {
+  position: relative;
+  padding-inline-start: 20px;
+}
+
+.page-directory-group li > ul > li:not(:last-child)::before {
+  position: absolute;
+  content: '';
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-inline-start: 1px solid var(--border);
+}
+
+.page-directory-group li > ul > li > a {
+  position: relative;
+}
+
+.page-directory-group li > ul > li > a::before {
+  position: absolute;
+  content: '';
+  inset-block-start: 0;
+  inset-inline-start: -20px;
+  width: 13px;
+  height: 50%;
+  border-bottom: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.page-directory-group li > ul > li:last-child > a::before {
+  border-inline-start: 1px solid var(--border);
+}
+
+.page-directory-secondary {
+  padding-top: 8px;
   border-top: 1px solid var(--border);
 }
 
-.home-panel-link:hover {
-  background: var(--surface-hover);
+.page-directory a {
+  display: inline-block;
+  max-width: 100%;
+  padding: 5px 0;
+  color: var(--link);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
 }
 
-.home-panel-arrow {
-  flex: none;
-  color: var(--text-muted);
+.page-directory a:hover { text-decoration-thickness: 2px; }
+
+.page-directory a:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
 }
 
-@media (max-width: 640px) {
-  .home-page { padding: 10px 6px 20px; }
-  .home-page-heading { margin-bottom: 20px; }
+@media (pointer: coarse) {
+  .page-directory a {
+    min-height: 44px;
+    align-content: center;
+  }
 }
