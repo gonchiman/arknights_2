@@ -170,15 +170,22 @@
 .main-story-chapter-controls {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   align-items: end;
   gap: 8px 16px;
 }
 
 .main-story-chapter-controls .main-story-spawns-filters {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  max-width: 100%;
+}
+
+.main-story-chapter-controls .main-story-spawns-filters label:first-child {
   width: min(100%, 240px);
 }
+
+.main-story-chapter-controls .main-story-spawns-total { margin-inline-start: auto; }
 
 .main-story-chapter-table {
   width: 100%;

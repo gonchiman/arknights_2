@@ -15,16 +15,27 @@ import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { AnalysisTabPanel } from './AnalysisTabs'
 import { PageLayout, PageOutputTabs } from './PageLayout'
+import { PageViewSwitch, TABLE_CHART_VIEWS, viewLabel, type TableChartView } from './PageViewSwitch'
+import { CategoryGroupedBarChart } from './CategoryGroupedBarChart'
 import { OutputImageSaveButton } from './OutputImageSaveButton'
 import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import { createMainStoryChapterSpawnImage } from './mainStoryChapterSpawnImage'
 import { MainStoryChapterSpawnTable, chapterSortLabels } from './MainStoryChapterSpawnTable'
+import {
+  createMainStoryChapterSpawnChart, MainStoryChapterSpawnChartImageDialog, type MainStoryChapterSpawnChartSnapshot,
+} from './MainStoryChapterSpawnChart'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 import './MainStoryEnemySpawnsPage.css'
 
 const TITLE = STANDARD_PAGE_TITLES['main-enemy-spawns']
 const TABS = [['list', '出現一覧'], ['chapters', '章別の出現回数']] as const
+const CHAPTER_SORT_OPTIONS = [
+  { key: 'chapter', direction: 'asc', label: '章の昇順' },
+  { key: 'chapter', direction: 'desc', label: '章の降順' },
+  { key: 'count', direction: 'desc', label: '回数が多い順' },
+  { key: 'count', direction: 'asc', label: '回数が少ない順' },
+] as const
 const DATA_CONDITIONS = [`集計版 ${MAIN_STORY_SPAWN_AGGREGATION_VERSION}`, '通常環境', '基礎ステータス']
 const PAGE_SIZE = 25
 const NUMBER_FORMAT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
@@ -66,8 +77,11 @@ function getStatusRowsInRange(statuses: readonly MainStorySpawnList[], offset: n
 
 export function MainStoryEnemySpawnsPage() {
   const [tab, setTab] = useState<typeof TABS[number][0]>('list')
+  const [chapterView, setChapterView] = useState<TableChartView>('table')
   const [chapterSort, setChapterSort] = useState<MainStorySpawnChapterSort>({ key: 'chapter', direction: 'asc' })
-  const [chapterImage, setChapterImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const [chapterImage, setChapterImage] = useState<
+    { view: 'table'; snapshot: ComparisonTableImageSnapshot } | { view: 'chart'; snapshot: MainStoryChapterSpawnChartSnapshot } | null
+  >(null)
   const tabProps = { idPrefix: 'main-story-spawns', activeTab: tab }
   const [stageAttempt, setStageAttempt] = useState(0)
   const [stageLoad, setStageLoad] = useState<LoadResult<MainStorySpawnStage[]> | null>(null)
@@ -134,6 +148,14 @@ export function MainStoryEnemySpawnsPage() {
   const chapterRows = useMemo(() => tab === 'chapters' ? getMainStorySpawnChapterRows(loadedLists, query, chapterSort) : [],
     [tab, loadedLists, query, chapterSort])
   const chapterCount = chapterRows.reduce((sum, row) => sum + row.count, 0)
+  const chapterConditions = {
+    query, scopeLabel: '全章',
+    sortLabel: `${chapterSortLabels[chapterSort.key]} ${chapterSort.direction === 'asc' ? '昇順' : '降順'}`,
+    confirmedCount: chapterCount, stageCount: stages.length,
+    partialStageCount: chapterRows.reduce((sum, row) => sum + row.partialStageCount, 0),
+  }
+  const chapterChart = chapterView === 'chart' && chapterRows.length > 0
+    ? createMainStoryChapterSpawnChart({ rows: chapterRows, ...chapterConditions }) : null
   const offset = page * PAGE_SIZE
   const { rows, rowCount, confirmedCount, rankedRowCount } = useMemo(
     () => getMainStorySpawnRows(lists, query, view, offset, PAGE_SIZE, sort), [lists, query, view, offset, sort],
@@ -275,12 +297,13 @@ export function MainStoryEnemySpawnsPage() {
 
   function openChapterImage() {
     if (!chapterRows.length) return
-    setChapterImage(createMainStoryChapterSpawnImage({
-      table: <MainStoryChapterSpawnTable rows={chapterRows} />, query, scopeLabel: '全章',
-      sortLabel: `${chapterSortLabels[chapterSort.key]} ${chapterSort.direction === 'asc' ? '昇順' : '降順'}`,
-      confirmedCount: chapterCount, stageCount: stages.length,
-      partialStageCount: chapterRows.reduce((sum, row) => sum + row.partialStageCount, 0),
-    }))
+    if (chapterChart) {
+      setChapterImage({ view: 'chart', snapshot: chapterChart })
+    } else {
+      setChapterImage({ view: 'table', snapshot: createMainStoryChapterSpawnImage({
+        ...chapterConditions, table: <MainStoryChapterSpawnTable rows={chapterRows} />,
+      }) })
+    }
   }
 
   const enemySearch = <label><span>敵名</span><input type="search" placeholder="敵名を検索" value={query} onChange={event => {
@@ -292,6 +315,7 @@ export function MainStoryEnemySpawnsPage() {
     <PageBreadcrumbs parents={[{ label: '敵データベース', href: '#/enemies' }]} current={TITLE} />
     <div className="main-story-spawns-intro">{DATA_CONDITIONS.join('・')}</div>
     <PageOutputTabs {...tabProps} tabs={TABS} onChange={setTab} label="出現敵の集計"
+      format={tab === 'chapters' ? viewLabel(TABLE_CHART_VIEWS, chapterView) : undefined}
       actions={tab === 'chapters'
         ? chapterRows.length > 0 && <OutputImageSaveButton onClick={openChapterImage} />
         : tableRowCount > 0 && <OutputImageSaveButton onClick={openImage} />} />
@@ -299,23 +323,42 @@ export function MainStoryEnemySpawnsPage() {
       onRetry={() => setStageAttempt(previous => previous + 1)}>
       {tab === 'chapters' ? <AnalysisTabPanel {...tabProps} tab="chapters">
         <div className="main-story-chapter-controls">
-          <div className="main-story-spawns-filters">{enemySearch}</div>
+          <PageViewSwitch label="章別の表示形式" views={TABLE_CHART_VIEWS} selected={chapterView} onChange={setChapterView} />
+          <div className="main-story-spawns-filters">
+            {enemySearch}
+            {chapterView === 'chart' && <label><span>並び順</span>
+              <select value={`${chapterSort.key}-${chapterSort.direction}`} onChange={event => {
+                const sort = CHAPTER_SORT_OPTIONS.find(option => `${option.key}-${option.direction}` === event.target.value)
+                if (sort) setChapterSort(sort)
+              }}>
+                {CHAPTER_SORT_OPTIONS.map(({ key, direction, label }) =>
+                  <option key={`${key}-${direction}`} value={`${key}-${direction}`}>{label}</option>)}
+              </select>
+            </label>}
+          </div>
           {currentListLoad?.data && <output className="main-story-spawns-total" aria-live="polite">
             確認済み {formatNumber(chapterCount)}回
           </output>}
         </div>
         <EnemyDataContent loading={loading} error={currentListLoad?.error ?? null}
           onRetry={() => setListAttempt(previous => previous + 1)}>
-          <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="章別の出現回数の表">
-            <MainStoryChapterSpawnTable rows={chapterRows} sorting={{ sort: chapterSort, onSort: key => {
-              setChapterSort(previous => ({
-                key, direction: previous.key === key ? (previous.direction === 'asc' ? 'desc' : 'asc')
-                  : key === 'chapter' ? 'asc' : 'desc',
-              }))
-            } }} />
-          </div>
-          {chapterRows.some(row => row.partialStageCount > 0) &&
-            <p className="main-story-chapter-note">一部集計のステージを含む章では、出現回数は確認できた下限です。</p>}
+          {chapterView === 'table' && <>
+            <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="章別の出現回数の表">
+              <MainStoryChapterSpawnTable rows={chapterRows} sorting={{ sort: chapterSort, onSort: key => {
+                setChapterSort(previous => ({
+                  key, direction: previous.key === key ? (previous.direction === 'asc' ? 'desc' : 'asc')
+                    : key === 'chapter' ? 'asc' : 'desc',
+                }))
+              } }} />
+            </div>
+            {chapterConditions.partialStageCount > 0 &&
+              <p className="main-story-chapter-note">一部集計のステージを含む章では、出現回数は確認できた下限です。</p>}
+          </>}
+          {chapterChart && <>
+            <CategoryGroupedBarChart {...chapterChart.chartProps} />
+            {chapterChart.chartProps.footerNote && <p className="main-story-chapter-note">{chapterChart.chartProps.footerNote}</p>}
+          </>}
+          {chapterView === 'chart' && !chapterChart && <p role="status" className="main-story-chapter-note">一致する敵名はありません</p>}
         </EnemyDataContent>
       </AnalysisTabPanel> : <AnalysisTabPanel {...tabProps} tab="list">
       <section className="main-story-spawns-panel" aria-label="出現敵一覧">
@@ -391,7 +434,9 @@ export function MainStoryEnemySpawnsPage() {
       </section>
       </AnalysisTabPanel>}
     </EnemyDataContent>
-    {chapterImage && <ComparisonTableImageDialog snapshot={chapterImage} parentLocation={[TITLE, TABS[1][1]]}
+    {chapterImage?.view === 'table' && <ComparisonTableImageDialog snapshot={chapterImage.snapshot} parentLocation={[TITLE, TABS[1][1], '表']}
+      onClose={() => setChapterImage(null)} />}
+    {chapterImage?.view === 'chart' && <MainStoryChapterSpawnChartImageDialog snapshot={chapterImage.snapshot} parentLocation={[TITLE, TABS[1][1], 'グラフ']}
       onClose={() => setChapterImage(null)} />}
     {imageSelection && <MainStorySpawnImageDialog selection={imageSelection} onClose={() => setImageSelection(null)} />}
   </PageLayout>

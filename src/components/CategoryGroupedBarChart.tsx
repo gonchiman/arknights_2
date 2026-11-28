@@ -29,15 +29,19 @@ export interface CategoryGroupedBarChartProps {
   legend: readonly CategoryGroupedBarLegendItem[]
   categoryAxisLabel: string
   metricLabel: string
+  title?: string
   valueAxisLabel?: string
   referenceY?: { value: number; label: string }
   conditionLabel?: string
+  footerNote?: string
   difference?: boolean
   integerTicks?: boolean
   /** Desired number of value-axis intervals before rounding to readable ticks. */
   valueTickCount?: number
   imageOutput?: boolean
   showValues?: boolean
+  showTooltips?: boolean
+  minimumGroupWidth?: number
   aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
   formatValue: (value: number) => string
@@ -60,6 +64,8 @@ interface ChartModel {
   axisMinimum: number
   axisSpan: number
   axisTitle: string
+  showTooltips: boolean
+  minimumGroupWidth?: number
   reference: { value: number; label: string } | null
 }
 
@@ -70,8 +76,8 @@ type TextWidths = Record<string, number>
 
 /** Renders categorical groups while retaining each supplied comparison and color. */
 export function CategoryGroupedBarChart({
-  groups: inputGroups, legend, categoryAxisLabel, metricLabel, valueAxisLabel, referenceY, conditionLabel,
-  difference = false, integerTicks = false, imageOutput = false, showValues = false,
+  groups: inputGroups, legend, categoryAxisLabel, metricLabel, title, valueAxisLabel, referenceY, conditionLabel, footerNote,
+  difference = false, integerTicks = false, imageOutput = false, showValues = false, showTooltips = true, minimumGroupWidth,
   aspectRatio, onLayout, formatValue, minHeight, valueTickCount = 4,
 }: CategoryGroupedBarChartProps) {
   const hierarchical = inputGroups.length > 0 && inputGroups.every((group) => group.parent)
@@ -122,28 +128,29 @@ export function CategoryGroupedBarChart({
     axisMinimum: firstTick * tickStep,
     axisSpan: (lastTick - firstTick) * tickStep,
     axisTitle: valueAxisLabel ?? (difference ? '総ダメージの差分' : '総ダメージ'),
+    showTooltips, minimumGroupWidth,
     reference,
   }
   const widths = useTextWidths(model)
   const titleId = useId()
 
   if (imageOutput) return <GroupedBarImage
-    model={model} widths={widths} legendItems={legend} metricLabel={metricLabel}
-    conditionLabel={conditionLabel} showValues={showValues} aspectRatio={aspectRatio} onLayout={onLayout} />
+    model={model} widths={widths} legendItems={legend} metricLabel={metricLabel} title={title ?? metricLabel}
+    conditionLabel={conditionLabel} footerNote={footerNote} showValues={showValues} aspectRatio={aspectRatio} onLayout={onLayout} />
 
   return <figure className="gg-performance-bar-chart gg-performance-grouped-chart" aria-labelledby={titleId}
     style={{ minHeight: minHeight ?? 420 }}>
     <figcaption className="gg-performance-bar-caption">
       <div className="gg-performance-bar-heading">
-        <strong id={titleId}>{metricLabel}比較</strong>
+        <strong id={titleId}>{title ?? `${metricLabel}比較`}</strong>
         {conditionLabel && <span className="gg-performance-bar-condition">{conditionLabel}</span>}
       </div>
-      <ul className="gg-performance-bar-legend" aria-label="比較条件の凡例">
+      {legend.length > 0 && <ul className="gg-performance-bar-legend" aria-label="比較条件の凡例">
         {legend.map((column) => <li key={column.id}>
           <i style={{ backgroundColor: column.color }} aria-hidden="true" />
           <span>{column.label}</span>
         </li>)}
-      </ul>
+      </ul>}
     </figcaption>
     <ResponsiveGroupedBarPlot model={model} widths={widths} metricLabel={metricLabel}
       showValues={showValues} baseHeight={Math.max(IMAGE_CHART_HEIGHT, (minHeight ?? 420) - 86)} />
@@ -321,9 +328,11 @@ function GroupedBarSvg({ model, layout, width, height = layout.height, metricLab
   const plotBottom = plotTop + layout.plotHeight
   const tickY = plotBottom + layout.extraBottom + 20
   const valueById = new Map(layout.bars.map((bar) => [bar.id, bar]))
+  const description = `${metricLabel}・${model.categoryAxisLabel}別の比較`
   return <svg className={`gg-performance-grouped-svg${imageOutput ? ' gg-performance-grouped-svg-image' : ''}`}
-    width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={titleId}>
-    <title id={titleId}>{`${metricLabel}・${model.categoryAxisLabel}別の比較`}</title>
+    width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img"
+    aria-labelledby={model.showTooltips ? titleId : undefined} aria-label={model.showTooltips ? undefined : description}>
+    {model.showTooltips && <title id={titleId}>{description}</title>}
     <text className="gg-performance-grouped-axis-title" x={layout.margin.left} y={18}>{model.axisTitle}</text>
     <g transform={`translate(${layout.margin.left} ${plotTop})`}>
       {model.ticks.map((tick) => <g key={tick.value} aria-hidden="true">
@@ -338,7 +347,7 @@ function GroupedBarSvg({ model, layout, width, height = layout.height, metricLab
       {layout.bars.map((bar) => <g key={bar.id} role="img"
         data-category-group={bar.groupId} data-category-parent={bar.parent?.id}
         aria-label={`${bar.label}・${bar.parent ? `${bar.parent.label}・` : ''}${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}>
-        <title>{`${bar.label}・${bar.parent ? `${bar.parent.label}・` : ''}${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}</title>
+        {model.showTooltips && <title>{`${bar.label}・${bar.parent ? `${bar.parent.label}・` : ''}${model.categoryAxisLabel} ${bar.groupLabel}・${metricLabel} ${bar.text}`}</title>}
         {bar.value === null
           ? <text className="gg-performance-grouped-missing" x={bar.x + bar.width / 2} y={layout.y(0) + 4} textAnchor="middle">—</text>
           : <rect className="gg-performance-grouped-bar" x={bar.x} y={Math.min(layout.y(0), bar.y) - (bar.value === 0 ? 1 : 0)}
@@ -396,20 +405,23 @@ function ResponsiveGroupedBarPlot({ model, widths, metricLabel, showValues, base
     observer.observe(frame)
     return () => observer.disconnect()
   }, [])
-  const minimumWidth = model.parents.length
-    ? model.groups.length * 36 + Math.max(48, ...model.ticks.map((tick) => textWidth(widths, 'tick', tick.text) + 12)) + 14
+  const groupMinimum = model.minimumGroupWidth ?? (model.parents.length ? 36 : 0)
+  const minimumWidth = groupMinimum
+    ? model.groups.length * groupMinimum + Math.max(48, ...model.ticks.map((tick) => textWidth(widths, 'tick', tick.text) + 12)) + 14
     : undefined
   const plotWidth = Math.max(width, minimumWidth ?? 0)
   const layout = createPlotLayout(model, widths, plotWidth, baseHeight, showValues, false)
-  return <div className="gg-performance-grouped-plot" style={minimumWidth ? { overflowX: 'auto' } : undefined}>
+  return <div className="gg-performance-grouped-plot" style={minimumWidth ? { overflowX: 'auto' } : undefined}
+    role={model.minimumGroupWidth ? 'region' : undefined} tabIndex={model.minimumGroupWidth ? 0 : undefined}
+    aria-label={model.minimumGroupWidth ? metricLabel : undefined}>
     <div className="gg-performance-grouped-svg-frame" ref={frameRef} style={minimumWidth ? { minWidth: minimumWidth } : undefined}>
     <GroupedBarSvg model={model} layout={layout} width={plotWidth} metricLabel={metricLabel} />
   </div></div>
 }
 
-function GroupedBarImage({ model, widths, legendItems, metricLabel, conditionLabel, showValues, aspectRatio, onLayout }: {
+function GroupedBarImage({ model, widths, legendItems, metricLabel, title, conditionLabel, footerNote, showValues, aspectRatio, onLayout }: {
   model: ChartModel; widths: TextWidths; legendItems: readonly CategoryGroupedBarLegendItem[]
-  metricLabel: string; conditionLabel?: string; showValues: boolean; aspectRatio?: number
+  metricLabel: string; title: string; conditionLabel?: string; footerNote?: string; showValues: boolean; aspectRatio?: number
   onLayout?: (size: { width: number; height: number }) => void
 }) {
   const request = JSON.stringify([model, widths, showValues, aspectRatio, metricLabel, conditionLabel])
@@ -423,7 +435,7 @@ function GroupedBarImage({ model, widths, legendItems, metricLabel, conditionLab
   }, [request])
   // Use the allocated column width so PNG cloning cannot wrap a shrink-fit
   // legend because of subpixel rounding of the individual item widths.
-  const legend = <ul className="chart-image-frame-legend-list" style={{ width: '100%' }} aria-label="比較条件の凡例">
+  const legend = legendItems.length > 0 && <ul className="chart-image-frame-legend-list" style={{ width: '100%' }} aria-label="比較条件の凡例">
     {legendItems.map((column) => <li key={column.id} className="chart-image-frame-legend-item">
       <svg className="chart-image-frame-legend-swatch" width="18" height="12" aria-hidden="true">
         <rect x="0" y="4" width="18" height="4" fill={column.color} />
@@ -431,7 +443,7 @@ function GroupedBarImage({ model, widths, legendItems, metricLabel, conditionLab
       <span>{column.label}</span>
     </li>)}
   </ul>
-  return <ChartImageFrame key={request} title={metricLabel} legend={legend} conditions={conditionLabel}
+  return <ChartImageFrame key={request} title={title} legend={legend} conditions={conditionLabel} footerNote={footerNote}
     axisTitle={model.categoryAxisLabel} naturalChartHeight={IMAGE_CHART_HEIGHT + overflow} aspectRatio={aspectRatio} onLayout={onLayout}
     className="gg-performance-grouped-image">
     {({ width, height }) => <ImageGroupedBarPlot model={model} widths={widths} metricLabel={metricLabel}
