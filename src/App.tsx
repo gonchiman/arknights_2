@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
+import { ArchivePage } from './components/ArchivePage'
+import { PhysicalArtsLabPage } from './components/PhysicalArtsLabPage'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { DamageCalculatorThree } from './components/DamageCalculatorThree'
@@ -98,6 +100,10 @@ const SkillHdbscanPage = lazy(() => import('./components/SkillHdbscanPage').then
 const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalPage').then((module) => ({ default: module.SkillHierarchicalPage })))
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
+function isDirectoryPage(view: AppRoute['view']) {
+  return view === 'home' || view === 'archive' || view === 'physical-arts-lab'
+}
+
 interface OperatorDirectoryPosition {
   top: number
   tableTop: number
@@ -138,7 +144,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (route.view === 'home' || route.view === 'bar-chart-workbench' || route.view === 'enemies' || route.view === 'enemies-2' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-rating-pairs' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-defense-resistance-formula' || route.view === 'enemy-map-coverage' || route.view === 'enemy-wiki-stats' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'td-maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
+    if (isDirectoryPage(route.view) || route.view === 'bar-chart-workbench' || route.view === 'enemies' || route.view === 'enemies-2' || route.view === 'enemy-analysis' || route.view === 'enemy-regression' || route.view === 'enemy-immunities' || route.view === 'enemy-rating-pairs' || route.view === 'enemy-defense-resistance' || route.view === 'enemy-defense-resistance-formula' || route.view === 'enemy-map-coverage' || route.view === 'enemy-wiki-stats' || route.view === 'main-enemy-trends' || route.view === 'main-enemy-spawns' || route.view === 'maps' || route.view === 'td-maps' || route.view === 'roguelike' || route.view === 'sources' || route.view === 'code-analysis' || route.view === 'slide-maker' || route.view === 'damage-verification' || route.view === 'physical-arts-comparison' || route.view === 'goldenglow-home' || route.view === 'surtr-home' || skillDataRequestStarted.current) return
     skillDataRequestStarted.current = true
     void load()
   }, [route.view])
@@ -322,7 +328,7 @@ export default function App() {
 
         <main className="app-content">
         <PanelStateScope.Provider value={displayedRoute.view}>
-        {error && displayedRoute.view !== 'attribute-effects' && displayedRoute.view !== 'skill-numeric-statistics' && displayedRoute.view !== 'skill-dps-analysis' && displayedRoute.view !== 'damage-three-power-by-year' && displayedRoute.view !== 'home' && displayedRoute.view !== 'bar-chart-workbench' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemies-2' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-rating-pairs' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-defense-resistance-formula' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'enemy-wiki-stats' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'td-maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
+        {error && displayedRoute.view !== 'attribute-effects' && displayedRoute.view !== 'skill-numeric-statistics' && displayedRoute.view !== 'skill-dps-analysis' && displayedRoute.view !== 'damage-three-power-by-year' && !isDirectoryPage(displayedRoute.view) && displayedRoute.view !== 'bar-chart-workbench' && displayedRoute.view !== 'enemies' && displayedRoute.view !== 'enemies-2' && displayedRoute.view !== 'enemy-analysis' && displayedRoute.view !== 'enemy-regression' && displayedRoute.view !== 'enemy-immunities' && displayedRoute.view !== 'enemy-rating-pairs' && displayedRoute.view !== 'enemy-defense-resistance' && displayedRoute.view !== 'enemy-defense-resistance-formula' && displayedRoute.view !== 'enemy-map-coverage' && displayedRoute.view !== 'enemy-wiki-stats' && displayedRoute.view !== 'main-enemy-trends' && displayedRoute.view !== 'main-enemy-spawns' && displayedRoute.view !== 'maps' && displayedRoute.view !== 'td-maps' && displayedRoute.view !== 'roguelike' && displayedRoute.view !== 'sources' && displayedRoute.view !== 'code-analysis' && displayedRoute.view !== 'slide-maker' && displayedRoute.view !== 'damage-verification' && displayedRoute.view !== 'physical-arts-comparison' && displayedRoute.view !== 'goldenglow-home' && displayedRoute.view !== 'surtr-home' && displayedRoute.view !== 'surtr-s3' && displayedRoute.view !== 'surtr-s3-comparison' && displayedRoute.view !== 'surtr-skill-comparison' && displayedRoute.view !== 'surtr-total-damage' && displayedRoute.view !== 'surtr-duration' && displayedRoute.view !== 'surtr-remnant-attacks' && displayedRoute.view !== 'goldenglow-guide' && displayedRoute.view !== 'goldenglow-performance' && displayedRoute.view !== 'goldenglow-target-switch' && displayedRoute.view !== 'goldenglow-target-switch-two' && displayedRoute.view !== 'goldenglow-target-switch-three' && displayedRoute.view !== 'goldenglow-single-trial' && displayedRoute.view !== 'goldenglow-trial-benchmark' && <section className="error-box" role="alert">{error}</section>}
 
         {/* Keep the directory mounted while viewing a detail page so filters, sort and charts survive returning. */}
         {operatorDirectoryVisited && (displayedRoute.view === 'operators' || displayedRoute.view === 'operator-detail') && (
@@ -345,6 +351,10 @@ export default function App() {
 
         {displayedRoute.view === 'home' ? (
           <HomePage />
+        ) : displayedRoute.view === 'physical-arts-lab' ? (
+          <PhysicalArtsLabPage />
+        ) : displayedRoute.view === 'archive' ? (
+          <ArchivePage />
         ) : displayedRoute.view === 'operator-pca' ? (
           <Suspense fallback={<p className="calculator-loading" role="status">オペレーター主成分分析を読み込み中…</p>}>
             <OperatorPcaPage rows={rows} loading={loading} onOpenOperatorDetail={openOperatorDetail} />

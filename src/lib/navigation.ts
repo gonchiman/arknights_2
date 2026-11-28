@@ -15,6 +15,8 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'td-maps'
   | 'skill-dps-analysis'
   | 'skill-numeric-statistics'
+  | 'physical-arts-lab'
+  | 'archive'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
 
@@ -24,16 +26,19 @@ export type NavigationItem = {
   label: string
   description: string
   section: NavigationSection
+  children?: readonly NavigationItem[]
 }
 
-export const NAVIGATION_SECTIONS: ReadonlyArray<{ id: NavigationSection; label: string }> = [
-  { id: 'analysis', label: 'ANALYSIS TOOLS' },
-  { id: 'operator-analysis', label: 'OPERATOR ANALYSIS' },
-  { id: 'information', label: 'INFORMATION' },
-]
+export type NavigationGroup = {
+  label: string
+  items: readonly NavigationItem[]
+}
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
 export const STANDARD_PAGE_TITLES = {
+  home: HOME_LINK.label,
+  'physical-arts-lab': '物理・術比較ラボ',
+  archive: '保管庫',
   'operator-wiki-views': 'オペレーター別 Wiki 集計',
   'bar-chart-workbench': '棒グラフ作成',
   'damage-three-comparison': 'DC3 スキル比較',
@@ -213,7 +218,30 @@ export const GOLDENGLOW_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   },
 ]
 
-export const APP_NAV_ITEMS: readonly NavigationItem[] = [
+export const PHYSICAL_ARTS_LAB_ITEM: NavigationItem = {
+  id: 'physical-arts-lab',
+  href: '#/labs/physical-arts',
+  label: STANDARD_PAGE_TITLES['physical-arts-lab'],
+  description: '',
+  section: 'analysis',
+}
+
+export const PHYSICAL_ARTS_LAB_ITEMS: readonly NavigationItem[] = [ATTRIBUTE_EFFECTS_ITEM]
+
+const ARCHIVE_ITEM: NavigationItem = {
+  id: 'archive',
+  href: '#/archive',
+  label: STANDARD_PAGE_TITLES.archive,
+  description: '',
+  section: 'information',
+}
+
+export const PRIMARY_NAV_GROUPS: readonly NavigationGroup[] = [
+  { label: 'ラボ', items: [PHYSICAL_ARTS_LAB_ITEM] },
+  { label: '', items: [ARCHIVE_ITEM] },
+]
+
+const OUTPUT_ITEMS: readonly NavigationItem[] = [
   {
     id: 'bar-chart-workbench',
     href: '#/charts/bar',
@@ -221,6 +249,16 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
+  {
+    id: 'slide-maker',
+    href: '#/slide-maker',
+    label: 'スライド作成',
+    description: '画像と字幕から解説用スライドを作成',
+    section: 'information',
+  },
+]
+
+const OPERATOR_ITEMS: readonly NavigationItem[] = [
   {
     id: 'operators',
     href: '#/operators',
@@ -249,6 +287,9 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
+]
+
+const SKILL_ITEMS: readonly NavigationItem[] = [
   {
     id: 'skills',
     href: '#/skills',
@@ -326,6 +367,11 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: 'blackboardの個別表示・キー一覧',
     section: 'analysis',
   },
+  SKILL_DPS_ANALYSIS_ITEM,
+  SKILL_NUMERIC_STATISTICS_ITEM,
+]
+
+export const SKILL_LEARNING_ITEMS: readonly NavigationItem[] = [
   {
     id: 'skill-kmeans',
     href: '#/analysis/skills/kmeans',
@@ -347,8 +393,9 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '',
     section: 'analysis',
   },
-  SKILL_DPS_ANALYSIS_ITEM,
-  SKILL_NUMERIC_STATISTICS_ITEM,
+]
+
+const REFERENCE_ITEMS: readonly NavigationItem[] = [
   {
     id: 'code-analysis',
     href: '#/analysis/code',
@@ -356,6 +403,16 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: 'GG関連の名前・クラス・処理を調べる',
     section: 'analysis',
   },
+  {
+    id: 'sources',
+    href: '#/sources',
+    label: 'Data Sources',
+    description: '利用データと参照元・算出方法',
+    section: 'information',
+  },
+]
+
+const DAMAGE_ITEMS: readonly NavigationItem[] = [
   {
     id: 'damage',
     href: '#/damage',
@@ -400,7 +457,6 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   },
   DAMAGE_THREE_POWER_BY_YEAR_ITEM,
   DAMAGE_THREE_SKILL_ATTRIBUTE_MATRIX_ITEM,
-  ATTRIBUTE_EFFECTS_ITEM,
   {
     id: 'physical-arts-comparison',
     href: '#/damage-3/physical-arts-comparison',
@@ -416,6 +472,9 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '複数ビルドの重ね合わせ比較',
     section: 'analysis',
   },
+]
+
+const ENEMY_ITEMS: readonly NavigationItem[] = [
   {
     id: 'enemies',
     href: '#/enemies',
@@ -494,6 +553,9 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '敵ページの閲覧数・コメント件数',
     section: 'analysis',
   },
+]
+
+const MAP_ITEMS: readonly NavigationItem[] = [
   {
     id: 'roguelike',
     href: '#/roguelike',
@@ -515,6 +577,9 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: '泡影を穿つ碧雷のステージ・地形・出現敵',
     section: 'analysis',
   },
+]
+
+const OPERATOR_ANALYSIS_ITEMS: readonly NavigationItem[] = [
   {
     id: 'goldenglow-home',
     href: '#/analysis/goldenglow',
@@ -528,20 +593,33 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
     description: 'S3 DPS・継続時間・総ダメージ・余燼の分析',
     section: 'operator-analysis',
   },
-  {
-    id: 'slide-maker',
-    href: '#/slide-maker',
-    label: 'スライド作成',
-    description: '画像と字幕から解説用スライドを作成',
-    section: 'information',
-  },
-  {
-    id: 'sources',
-    href: '#/sources',
-    label: 'Data Sources',
-    description: '利用データと参照元・算出方法',
-    section: 'information',
-  },
 ]
 
-export const SKILL_LEARNING_ITEMS = APP_NAV_ITEMS.filter((item) => item.id === 'skill-kmeans' || item.id === 'skill-hdbscan' || item.id === 'skill-hierarchical')
+export const ARCHIVE_NAV_GROUPS: readonly NavigationGroup[] = [
+  { label: '敵', items: ENEMY_ITEMS },
+  { label: 'ダメージ計算・比較', items: DAMAGE_ITEMS },
+  { label: 'オペレーター', items: OPERATOR_ITEMS },
+  { label: 'オペレーター個別分析', items: OPERATOR_ANALYSIS_ITEMS },
+  { label: 'スキル・素質・特性', items: SKILL_ITEMS },
+  { label: 'スキル学習', items: SKILL_LEARNING_ITEMS },
+  { label: 'マップ・統合戦略', items: MAP_ITEMS },
+  { label: 'グラフ・スライド作成', items: OUTPUT_ITEMS },
+  { label: 'コード解析・資料', items: REFERENCE_ITEMS },
+]
+
+function collectNavigationItems(items: readonly NavigationItem[]): NavigationItem[] {
+  const indexed = new Map<NavigationPage, NavigationItem>()
+  function visit(item: NavigationItem) {
+    if (indexed.has(item.id)) return
+    indexed.set(item.id, item)
+    item.children?.forEach(visit)
+  }
+  items.forEach(visit)
+  return [...indexed.values()]
+}
+
+export const APP_NAV_ITEMS: readonly NavigationItem[] = collectNavigationItems([
+  ...PRIMARY_NAV_GROUPS.flatMap(group => group.items),
+  ...PHYSICAL_ARTS_LAB_ITEMS,
+  ...ARCHIVE_NAV_GROUPS.flatMap(group => group.items),
+])

@@ -130,10 +130,12 @@ test('オペレーター主成分分析の2ページは図鑑の隣から別々�
   }
 })
 
-test('サイドバーから主要ページへ遷移できる', () => {
+test('主要ページと保管庫の全リンクが該当するページへ解決される', () => {
   assert.deepEqual(
-    APP_NAV_ITEMS.map((item) => [item.id, parseHashRoute(item.href).view]),
-    [
+    new Map(APP_NAV_ITEMS.map(item => [item.id, parseHashRoute(item.href).view])),
+    new Map([
+      ['physical-arts-lab', 'physical-arts-lab'],
+      ['archive', 'archive'],
       ['bar-chart-workbench', 'bar-chart-workbench'],
       ['operators', 'operators'],
       ['operator-pca', 'operator-pca'],
@@ -187,7 +189,7 @@ test('サイドバーから主要ページへ遷移できる', () => {
       ['surtr-home', 'surtr-home'],
       ['slide-maker', 'slide-maker'],
       ['sources', 'sources'],
-    ],
+    ]),
   )
   assert.equal(new Set(APP_NAV_ITEMS.map((item) => item.href)).size, APP_NAV_ITEMS.length)
 })
@@ -624,7 +626,7 @@ test('スライド作成はアプリ内の独立したページとしてメニ�
   assert.deepEqual(parseHashRoute('#/slide-maker/extra'), { view: 'operators' })
 })
 
-test('オペレーター分析は各オペレーターのトップをサイドバーの入口にする', () => {
+test('オペレーター個別分析には各オペレーターのトップから入る', () => {
   assert.deepEqual(parseHashRoute('#/analysis/goldenglow'), { view: 'goldenglow-home' })
   assert.deepEqual(APP_NAV_ITEMS.filter((item) => item.section === 'operator-analysis'), [
     {
