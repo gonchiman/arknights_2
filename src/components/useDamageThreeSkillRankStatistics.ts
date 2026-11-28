@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { DamageThreeAttributeEntry } from '../lib/damageCalculatorThreeAttributeComparison'
 import type { EnemyDamageStatPair } from '../lib/damageCalculatorThreeAttributeTables'
-import type { DamageCell, SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
+import type { SkillRankEffectPolicy } from '../lib/damageThreeSkillRankMatrix'
 import {
-  evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type NamedSkillRankStageSample,
+  evaluateSkillRankStageSample, evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics, type NamedSkillRankStageSample,
 } from '../lib/damageThreeSkillRankStatistics'
 import type { EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
 
@@ -11,7 +11,7 @@ const EMPTY_THRESHOLDS: readonly EnemyResistanceThreshold[] = []
 const EMPTY_STAGES: readonly NamedSkillRankStageSample[] = []
 const PAIRS_PER_BATCH = 12
 
-type StageCache = WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>
+type StageCache = WeakMap<DamageThreeAttributeEntry, NamedSkillRankStageSample | null>
 
 export function* calculateStageSamples(
   entries: readonly DamageThreeAttributeEntry[], pairs: readonly EnemyDamageStatPair[],
@@ -19,22 +19,21 @@ export function* calculateStageSamples(
 ): Generator<void, NamedSkillRankStageSample[]> {
   const stages: NamedSkillRankStageSample[] = []
   for (const entry of entries) {
-    let cells = cache?.get(entry)
-    if (cells === undefined) {
-      cells = []
-      for (let start = 0; start < pairs.length; start += PAIRS_PER_BATCH) {
-        const chunk = pairs.length <= PAIRS_PER_BATCH ? pairs : pairs.slice(start, start + PAIRS_PER_BATCH)
-        const batch = evaluateSkillRankStatisticsStage(entry, chunk, effectPolicy)
-        if (!batch) {
-          cells = null
-          break
+    let stage = cache?.get(entry)
+    if (stage === undefined) {
+      stage = evaluateSkillRankStageSample(entry, pairs.slice(0, PAIRS_PER_BATCH), effectPolicy)
+      if (stage && pairs.length > PAIRS_PER_BATCH) {
+        const cells = [...stage.cells]
+        for (let start = PAIRS_PER_BATCH; start < pairs.length; start += PAIRS_PER_BATCH) {
+          yield
+          const batch = evaluateSkillRankStatisticsStage(entry, pairs.slice(start, start + PAIRS_PER_BATCH), effectPolicy)
+          if (batch) cells.push(...batch)
         }
-        cells.push(...batch)
-        yield
+        stage = { ...stage, cells }
       }
-      cache?.set(entry, cells)
+      cache?.set(entry, stage)
     }
-    if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
+    if (stage) stages.push(stage)
     yield
   }
   return stages
@@ -70,7 +69,7 @@ export function useDamageThreeSkillStageSamples(
   effectPolicy: SkillRankEffectPolicy,
 ): readonly NamedSkillRankStageSample[] | null {
   // Cache identity ties both intermediate cells and the summary to the current combat conditions.
-  const cache = useMemo(() => new WeakMap<DamageThreeAttributeEntry, DamageCell[] | null>(), [pairs, effectPolicy])
+  const cache = useMemo((): StageCache => new WeakMap(), [pairs, effectPolicy])
   const [result, setResult] = useState<{
     entries: readonly DamageThreeAttributeEntry[]; cache: typeof cache; stages: NamedSkillRankStageSample[]
   } | null>(null)

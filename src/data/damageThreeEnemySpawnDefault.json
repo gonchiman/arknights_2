@@ -3,7 +3,7 @@
   "aggregationPayloadSha256": "f5e3c2ded9c19144541fae7093e0df2f11eba7a399bfcf7d73b277e5db012a77",
   "gameDataRevision": "270115d3ef5dc0e97530bedc168eb3ddb3d14bc6",
   "skillDataSha256": "cd70c1e641874c657bbe46ca80b35e8228640f30a58f93841d7a86e29ac000f4",
-  "calculationSha256": "308c75acbf039abc7b0a3a5f9694f3727c044fd7190db87d153845780bb10320",
+  "calculationSha256": "0c960dae68049ca2d5a2c5277305eee0f86a157777fd1c48c29a46c12d93db3c",
   "statistics": {
     "rows": [
       {
@@ -287,6 +287,4277 @@
             "artsWins": 116718,
             "count": 661507
           }
+        }
+      ]
+    },
+    "attackQuartileStages": [
+      {
+        "key": "char_456_ash:skchr_ash_1:9:active",
+        "finalAttack": 717,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_456_ash:skchr_ash_2:9:active",
+        "finalAttack": 1560,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_456_ash:skchr_ash_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_457_blitz:skchr_blitz_1:9:active",
+        "finalAttack": 784,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_457_blitz:skchr_blitz_2:9:normal",
+        "finalAttack": 1176.0000000000002,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4125_rdoc:skchr_rdoc_1:9:active",
+        "finalAttack": 788.4,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4123_ela:skchr_ela_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4123_ela:skchr_ela_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4123_ela:skchr_ela_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_458_rfrost:skchr_rfrost_1:9:trap",
+        "finalAttack": 1991.5,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_458_rfrost:skchr_rfrost_1:9:normal",
+        "finalAttack": 569,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_458_rfrost:skchr_rfrost_2:9:trap",
+        "finalAttack": 1138,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_458_rfrost:skchr_rfrost_2:9:normal",
+        "finalAttack": 569,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4126_fuze:skchr_fuze_1:9:active",
+        "finalAttack": 1085,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4126_fuze:skchr_fuze_2:9:active",
+        "finalAttack": 4008,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_4124_iana:skchr_iana_1:9:active",
+        "finalAttack": 3032,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_4124_iana:skchr_iana_2:9:active",
+        "finalAttack": 758,
+        "physicalRate": 0.4531510211236743
+      },
+      {
+        "key": "char_4179_monstr:skchr_monstr_3:9:active",
+        "finalAttack": 2399,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_459_tachak:skchr_tachak_1:9:burn",
+        "finalAttack": 462.7,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_459_tachak:skchr_tachak_1:9:normal",
+        "finalAttack": 661,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_459_tachak:skchr_tachak_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.4532386712244719
+      },
+      {
+        "key": "char_113_cqbw:skchr_cqbw_1:9:active",
+        "finalAttack": 3542,
+        "physicalRate": 0.6640371636427382
+      },
+      {
+        "key": "char_113_cqbw:skchr_cqbw_2:9:active",
+        "finalAttack": 2833.6,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_113_cqbw:skchr_cqbw_3:9:active",
+        "finalAttack": 3137.2000000000003,
+        "physicalRate": 0.6594793584012622
+      },
+      {
+        "key": "char_225_haak:skchr_haak_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_225_haak:skchr_haak_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_225_haak:skchr_haak_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_183_skgoat:skcom_atk_up[2]:9:active",
+        "finalAttack": 954,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_002_amiya:skcom_magic_rage[3]:9:active",
+        "finalAttack": 682,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_002_amiya:skchr_amiya_2:9:active",
+        "finalAttack": 409.2,
+        "physicalRate": 0.2384959242703129
+      },
+      {
+        "key": "char_002_amiya:skchr_amiya_3:9:active",
+        "finalAttack": 2250,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4105_almond:skchr_almond_1:9:active",
+        "finalAttack": 1181.5,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4105_almond:skchr_almond_2:9:active",
+        "finalAttack": 1251,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4009_irene:skchr_irene_1:9:next-attack",
+        "finalAttack": 1402,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_4009_irene:skchr_irene_2:9:skill-action",
+        "finalAttack": 2804,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4009_irene:skchr_irene_3:9:skill-action",
+        "finalAttack": null,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_338_iris:skchr_iris_1:9:active",
+        "finalAttack": 694.5,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_338_iris:skchr_iris_2:9:active",
+        "finalAttack": 4167,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_346_aosta:skcom_quickattack[3]:9:active",
+        "finalAttack": 1096,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_346_aosta:skchr_aosta_2:9:active",
+        "finalAttack": 1285,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_475_akafyu:skchr_akafyu_1:9:active",
+        "finalAttack": 1364,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_475_akafyu:skchr_akafyu_2:9:active",
+        "finalAttack": 1516,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4051_akkord:skchr_akkord_1:9:active",
+        "finalAttack": 1480,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4051_akkord:skchr_akkord_2:9:active",
+        "finalAttack": 1184,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_366_acdrop:skchr_acdrop_1:9:active",
+        "finalAttack": 815,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_366_acdrop:skchr_acdrop_2:9:active",
+        "finalAttack": 1141,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_4132_ascln:skchr_ascln_1:9:active",
+        "finalAttack": 2003.4,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_4132_ascln:skchr_ascln_2:9:active",
+        "finalAttack": 2194,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4132_ascln:skchr_ascln_3:9:active",
+        "finalAttack": 1431,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_274_astesi:skchr_astesi_1:9:active",
+        "finalAttack": 1035,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_274_astesi:skchr_astesi_2:9:active",
+        "finalAttack": 1242,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_135_halo:skchr_halo_1:9:active",
+        "finalAttack": 881.25,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_135_halo:skchr_halo_2:9:active",
+        "finalAttack": 987,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_378_asbest:skchr_asbest_1:9:active",
+        "finalAttack": 673,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_378_asbest:skchr_asbest_2:9:active",
+        "finalAttack": 1278,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_129_bluep:skchr_bluep_1:9:active",
+        "finalAttack": 1220,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_129_bluep:skchr_bluep_2:9:active",
+        "finalAttack": 915,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_431_ashlok:skcom_atk_up[3]:9:active",
+        "finalAttack": 1903,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_431_ashlok:skchr_ashlok_2:9:active",
+        "finalAttack": 1491,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_211_adnach:skcom_atk_up[1]:6:active",
+        "finalAttack": 622,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_405_absin:skchr_absin_1:9:active",
+        "finalAttack": 1335,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_405_absin:skchr_absin_2:9:active",
+        "finalAttack": 632.7,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4178_alanna:skchr_alanna_1:9:active",
+        "finalAttack": 610,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4178_alanna:skchr_alanna_2:9:active",
+        "finalAttack": 915,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_332_archet:skchr_archet_1:9:active",
+        "finalAttack": 1421.3999999999999,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_332_archet:skchr_archet_2:9:active",
+        "finalAttack": 865.1999999999999,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_332_archet:skchr_archet_3:9:active",
+        "finalAttack": 803,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_271_spikes:skchr_spikes_1:9:active",
+        "finalAttack": 834.0000000000001,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_271_spikes:skchr_spikes_2:9:active",
+        "finalAttack": 1112,
+        "physicalRate": 0.5631518976246823
+      },
+      {
+        "key": "char_446_aroma:skchr_aroma_1:9:active",
+        "finalAttack": 1764,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_446_aroma:skchr_aroma_2:9:attack",
+        "finalAttack": 1680,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_446_aroma:skchr_aroma_2:9:landing",
+        "finalAttack": 1848.0000000000002,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_291_aglina:skchr_aglina_1:9:active",
+        "finalAttack": 1295,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_291_aglina:skchr_aglina_2:9:active",
+        "finalAttack": 277.65000000000003,
+        "physicalRate": 0.16320448768516083
+      },
+      {
+        "key": "char_291_aglina:skchr_aglina_3:9:active",
+        "finalAttack": 1542,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4137_udflow:skchr_udflow_1:9:active",
+        "finalAttack": 726,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4137_udflow:skchr_udflow_2:9:active",
+        "finalAttack": 726,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_218_cuttle:skcom_atk_up[3]:9:active",
+        "finalAttack": 2220,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_218_cuttle:skchr_cuttle_2:9:active",
+        "finalAttack": 3774,
+        "physicalRate": 0.6671049171706548
+      },
+      {
+        "key": "char_302_glaze:skchr_glaze_1:9:active",
+        "finalAttack": 1052,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_302_glaze:skchr_glaze_2:9:active",
+        "finalAttack": 2104,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_355_ethan:skchr_ethan_1:9:active",
+        "finalAttack": 742,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_355_ethan:skchr_ethan_2:9:active",
+        "finalAttack": 1261,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_195_glassb:skchr_glassb_1:9:active",
+        "finalAttack": 583,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_195_glassb:skchr_glassb_2:9:active",
+        "finalAttack": 1020,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4013_kjera:skcom_atk_up[3]:9:active",
+        "finalAttack": 743,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_4013_kjera:skchr_kjera_2:9:immune",
+        "finalAttack": null,
+        "physicalRate": 0.16653519151547025
+      },
+      {
+        "key": "char_279_excu:skchr_excu_1:9:active",
+        "finalAttack": 2001,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_279_excu:skchr_excu_2:9:active",
+        "finalAttack": 785,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4087_ines:skchr_ines_1:9:stable",
+        "finalAttack": 729,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4087_ines:skchr_ines_2:9:active",
+        "finalAttack": 1341,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4087_ines:skchr_ines_3:9:normal",
+        "finalAttack": 1661,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4087_ines:skchr_ines_3:9:first-shadow",
+        "finalAttack": 3322,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_134_ifrit:skchr_ifrit_1:9:active",
+        "finalAttack": 1176,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_134_ifrit:skchr_ifrit_2:9:active",
+        "finalAttack": 2450,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_498_inside:skchr_inside_1:9:active",
+        "finalAttack": 1373.1,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_498_inside:skchr_inside_2:9:active",
+        "finalAttack": 1373,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_469_indigo:skchr_indigo_1:9:active",
+        "finalAttack": 608,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_469_indigo:skchr_indigo_2:9:volley",
+        "finalAttack": 1216,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_155_tiger:skchr_tiger_1:9:active",
+        "finalAttack": 1452,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_155_tiger:skchr_tiger_2:9:active",
+        "finalAttack": 1331,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4107_vrdant:skchr_vrdant_1:9:active",
+        "finalAttack": 732,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4107_vrdant:skchr_vrdant_2:9:active",
+        "finalAttack": 732,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_190_clour:skcom_atk_up[2]:9:active",
+        "finalAttack": 990,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_190_clour:skchr_clour_2:9:active",
+        "finalAttack": 797,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4102_threye:skchr_threye_1:9:active",
+        "finalAttack": 656.5,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4102_threye:skchr_threye_2:9:active",
+        "finalAttack": 505,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_4166_varkis:skchr_varkis_1:9:active",
+        "finalAttack": 1202.8500000000004,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4166_varkis:skchr_varkis_2:9:active",
+        "finalAttack": 1782.0000000000002,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_163_hpsts:skchr_hpsts_1:9:active",
+        "finalAttack": 870,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_163_hpsts:skchr_hpsts_2:9:active",
+        "finalAttack": 2175,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_2027_wang:skchr_wang_1:9:normal",
+        "finalAttack": 669,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_2027_wang:skchr_wang_2:9:trap",
+        "finalAttack": 3880.2,
+        "physicalRate": 0.6671049171706548
+      },
+      {
+        "key": "char_2027_wang:skchr_wang_2:9:normal",
+        "finalAttack": 669,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_2027_wang:skchr_wang_3:9:trap",
+        "finalAttack": 2542.2,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_494_vendla:skcom_magic_rage[3]:9:active",
+        "finalAttack": 580,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_494_vendla:skchr_vendla_2:9:normal",
+        "finalAttack": 1044,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_494_vendla:skchr_vendla_2:9:counter",
+        "finalAttack": 522,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_4226_veen:skchr_veen_1:9:volley",
+        "finalAttack": 1510,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4226_veen:skchr_veen_2:9:volley",
+        "finalAttack": 1510,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4226_veen:skchr_veen_3:9:volley",
+        "finalAttack": 1510,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_400_weedy:skchr_weedy_1:9:active",
+        "finalAttack": 1083,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_400_weedy:skchr_weedy_2:9:active",
+        "finalAttack": 2166,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_400_weedy:skchr_weedy_3:9:shot",
+        "finalAttack": 2527,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_400_weedy:skchr_weedy_3:9:movement",
+        "finalAttack": 1200,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1019_siege2:skchr_siege2_1:9:active",
+        "finalAttack": 745,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_1019_siege2:skchr_siege2_2:9:active",
+        "finalAttack": 2086,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_1019_siege2:skchr_siege2_3:9:active",
+        "finalAttack": 2160,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4098_vvana:skchr_vvana_1:9:active",
+        "finalAttack": 1492,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_4098_vvana:skchr_vvana_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4098_vvana:skchr_vvana_3:9:active",
+        "finalAttack": 1566,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_290_vigna:skchr_vigna_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_290_vigna:skchr_vigna_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_427_vigil:skchr_vigil_1:9:active",
+        "finalAttack": 371,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_427_vigil:skchr_vigil_2:9:active",
+        "finalAttack": 742,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_427_vigil:skchr_vigil_3:9:token",
+        "finalAttack": 371,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_427_vigil:skchr_vigil_3:9:owner",
+        "finalAttack": 813,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_1035_wisdel:skchr_wisdel_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_1035_wisdel:skchr_wisdel_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1035_wisdel:skchr_wisdel_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6753440266456306
+      },
+      {
+        "key": "char_265_sophia:skchr_sophia_1:9:active",
+        "finalAttack": 810,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_265_sophia:skchr_sophia_2:9:active",
+        "finalAttack": 1296,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_245_cello:skchr_cello_1:9:ATTACK",
+        "finalAttack": 1575,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_245_cello:skchr_cello_2:9:ATTACK",
+        "finalAttack": 525,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_445_wscoot:skchr_wscoot_1:9:active",
+        "finalAttack": 960,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_445_wscoot:skchr_wscoot_2:9:active",
+        "finalAttack": 1920,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4083_chimes:skcom_atk_up[3]:9:active",
+        "finalAttack": 3317,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_4083_chimes:skchr_chimes_2:9:active",
+        "finalAttack": 5894.9,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_433_windft:skchr_windft_1:9:active",
+        "finalAttack": 1512.5,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_433_windft:skchr_windft_2:9:active",
+        "finalAttack": 1573,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4207_branch:skchr_branch_1:9:active",
+        "finalAttack": 865,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_4207_branch:skchr_branch_2:9:active",
+        "finalAttack": 2162,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4081_warmy:skchr_warmy_1:9:active",
+        "finalAttack": 646,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4081_warmy:skchr_warmy_2:9:normal",
+        "finalAttack": 1938,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4081_warmy:skchr_warmy_2:9:overcharge",
+        "finalAttack": 1938,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_337_utage:skchr_utage_2:9:active",
+        "finalAttack": 1518,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_455_nothin:skchr_nothin_2:9:active",
+        "finalAttack": 1224,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4145_ulpia:skchr_ulpia_1:9:active",
+        "finalAttack": 4452.3,
+        "physicalRate": 0.6753440266456306
+      },
+      {
+        "key": "char_4145_ulpia:skchr_ulpia_2:9:active",
+        "finalAttack": 4287,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_4145_ulpia:skchr_ulpia_3:9:normal",
+        "finalAttack": 5936,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_4145_ulpia:skchr_ulpia_3:9:anchor",
+        "finalAttack": 9497.6,
+        "physicalRate": 0.6870014900517135
+      },
+      {
+        "key": "char_4026_vulpis:skchr_vulpis_1:9:active",
+        "finalAttack": 622,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4026_vulpis:skchr_vulpis_2:9:active",
+        "finalAttack": 1866,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4026_vulpis:skchr_vulpis_3:9:active",
+        "finalAttack": 1306,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4171_wulfen:skchr_wulfen_1:9:trap",
+        "finalAttack": 1400,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4171_wulfen:skchr_wulfen_1:9:normal",
+        "finalAttack": 560,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4171_wulfen:skchr_wulfen_2:9:trap",
+        "finalAttack": 1400,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4171_wulfen:skchr_wulfen_2:9:normal",
+        "finalAttack": 560,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_294_ayer:skchr_ayer_1:9:active",
+        "finalAttack": 1192,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_294_ayer:skchr_ayer_2:9:active",
+        "finalAttack": 745,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_365_aprl:skchr_aprl_1:9:active",
+        "finalAttack": 1386.8999999999999,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_365_aprl:skchr_aprl_2:9:active",
+        "finalAttack": 1206,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_180_amgoat:skchr_amgoat_1:9:active",
+        "finalAttack": 837,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_180_amgoat:skchr_amgoat_2:9:main",
+        "finalAttack": 1548.45,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_180_amgoat:skchr_amgoat_2:9:splash",
+        "finalAttack": 1548.45,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_180_amgoat:skchr_amgoat_3:9:active",
+        "finalAttack": 1793,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4046_ebnhlz:skchr_ebnhlz_1:9:active",
+        "finalAttack": 775,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4046_ebnhlz:skchr_ebnhlz_2:9:remnant",
+        "finalAttack": 3797.5000000000005,
+        "physicalRate": 0.6671049171706548
+      },
+      {
+        "key": "char_4046_ebnhlz:skchr_ebnhlz_3:9:active",
+        "finalAttack": 2557,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_103_angel:skchr_angel_1:9:active",
+        "finalAttack": 967.15,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_103_angel:skchr_angel_2:9:active",
+        "finalAttack": 833.75,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_103_angel:skchr_angel_3:9:active",
+        "finalAttack": 733.7,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_127_estell:skcom_atk_up[2]:9:active",
+        "finalAttack": 1242,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_127_estell:skchr_estell_2:9:active",
+        "finalAttack": 1725,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_241_panda:skchr_panda_1:9:active",
+        "finalAttack": 685,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_241_panda:skchr_panda_2:9:active",
+        "finalAttack": 1712.5,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4043_erato:skchr_erato_1:9:active",
+        "finalAttack": 2464.7999999999997,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4043_erato:skchr_erato_2:9:active",
+        "finalAttack": 1540,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_131_flameb:skchr_flameb_1:9:active",
+        "finalAttack": 2118.6000000000004,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_131_flameb:skchr_flameb_2:9:active",
+        "finalAttack": 1637,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4010_etlchi:skchr_etlchi_1:9:active",
+        "finalAttack": 1312.5,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4010_etlchi:skchr_etlchi_2:9:active",
+        "finalAttack": 1462.5,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4010_etlchi:skchr_etlchi_3:9:heart",
+        "finalAttack": 1762,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4010_etlchi:skchr_etlchi_3:9:enemy",
+        "finalAttack": 1762,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4036_forcer:skchr_forcer_1:9:active",
+        "finalAttack": 653,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_278_orchid:skcom_quickattack[1]:6:active",
+        "finalAttack": 522,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_422_aurora:skchr_aurora_1:9:active",
+        "finalAttack": 956,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_422_aurora:skchr_aurora_2:9:active",
+        "finalAttack": 1673,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4131_odda:skchr_odda_1:9:active",
+        "finalAttack": 3024,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_4131_odda:skchr_odda_2:9:active",
+        "finalAttack": 2520,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_426_billro:skchr_billro_1:9:active",
+        "finalAttack": 1481,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_426_billro:skchr_billro_2:9:active",
+        "finalAttack": 926,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_426_billro:skchr_billro_3:9:active",
+        "finalAttack": 3518,
+        "physicalRate": 0.6640371636427382
+      },
+      {
+        "key": "char_328_cammou:skcom_atk_up[2]:9:active",
+        "finalAttack": 675,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_328_cammou:skchr_cammou_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.22841616267858708
+      },
+      {
+        "key": "char_4016_kazema:skchr_kazema_1:9:active",
+        "finalAttack": 2702,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_4016_kazema:skchr_kazema_2:9:owner",
+        "finalAttack": 1698,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4016_kazema:skchr_kazema_2:9:token",
+        "finalAttack": 1698,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_282_catap:skchr_catap_1:6:active",
+        "finalAttack": 672,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_301_cutter:skchr_cutter_1:9:active",
+        "finalAttack": 2179.4,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_301_cutter:skchr_cutter_2:9:active",
+        "finalAttack": 2884.5,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_466_qanik:skchr_qanik_1:9:active",
+        "finalAttack": 695,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_466_qanik:skchr_qanik_2:9:tick",
+        "finalAttack": 521.25,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_466_qanik:skchr_qanik_2:9:explosion",
+        "finalAttack": 2085,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_214_kafka:skchr_kafka_1:9:active",
+        "finalAttack": 2713.5,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_214_kafka:skchr_kafka_2:9:normal",
+        "finalAttack": 603,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_214_kafka:skchr_kafka_2:9:deploy",
+        "finalAttack": 2412,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_497_ctable:skchr_ctable_1:9:active",
+        "finalAttack": 1180,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_497_ctable:skchr_ctable_2:9:active",
+        "finalAttack": 826,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_349_chiave:skchr_chiave_2:9:active",
+        "finalAttack": 2072,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_109_fmout:skcom_magic_rage[2]:9:active",
+        "finalAttack": 887,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_109_fmout:skchr_fmout_2:9:active",
+        "finalAttack": 1672,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4203_kichi:skchr_kichi_1:9:active",
+        "finalAttack": 792,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4203_kichi:skchr_kichi_2:9:active",
+        "finalAttack": 1425,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_4162_cathy:skchr_cathy_1:9:active",
+        "finalAttack": 678,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_478_kirara:skchr_kirara_1:9:active",
+        "finalAttack": 858,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1029_yato2:skchr_yato2_1:9:active",
+        "finalAttack": 740,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_1029_yato2:skchr_yato2_2:9:active",
+        "finalAttack": 1110,
+        "physicalRate": 0.562976597423087
+      },
+      {
+        "key": "char_1029_yato2:skchr_yato2_3:9:active",
+        "finalAttack": 2220,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_198_blackd:skchr_blackd_2:9:active",
+        "finalAttack": 435,
+        "physicalRate": 0.2494521868700149
+      },
+      {
+        "key": "char_4063_quartz:skcom_atk_up[2]:9:active",
+        "finalAttack": 2701,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_4063_quartz:skchr_quartz_2:9:active",
+        "finalAttack": 1861.1999999999998,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_150_snakek:skcom_def_up[2]:9:active",
+        "finalAttack": 365,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_326_glacus:skchr_glacus_1:9:active",
+        "finalAttack": 810,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_326_glacus:skchr_glacus_2:9:active",
+        "finalAttack": 2160,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_1502_crosly:skchr_crosly_1:9:active",
+        "finalAttack": 1270,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1502_crosly:skchr_crosly_2:9:active",
+        "finalAttack": 3175,
+        "physicalRate": 0.6594793584012622
+      },
+      {
+        "key": "char_1502_crosly:skchr_crosly_3:9:active",
+        "finalAttack": 1587.5,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4225_tanya:skchr_tanya_1:9:active",
+        "finalAttack": 632,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4225_tanya:skchr_tanya_2:9:normal",
+        "finalAttack": 632,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_220_grani:skcom_def_up[3]:9:active",
+        "finalAttack": 552,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_220_grani:skchr_grani_2:9:active",
+        "finalAttack": 993,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_237_gravel:skchr_gravel_1:9:active",
+        "finalAttack": 452,
+        "physicalRate": 0.2597948987641336
+      },
+      {
+        "key": "char_237_gravel:skchr_gravel_2:9:active",
+        "finalAttack": 452,
+        "physicalRate": 0.2597948987641336
+      },
+      {
+        "key": "char_173_slchan:skchr_slchan_1:9:active",
+        "finalAttack": 1683,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_173_slchan:skchr_slchan_2:9:active",
+        "finalAttack": 1870,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_124_kroos:skchr_kroos_1:6:active",
+        "finalAttack": null,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_253_greyy:skcom_magic_rage[2]:9:active",
+        "finalAttack": 699,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_253_greyy:skchr_greyy_2:9:active",
+        "finalAttack": 699,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_474_glady:skchr_glady_1:9:active",
+        "finalAttack": 2323.2300000000005,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_474_glady:skchr_glady_2:9:active",
+        "finalAttack": 1991.3400000000001,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_474_glady:skchr_glady_3:9:active",
+        "finalAttack": 1438.19,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4122_grabds:skchr_grabds_1:9:active",
+        "finalAttack": 1239,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4122_grabds:skchr_grabds_2:9:attack",
+        "finalAttack": 590,
+        "physicalRate": 0.3579630116574634
+      },
+      {
+        "key": "char_4187_graceb:skchr_graceb_1:9:active",
+        "finalAttack": 1485,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4187_graceb:skchr_graceb_2:9:physical",
+        "finalAttack": 2475,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4187_graceb:skchr_graceb_2:9:elemental",
+        "finalAttack": 2475,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_367_swllow:skchr_swllow_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_367_swllow:skchr_swllow_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_4228_closur:skchr_closur_1:9:active",
+        "finalAttack": 561,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4228_closur:skchr_closur_2:9:active",
+        "finalAttack": 993,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4228_closur:skchr_closur_3:9:active",
+        "finalAttack": 1402.5,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_201_moeshd:skchr_moeshd_1:9:active",
+        "finalAttack": 380,
+        "physicalRate": 0.19686212639144535
+      },
+      {
+        "key": "char_201_moeshd:skchr_moeshd_2:9:active",
+        "finalAttack": 1824,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4100_caper:skchr_caper_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4100_caper:skchr_caper_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_2013_cerber:skchr_cerber_1:9:active",
+        "finalAttack": 1715.7,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_2013_cerber:skchr_cerber_2:9:active",
+        "finalAttack": 817,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_2013_cerber:skchr_cerber_3:9:active",
+        "finalAttack": 2407,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4023_rfalcn:skchr_rfalcn_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_003_kalts:skchr_kalts_1:9:attack",
+        "finalAttack": 1402,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_003_kalts:skchr_kalts_2:9:attack",
+        "finalAttack": 2663,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_003_kalts:skchr_kalts_3:9:attack",
+        "finalAttack": 5047,
+        "physicalRate": 0.6765711280567973
+      },
+      {
+        "key": "char_1052_kalts2:skchr_kalts2_2:9:active",
+        "finalAttack": 4845,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_4214_cairn:skchr_cairn_1:9:ATTACK",
+        "finalAttack": 606,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4214_cairn:skchr_cairn_2:9:SKILL_TICK",
+        "finalAttack": 484.8,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_4214_cairn:skchr_cairn_2:9:ATTACK",
+        "finalAttack": 606,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_377_gdglow:skchr_gdglow_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.164080988693137
+      },
+      {
+        "key": "char_377_gdglow:skchr_gdglow_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.18073450784468403
+      },
+      {
+        "key": "char_377_gdglow:skchr_gdglow_3:9:active",
+        "finalAttack": 140.6,
+        "physicalRate": 0.07467788587956876
+      },
+      {
+        "key": "char_4104_coldst:skcom_atk_up[3]:9:active",
+        "finalAttack": 2551.2,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4104_coldst:skchr_coldst_2:9:active",
+        "finalAttack": 3061.2,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_489_serum:skchr_serum_1:9:active",
+        "finalAttack": 1997,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_489_serum:skchr_serum_2:9:active",
+        "finalAttack": 1700,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4165_ctrail:skchr_ctrail_1:9:active",
+        "finalAttack": 1438.8000000000002,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4165_ctrail:skchr_ctrail_2:9:active",
+        "finalAttack": 1519.1000000000001,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_159_peacok:skchr_peacok_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6388815847138224
+      },
+      {
+        "key": "char_159_peacok:skchr_peacok_2:9:active",
+        "finalAttack": 3328.5,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_4052_surfer:skchr_surfer_1:9:active",
+        "finalAttack": 1200,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4052_surfer:skchr_surfer_2:9:active",
+        "finalAttack": 600,
+        "physicalRate": 0.3579630116574634
+      },
+      {
+        "key": "char_479_sleach:skchr_sleach_3:9:event",
+        "finalAttack": 1758,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_362_saga:skchr_saga_2:9:impact",
+        "finalAttack": 2460,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_362_saga:skchr_saga_3:9:first",
+        "finalAttack": 1414,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_230_savage:skchr_savage_1:9:active",
+        "finalAttack": 1621.4999999999998,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_230_savage:skchr_savage_2:9:active",
+        "finalAttack": 2820,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4194_rmixer:skchr_rmixer_1:9:active",
+        "finalAttack": 1071.6,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4194_rmixer:skchr_rmixer_2:9:active",
+        "finalAttack": 1410,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_4194_rmixer:skchr_rmixer_3:9:active",
+        "finalAttack": 1804,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_341_sntlla:skcom_quickattack[3]:9:active",
+        "finalAttack": 1376,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_341_sntlla:skchr_sntlla_2:9:none",
+        "finalAttack": 890.1,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_341_sntlla:skchr_sntlla_2:9:frozen",
+        "finalAttack": 890.1,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_341_sntlla:skchr_sntlla_2:9:immune",
+        "finalAttack": 890.1,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_4140_lasher:skchr_lasher_1:9:token",
+        "finalAttack": 340,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_4140_lasher:skchr_lasher_1:9:owner",
+        "finalAttack": 485,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_4140_lasher:skchr_lasher_2:9:active",
+        "finalAttack": 476,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_2015_dusk:skchr_dusk_1:9:body",
+        "finalAttack": 2570,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_2015_dusk:skchr_dusk_2:9:body",
+        "finalAttack": 1593,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_2015_dusk:skchr_dusk_3:9:body",
+        "finalAttack": 2261,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_112_siege:skchr_siege_2:9:active",
+        "finalAttack": 2111.4,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_112_siege:skchr_siege_3:9:active",
+        "finalAttack": 2359.7999999999997,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_336_folivo:skchr_folivo_1:9:active",
+        "finalAttack": 763,
+        "physicalRate": 0.4532386712244719
+      },
+      {
+        "key": "char_336_folivo:skchr_folivo_2:9:active",
+        "finalAttack": 1097,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4134_cetsyr:skchr_cetsyr_2:9:event",
+        "finalAttack": 1097.25,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_272_strong:skchr_strong_1:9:active",
+        "finalAttack": 1213,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_272_strong:skchr_strong_2:9:active",
+        "finalAttack": 1142,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_379_sesa:skcom_atk_up[3]:9:active",
+        "finalAttack": 1836,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_379_sesa:skchr_sesa_2:9:active",
+        "finalAttack": 2203.2,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_235_jesica:skchr_jesica_1:9:active",
+        "finalAttack": 1242,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_235_jesica:skchr_jesica_2:9:active",
+        "finalAttack": 972,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4078_bdhkgt:skchr_bdhkgt_1:9:active",
+        "finalAttack": 1775,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4078_bdhkgt:skchr_bdhkgt_2:9:active",
+        "finalAttack": 1402.65,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_333_sidero:skchr_sidero_2:9:active",
+        "finalAttack": 1302,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_347_jaksel:skchr_jaksel_1:9:active",
+        "finalAttack": 1472.5,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_347_jaksel:skchr_jaksel_2:9:counter",
+        "finalAttack": 942.4000000000001,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_254_vodfox:skchr_vodfox_1:9:active",
+        "finalAttack": 756,
+        "physicalRate": 0.4531510211236743
+      },
+      {
+        "key": "char_254_vodfox:skchr_vodfox_2:9:active",
+        "finalAttack": 473,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_4025_aprot2:skchr_aprot2_1:9:active",
+        "finalAttack": 729,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4025_aprot2:skchr_aprot2_2:9:active",
+        "finalAttack": 583.2,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_2025_shu:skchr_shu_3:9:active",
+        "finalAttack": 793,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4221_ju:skchr_ju_1:9:active",
+        "finalAttack": 2650,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_4221_ju:skchr_ju_2:9:normal",
+        "finalAttack": 2120,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_340_shwaz:skchr_shwaz_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6594793584012622
+      },
+      {
+        "key": "char_340_shwaz:skchr_shwaz_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.648084845297572
+      },
+      {
+        "key": "char_340_shwaz:skchr_shwaz_3:9:active",
+        "finalAttack": 4211.2,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_260_durnar:skcom_atk_up[2]:9:active",
+        "finalAttack": 1211,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_260_durnar:skchr_durnar_2:9:active",
+        "finalAttack": 1211,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_277_sqrrel:skchr_sqrrel_1:9:active",
+        "finalAttack": 922.5,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_277_sqrrel:skchr_sqrrel_2:9:active",
+        "finalAttack": 1845,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_118_yuki:skchr_yuki_1:9:active",
+        "finalAttack": 1040,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_118_yuki:skchr_yuki_2:9:active",
+        "finalAttack": 832,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_172_svrash:skchr_svrash_1:9:next_attack",
+        "finalAttack": 2433.1,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_172_svrash:skchr_svrash_2:9:initial",
+        "finalAttack": 839,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_172_svrash:skchr_svrash_2:9:alternate",
+        "finalAttack": 839,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_172_svrash:skchr_svrash_3:9:active",
+        "finalAttack": 2365,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_115_headbr:skchr_headbr_2:9:active",
+        "finalAttack": 752,
+        "physicalRate": 0.4531510211236743
+      },
+      {
+        "key": "char_4121_zuole:skchr_zuole_1:9:active",
+        "finalAttack": 1640,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4121_zuole:skchr_zuole_2:9:active",
+        "finalAttack": 2214,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4121_zuole:skchr_zuole_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_166_skfire:skcom_atk_up[3]:9:active",
+        "finalAttack": 1748,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_166_skfire:skchr_skfire_2:9:active",
+        "finalAttack": 2097.6,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4213_skybx:skchr_skybx_1:9:active",
+        "finalAttack": 2952,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4213_skybx:skchr_skybx_2:9:active",
+        "finalAttack": 2361.6,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_263_skadi:skcom_quickattack[3]:9:active",
+        "finalAttack": 1741,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_263_skadi:skchr_skadi_2:9:active",
+        "finalAttack": 3109,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_263_skadi:skchr_skadi_3:9:active",
+        "finalAttack": 2671,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_149_scave:skchr_scave_2:9:active",
+        "finalAttack": 901,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_358_lisa:skchr_lisa_1:9:active",
+        "finalAttack": 1072,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_358_lisa:skchr_lisa_2:9:active",
+        "finalAttack": 953,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_210_stward:skchr_stward_1:6:active",
+        "finalAttack": 1046.8999999999999,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4072_ironmn:skchr_ironmn_1:9:active",
+        "finalAttack": 1266,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4072_ironmn:skchr_ironmn_2:9:active",
+        "finalAttack": 1012,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4072_ironmn:skchr_ironmn_3:9:owner",
+        "finalAttack": 981,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4072_ironmn:skchr_ironmn_3:9:direct",
+        "finalAttack": 2943,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4072_ironmn:skchr_ironmn_3:9:splash",
+        "finalAttack": 1471.5,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4208_wintim:skchr_wintim_1:9:active",
+        "finalAttack": 1503.6,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4208_wintim:skchr_wintim_2:9:active",
+        "finalAttack": 537,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_383_snsant:skchr_snsant_1:9:active",
+        "finalAttack": 1266.5,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_383_snsant:skchr_snsant_2:9:active",
+        "finalAttack": 1490,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_4211_snhunt:skchr_snhunt_1:9:active",
+        "finalAttack": 2900.7599999999998,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4211_snhunt:skchr_snhunt_2:9:active",
+        "finalAttack": 2312.2000000000003,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_4015_spuria:skchr_spuria_1:9:actual",
+        "finalAttack": 707,
+        "physicalRate": 0.38644929441668857
+      },
+      {
+        "key": "char_4015_spuria:skchr_spuria_2:9:actual",
+        "finalAttack": 919,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_143_ghost:skcom_atk_up[3]:9:active",
+        "finalAttack": 1610,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_143_ghost:skchr_ghost_2:9:active",
+        "finalAttack": 2093,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_350_surtr:skchr_surtr_1:9:next_attack",
+        "finalAttack": 2393.2000000000003,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_350_surtr:skchr_surtr_2:9:active",
+        "finalAttack": 2716.8,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_350_surtr:skchr_surtr_3:9:active",
+        "finalAttack": 3319,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_308_swire:skchr_swire_1:9:active",
+        "finalAttack": 835.1999999999999,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_308_swire:skchr_swire_2:9:active",
+        "finalAttack": 1502.3999999999999,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_464_cement:skchr_cement_1:9:active",
+        "finalAttack": 2917.6,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_464_cement:skchr_cement_2:9:active",
+        "finalAttack": 1042,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4143_sensi:skchr_sensi_1:9:attack",
+        "finalAttack": 510,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_293_thorns:skcom_atk_up[3]:9:active",
+        "finalAttack": 1482,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_293_thorns:skchr_thorns_2:9:active",
+        "finalAttack": 948,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_293_thorns:skchr_thorns_3:9:first",
+        "finalAttack": 1185,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_293_thorns:skchr_thorns_3:9:second_and_later",
+        "finalAttack": 1630,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_157_dagda:skchr_dagda_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_157_dagda:skchr_dagda_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_010_chen:skchr_chen_1:9:active",
+        "finalAttack": 2217.6,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_010_chen:skchr_chen_2:9:active",
+        "finalAttack": 3465,
+        "physicalRate": 0.6634236129371549
+      },
+      {
+        "key": "char_010_chen:skchr_chen_3:9:active",
+        "finalAttack": 2217.6,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4082_qiubai:skchr_qiubai_1:9:active",
+        "finalAttack": 768,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4082_qiubai:skchr_qiubai_2:9:normal",
+        "finalAttack": 1843,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4082_qiubai:skchr_qiubai_2:9:start",
+        "finalAttack": 2304,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_4082_qiubai:skchr_qiubai_2:9:end",
+        "finalAttack": 5529,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_4082_qiubai:skchr_qiubai_3:9:active",
+        "finalAttack": 1190,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_2024_chyue:skchr_chyue_1:9:active",
+        "finalAttack": 2600,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_2024_chyue:skchr_chyue_2:9:initial",
+        "finalAttack": 2925,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_2024_chyue:skchr_chyue_2:9:fall",
+        "finalAttack": 4225,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_2024_chyue:skchr_chyue_3:9:active",
+        "finalAttack": 2470,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4144_chilc:skchr_chilc_2:9:active",
+        "finalAttack": 560,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4047_pianst:skchr_pianst_1:9:active",
+        "finalAttack": 1197,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4047_pianst:skchr_pianst_2:9:normal",
+        "finalAttack": 665,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4047_pianst:skchr_pianst_2:9:finale",
+        "finalAttack": 1662.5,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4047_pianst:skchr_pianst_2:9:counter",
+        "finalAttack": 532,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_499_kaitou:skchr_kaitou_1:9:active",
+        "finalAttack": 1350,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_499_kaitou:skchr_kaitou_2:9:active",
+        "finalAttack": 643,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4191_tippi:skchr_tippi_1:9:active",
+        "finalAttack": 1570,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4191_tippi:skchr_tippi_2:9:active",
+        "finalAttack": 1177,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4056_titi:skchr_titi_1:9:attack",
+        "finalAttack": 1196,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4056_titi:skchr_titi_3:9:attack",
+        "finalAttack": 1674,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4056_titi:skchr_titi_3:9:wake",
+        "finalAttack": 7700.4,
+        "physicalRate": 0.6861249890437374
+      },
+      {
+        "key": "char_4056_titi:skchr_titi_3:9:end",
+        "finalAttack": 2750.7999999999997,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_110_deepcl:skchr_deepcl_1:9:active",
+        "finalAttack": 739,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_110_deepcl:skchr_deepcl_2:9:token",
+        "finalAttack": 462,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_110_deepcl:skchr_deepcl_2:9:owner",
+        "finalAttack": 403,
+        "physicalRate": 0.2384959242703129
+      },
+      {
+        "key": "char_2012_typhon:skcom_quickattack[3]:9:active",
+        "finalAttack": 1674,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_2012_typhon:skchr_typhon_2:9:active",
+        "finalAttack": 1732,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_2012_typhon:skchr_typhon_3:9:active",
+        "finalAttack": 2021.25,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_486_takila:skchr_takila_1:9:active",
+        "finalAttack": 1795.2,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_486_takila:skchr_takila_2:9:active",
+        "finalAttack": 2428.7999999999997,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_102_texas:skchr_texas_2:9:active",
+        "finalAttack": 969,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4164_tecno:skchr_tecno_1:9:owner",
+        "finalAttack": 778,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4164_tecno:skchr_tecno_2:9:owner",
+        "finalAttack": 519,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_4110_delphn:skchr_delphn_1:9:active",
+        "finalAttack": 685,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_4110_delphn:skchr_delphn_2:9:active",
+        "finalAttack": 2740,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_130_doberm:skchr_doberm_1:9:active",
+        "finalAttack": 1744.32,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_130_doberm:skchr_doberm_2:9:active",
+        "finalAttack": 1364.3999999999999,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_363_toddi:skchr_toddi_1:9:active",
+        "finalAttack": 1888.2,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_363_toddi:skchr_toddi_2:9:active",
+        "finalAttack": 2517.6,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4062_totter:skchr_totter_1:9:active",
+        "finalAttack": 2134,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4062_totter:skchr_totter_2:9:active",
+        "finalAttack": 2182.5,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_411_tomimi:skchr_tomimi_1:9:active",
+        "finalAttack": 1270,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_411_tomimi:skchr_tomimi_2:9:stun",
+        "finalAttack": 1270,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_411_tomimi:skchr_tomimi_2:9:power",
+        "finalAttack": 2794,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_411_tomimi:skchr_tomimi_2:9:area",
+        "finalAttack": 1270,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1042_phatm2:skchr_phatm2_1:9:ATTACK",
+        "finalAttack": 795,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_1042_phatm2:skchr_phatm2_2:9:ATTACK",
+        "finalAttack": 530,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_1042_phatm2:skchr_phatm2_2:9:TOKEN_TICK",
+        "finalAttack": 795,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_1042_phatm2:skchr_phatm2_3:9:ATTACK",
+        "finalAttack": 1192,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_1:9:trap",
+        "finalAttack": 3568.5,
+        "physicalRate": 0.6640371636427382
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_1:9:normal",
+        "finalAttack": 793,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_2:9:trap",
+        "finalAttack": 2379,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_2:9:normal",
+        "finalAttack": 793,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_3:9:trap",
+        "finalAttack": 2775.5,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4048_doroth:skchr_doroth_3:9:normal",
+        "finalAttack": 793,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_164_nightm:skchr_nightm_1:9:active",
+        "finalAttack": 692,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_164_nightm:skchr_nightm_2:9:movement",
+        "finalAttack": 1200,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_164_nightm:skchr_nightm_2:9:normal",
+        "finalAttack": 795,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4212_nasti:skchr_nasti_1:9:active",
+        "finalAttack": 1105,
+        "physicalRate": 0.562976597423087
+      },
+      {
+        "key": "char_4212_nasti:skchr_nasti_3:9:active",
+        "finalAttack": 1596,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4138_narant:skchr_narant_1:9:active",
+        "finalAttack": 1928.5,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4138_narant:skchr_narant_2:9:active",
+        "finalAttack": 2537.5,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4138_narant:skchr_narant_3:9:active",
+        "finalAttack": 1776.25,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_2014_nian:skchr_nian_1:9:active",
+        "finalAttack": 897,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_2014_nian:skchr_nian_2:9:counter",
+        "finalAttack": 557.1,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_2014_nian:skchr_nian_3:9:active",
+        "finalAttack": 1361,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4146_nymph:skchr_nymph_1:9:ATTACK",
+        "finalAttack": 1564,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4146_nymph:skchr_nymph_2:9:FIRST_HIT",
+        "finalAttack": 2980,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4146_nymph:skchr_nymph_2:9:AREA_HIT",
+        "finalAttack": 2980,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4146_nymph:skchr_nymph_3:9:ATTACK",
+        "finalAttack": 2384,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_450_necras:skchr_necras_1:9:owner",
+        "finalAttack": 3051,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_450_necras:skchr_necras_2:9:owner",
+        "finalAttack": 1084.8,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_450_necras:skchr_necras_3:9:owner",
+        "finalAttack": 5424,
+        "physicalRate": 0.6765711280567973
+      },
+      {
+        "key": "char_206_gnosis:skchr_gnosis_1:9:active",
+        "finalAttack": 909.5,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_206_gnosis:skchr_gnosis_2:9:active",
+        "finalAttack": 1070,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_206_gnosis:skchr_gnosis_3:9:attack",
+        "finalAttack": 535,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_206_gnosis:skchr_gnosis_3:9:ending",
+        "finalAttack": 3210,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_297_hamoni:skchr_hamoni_1:9:active",
+        "finalAttack": 687.5,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_297_hamoni:skchr_hamoni_2:9:volley",
+        "finalAttack": 1608.75,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_325_bison:skcom_def_up[3]:9:active",
+        "finalAttack": 375,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_252_bibeak:skchr_bibeak_1:9:active",
+        "finalAttack": 1227.6000000000001,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_252_bibeak:skchr_bibeak_2:9:active",
+        "finalAttack": 1364,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4066_highmo:skchr_highmo_1:9:active",
+        "finalAttack": 1171.5,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4066_highmo:skchr_highmo_2:9:active",
+        "finalAttack": 1136,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_440_pinecn:skchr_pinecn_1:9:active",
+        "finalAttack": 1444,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_440_pinecn:skchr_pinecn_2:9:active",
+        "finalAttack": 1155,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_222_bpipe:skcom_quickattack[3]:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_222_bpipe:skchr_bpipe_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_222_bpipe:skchr_bpipe_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4017_puzzle:skchr_puzzle_1:9:active",
+        "finalAttack": 1818,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4017_puzzle:skchr_puzzle_2:9:normal",
+        "finalAttack": 606,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4017_puzzle:skchr_puzzle_2:9:poison",
+        "finalAttack": 90.89999999999999,
+        "physicalRate": 0.03541064072223683
+      },
+      {
+        "key": "char_4055_bgsnow:skchr_bgsnow_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_4055_bgsnow:skchr_bgsnow_2:9:active",
+        "finalAttack": 2175.7999999999997,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4055_bgsnow:skchr_bgsnow_3:9:active",
+        "finalAttack": 1892,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_472_pasngr:skchr_pasngr_1:9:active",
+        "finalAttack": 2087.5,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_472_pasngr:skchr_pasngr_2:9:active",
+        "finalAttack": 1068,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_472_pasngr:skchr_pasngr_3:9:active",
+        "finalAttack": 1252.5,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_394_hadiya:skchr_hadiya_1:9:active",
+        "finalAttack": 702,
+        "physicalRate": 0.38644929441668857
+      },
+      {
+        "key": "char_394_hadiya:skchr_hadiya_2:9:active",
+        "finalAttack": 1579,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_240_wyvern:skchr_wyvern_1:6:active",
+        "finalAttack": 579,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_381_bubble:skcom_def_up[2]:9:active",
+        "finalAttack": 370,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_381_bubble:skchr_bubble_2:9:active",
+        "finalAttack": 792,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_485_pallas:skchr_pallas_1:9:active",
+        "finalAttack": 1934.1000000000001,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_485_pallas:skchr_pallas_2:9:active",
+        "finalAttack": 1812,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_485_pallas:skchr_pallas_3:9:active",
+        "finalAttack": 2210.4,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4202_haruka:skchr_haruka_2:9:measured",
+        "finalAttack": 200,
+        "physicalRate": 0.08353054606012797
+      },
+      {
+        "key": "char_122_beagle:skcom_def_up[1]:6:active",
+        "finalAttack": 295,
+        "physicalRate": 0.16320448768516083
+      },
+      {
+        "key": "char_344_beewax:skchr_beewax_1:9:active",
+        "finalAttack": 1288,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_344_beewax:skchr_beewax_2:9:normal",
+        "finalAttack": 805,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_344_beewax:skchr_beewax_2:9:summon",
+        "finalAttack": 2415,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_137_brownb:skchr_brownb_1:9:active",
+        "finalAttack": 573,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_137_brownb:skchr_brownb_2:9:active",
+        "finalAttack": 573,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_452_bstalk:skchr_bstalk_2:9:active",
+        "finalAttack": 404,
+        "physicalRate": 0.2384959242703129
+      },
+      {
+        "key": "char_491_humus:skchr_humus_1:9:active",
+        "finalAttack": 1615,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_491_humus:skchr_humus_2:9:active",
+        "finalAttack": 1227,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_430_fartth:skcom_quickattack[3]:9:active",
+        "finalAttack": 2073,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_430_fartth:skchr_fartth_2:9:active",
+        "finalAttack": 1490,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_430_fartth:skchr_fartth_3:9:active",
+        "finalAttack": 3304,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_158_milu:skchr_milu_1:9:active",
+        "finalAttack": 1997,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_158_milu:skchr_milu_2:9:active",
+        "finalAttack": 3525,
+        "physicalRate": 0.6640371636427382
+      },
+      {
+        "key": "char_493_firwhl:skchr_firwhl_1:9:active",
+        "finalAttack": 1929.5500000000002,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_493_firwhl:skchr_firwhl_2:9:active",
+        "finalAttack": 1043,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_250_phatom:skchr_phatom_1:9:active",
+        "finalAttack": 648,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_250_phatom:skchr_phatom_2:9:active",
+        "finalAttack": 1944,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_250_phatom:skchr_phatom_3:9:active",
+        "finalAttack": 1944,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_300_phenxi:skchr_phenxi_1:9:active",
+        "finalAttack": 2402,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_300_phenxi:skchr_phenxi_2:9:active",
+        "finalAttack": 5764,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_300_phenxi:skchr_phenxi_2:9:trail-explosion",
+        "finalAttack": 2882,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_300_phenxi:skchr_phenxi_3:9:active",
+        "finalAttack": 3170.2000000000003,
+        "physicalRate": 0.6594793584012622
+      },
+      {
+        "key": "char_4155_talr:skchr_talr_1:9:active",
+        "finalAttack": 1225,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4155_talr:skchr_talr_2:9:active",
+        "finalAttack": 1225.6000000000001,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4148_philae:skchr_philae_1:9:active",
+        "finalAttack": 643,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4148_philae:skchr_philae_2:9:counter",
+        "finalAttack": 1286,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_345_folnic:skchr_folnic_2:9:active",
+        "finalAttack": 1058,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4106_bryota:skchr_bryota_1:9:active",
+        "finalAttack": 1890.6,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4106_bryota:skchr_bryota_2:9:active",
+        "finalAttack": 1479.6,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_204_platnm:skcom_atk_up[3]:9:active",
+        "finalAttack": 2088,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_204_platnm:skchr_platnm_2:9:active",
+        "finalAttack": 2088,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_476_blkngt:skchr_blkngt_1:9:awake",
+        "finalAttack": 734,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_476_blkngt:skchr_blkngt_2:9:active",
+        "finalAttack": 995.4000000000001,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_174_slbell:skchr_slbell_1:9:active",
+        "finalAttack": 495,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_174_slbell:skchr_slbell_2:9:active",
+        "finalAttack": 495,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_106_franka:skcom_quickattack[3]:9:active",
+        "finalAttack": 1465,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_106_franka:skchr_franka_2:9:active",
+        "finalAttack": 2022,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_4177_brigid:skchr_brigid_1:9:active",
+        "finalAttack": 929.5,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4177_brigid:skchr_brigid_2:9:active",
+        "finalAttack": 1072,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_192_falco:skcom_quickattack[1]:6:active",
+        "finalAttack": 658,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4004_pudd:skcom_magic_rage[2]:9:active",
+        "finalAttack": 673,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_4004_pudd:skchr_pudd_2:9:active",
+        "finalAttack": 1346,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_415_flint:skchr_flint_1:9:active",
+        "finalAttack": 1426,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_415_flint:skchr_flint_2:9:active",
+        "finalAttack": 961,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_017_huang:skchr_huang_1:9:active",
+        "finalAttack": 2392.5,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_017_huang:skchr_huang_2:9:active",
+        "finalAttack": 1650,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_017_huang:skchr_huang_3:9:normal",
+        "finalAttack": 1485,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_017_huang:skchr_huang_3:9:end",
+        "finalAttack": 5940,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_420_flamtl:skchr_flamtl_1:9:followup",
+        "finalAttack": 611,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_420_flamtl:skchr_flamtl_2:9:active",
+        "finalAttack": 1466.3999999999999,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_420_flamtl:skchr_flamtl_3:9:active",
+        "finalAttack": 1160,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_423_blemsh:skchr_blemsh_1:9:active",
+        "finalAttack": 1510.6000000000001,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_423_blemsh:skchr_blemsh_2:9:active",
+        "finalAttack": 1220,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_423_blemsh:skchr_blemsh_3:9:active",
+        "finalAttack": 1220,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4032_provs:skchr_provs_1:9:active",
+        "finalAttack": 1734,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_4032_provs:skchr_provs_2:9:normal",
+        "finalAttack": 578,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_4032_provs:skchr_provs_2:9:activation",
+        "finalAttack": 2023,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_145_prove:skchr_prove_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_145_prove:skchr_prove_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.662722412130774
+      },
+      {
+        "key": "char_356_broca:skchr_broca_1:9:active",
+        "finalAttack": 1515,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_356_broca:skchr_broca_2:9:active",
+        "finalAttack": 2441,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_193_frostl:skchr_frostl_1:9:active",
+        "finalAttack": 990,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_193_frostl:skchr_frostl_2:9:active",
+        "finalAttack": 660,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_141_nights:skcom_atk_up[2]:9:active",
+        "finalAttack": 1157,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_141_nights:skchr_nights_2:9:active",
+        "finalAttack": 1028,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4088_hodrer:skchr_hodrer_1:9:active",
+        "finalAttack": 4736.160000000001,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_4088_hodrer:skchr_hodrer_2:9:initial",
+        "finalAttack": 2549.8,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4088_hodrer:skchr_hodrer_2:9:stance",
+        "finalAttack": 2549.8,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4088_hodrer:skchr_hodrer_3:9:normal",
+        "finalAttack": 4007.3,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_4088_hodrer:skchr_hodrer_3:9:dot",
+        "finalAttack": 200,
+        "physicalRate": 0.08353054606012797
+      },
+      {
+        "key": "char_369_bena:skchr_bena_1:9:active",
+        "finalAttack": 1484,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_369_bena:skchr_bena_2:9:active",
+        "finalAttack": 1409,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_4065_judge:skchr_judge_1:9:active",
+        "finalAttack": 916,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4065_judge:skchr_judge_2:9:active",
+        "finalAttack": 1282.3999999999999,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4065_judge:skchr_judge_3:9:active",
+        "finalAttack": 4580,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_4058_pepe:skchr_pepe_1:9:active",
+        "finalAttack": 4573.3,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_4058_pepe:skchr_pepe_2:9:active",
+        "finalAttack": 2801,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4058_pepe:skchr_pepe_3:9:active",
+        "finalAttack": 4841,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_188_helage:skchr_helage_1:9:active",
+        "finalAttack": 1456,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_188_helage:skchr_helage_2:9:active",
+        "finalAttack": 1497,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_188_helage:skchr_helage_3:9:active",
+        "finalAttack": 1664,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_136_hsguma:skchr_hsguma_1:9:active",
+        "finalAttack": 686,
+        "physicalRate": 0.3816285388728197
+      },
+      {
+        "key": "char_136_hsguma:skchr_hsguma_2:9:normal",
+        "finalAttack": 490,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_136_hsguma:skchr_hsguma_2:9:counter",
+        "finalAttack": 490,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_136_hsguma:skchr_hsguma_3:9:active",
+        "finalAttack": 1176,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4223_botany:skchr_botany_1:9:active",
+        "finalAttack": 551.1,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4223_botany:skchr_botany_2:9:active",
+        "finalAttack": 501,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_487_bobb:skchr_bobb_1:9:ATTACK",
+        "finalAttack": 972,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_487_bobb:skchr_bobb_2:9:SKILL_TICK",
+        "finalAttack": 680.4,
+        "physicalRate": 0.37233762818827243
+      },
+      {
+        "key": "char_281_popka:skcom_atk_up[1]:6:active",
+        "finalAttack": 850,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_4027_heyak:skchr_heyak_1:9:active",
+        "finalAttack": 2169,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4027_heyak:skchr_heyak_2:9:active",
+        "finalAttack": 325.35,
+        "physicalRate": 0.1690770444386011
+      },
+      {
+        "key": "char_4027_heyak:skchr_heyak_3:9:stable",
+        "finalAttack": 3036.6,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_4039_horn:skchr_horn_1:9:active",
+        "finalAttack": 3379.6,
+        "physicalRate": 0.6634236129371549
+      },
+      {
+        "key": "char_4039_horn:skchr_horn_2:9:normal",
+        "finalAttack": 2896.7999999999997,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4039_horn:skchr_horn_2:9:overdrive",
+        "finalAttack": 2896.7999999999997,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_4039_horn:skchr_horn_3:9:active",
+        "finalAttack": 1911,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_488_buildr:skchr_buildr_2:9:active",
+        "finalAttack": 641,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_488_buildr:skchr_buildr_2:9:permanent",
+        "finalAttack": 641,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_264_f12yin:skchr_f12yin_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_264_f12yin:skchr_f12yin_2:9:initial",
+        "finalAttack": null,
+        "physicalRate": 0.38644929441668857
+      },
+      {
+        "key": "char_264_f12yin:skchr_f12yin_2:9:stance",
+        "finalAttack": null,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_264_f12yin:skchr_f12yin_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_248_mgllan:skchr_mgllan_1:9:active",
+        "finalAttack": 509,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_248_mgllan:skchr_mgllan_2:9:token",
+        "finalAttack": 509,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_248_mgllan:skchr_mgllan_2:9:owner",
+        "finalAttack": 509,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_248_mgllan:skchr_mgllan_3:9:token",
+        "finalAttack": 1882,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_248_mgllan:skchr_mgllan_3:9:owner",
+        "finalAttack": 1272,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4199_makiri:skchr_makiri_2:9:active",
+        "finalAttack": 1105,
+        "physicalRate": 0.562976597423087
+      },
+      {
+        "key": "char_199_yak:skchr_yak_1:9:active",
+        "finalAttack": 375,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_199_yak:skchr_yak_2:9:active",
+        "finalAttack": 375,
+        "physicalRate": 0.19344377246033834
+      },
+      {
+        "key": "char_289_gyuki:skchr_gyuki_2:9:active",
+        "finalAttack": 2290,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_311_mudrok:skcom_def_up[3]:9:active",
+        "finalAttack": 882,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_311_mudrok:skchr_mudrok_2:9:active",
+        "finalAttack": 2381.4,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_311_mudrok:skchr_mudrok_3:9:active",
+        "finalAttack": 2116,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4141_marcil:skchr_marcil_1:9:active",
+        "finalAttack": 2662,
+        "physicalRate": 0.6440529406608818
+      },
+      {
+        "key": "char_4141_marcil:skchr_marcil_2:9:active",
+        "finalAttack": 2252,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_4141_marcil:skchr_marcil_3:9:active",
+        "finalAttack": 4789.2,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_215_mantic:skchr_mantic_1:9:active",
+        "finalAttack": 871,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_215_mantic:skchr_mantic_2:9:active",
+        "finalAttack": 1654,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4204_mantra:skchr_mantra_1:9:ATTACK",
+        "finalAttack": 2453.75,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4204_mantra:skchr_mantra_2:9:PRIMARY",
+        "finalAttack": 1812,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4204_mantra:skchr_mantra_2:9:BOUNCE",
+        "finalAttack": 906,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4204_mantra:skchr_mantra_3:9:ATTACK",
+        "finalAttack": 2831,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4204_mantra:skchr_mantra_3:9:OVERFLOW",
+        "finalAttack": 5237.35,
+        "physicalRate": 0.6765711280567973
+      },
+      {
+        "key": "char_4198_christ:skchr_christ_1:9:ATTACK",
+        "finalAttack": 960,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4198_christ:skchr_christ_2:9:SKILL_TICK",
+        "finalAttack": 736,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_437_mizuki:skchr_mizuki_1:9:active",
+        "finalAttack": 2925,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_437_mizuki:skchr_mizuki_2:9:active",
+        "finalAttack": 1267,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_437_mizuki:skchr_mizuki_3:9:active",
+        "finalAttack": 2437,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_283_midn:skchr_midn_1:6:active",
+        "finalAttack": null,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_4147_mitm:skchr_mitm_1:9:explosion",
+        "finalAttack": 2220,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_4147_mitm:skchr_mitm_2:9:active",
+        "finalAttack": 999,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4054_malist:skcom_quickattack[3]:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.3579630116574634
+      },
+      {
+        "key": "char_4054_malist:skchr_malist_2:9:capped",
+        "finalAttack": null,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_249_mlyss:skchr_mlyss_1:9:owner",
+        "finalAttack": 805,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_249_mlyss:skchr_mlyss_2:9:owner",
+        "finalAttack": 805,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_249_mlyss:skchr_mlyss_3:9:owner",
+        "finalAttack": 805,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_388_mint:skchr_mint_1:9:active",
+        "finalAttack": 1291.2,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_388_mint:skchr_mint_2:9:normal",
+        "finalAttack": 1049.1000000000001,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_388_mint:skchr_mint_2:9:end",
+        "finalAttack": 2421,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_185_frncat:skchr_frncat_1:9:active",
+        "finalAttack": 1188,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_185_frncat:skchr_frncat_2:9:active",
+        "finalAttack": 1188,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4064_mlynar:skchr_mlynar_1:9:active",
+        "finalAttack": 2541,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_4064_mlynar:skchr_mlynar_2:9:active",
+        "finalAttack": 2413.95,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4064_mlynar:skchr_mlynar_3:9:active",
+        "finalAttack": 3811.5000000000005,
+        "physicalRate": 0.6671049171706548
+      },
+      {
+        "key": "char_133_mm:skchr_mm_1:9:active",
+        "finalAttack": 1162,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_133_mm:skchr_mm_2:9:active",
+        "finalAttack": 1232,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_242_otter:skchr_otter_1:9:token",
+        "finalAttack": 444,
+        "physicalRate": 0.2494521868700149
+      },
+      {
+        "key": "char_242_otter:skchr_otter_1:9:owner",
+        "finalAttack": 478,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_242_otter:skchr_otter_2:9:explosion",
+        "finalAttack": 2868,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_126_shotst:skchr_shotst_1:9:active",
+        "finalAttack": 954,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_126_shotst:skchr_shotst_2:9:active",
+        "finalAttack": 1060,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_219_meteo:skchr_meteo_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_219_meteo:skchr_meteo_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.6634236129371549
+      },
+      {
+        "key": "char_4006_melnte:skchr_melnte_1:9:active",
+        "finalAttack": 2469,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4006_melnte:skchr_melnte_2:9:active",
+        "finalAttack": 4409.999999999999,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_208_melan:skcom_atk_up[1]:6:active",
+        "finalAttack": 1268,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_154_morgan:skchr_morgan_1:9:active",
+        "finalAttack": 1862,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_154_morgan:skchr_morgan_2:9:active",
+        "finalAttack": 1862,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_213_mostma:skcom_atk_up[3]:9:active",
+        "finalAttack": 1878,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_213_mostma:skchr_mostma_3:9:active",
+        "finalAttack": 2535,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_2026_yu:skchr_yu_1:9:ATTACK",
+        "finalAttack": 715,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_2026_yu:skchr_yu_2:9:ATTACK",
+        "finalAttack": 2788,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_2026_yu:skchr_yu_2:9:START",
+        "finalAttack": 2788,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_2026_yu:skchr_yu_3:9:ATTACK",
+        "finalAttack": 1501,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_416_zumama:skchr_zumama_1:9:active",
+        "finalAttack": 1346,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_416_zumama:skchr_zumama_2:9:active",
+        "finalAttack": 3015,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_416_zumama:skchr_zumama_3:9:active",
+        "finalAttack": 3554,
+        "physicalRate": 0.6640371636427382
+      },
+      {
+        "key": "char_421_crow:skchr_crow_1:9:active",
+        "finalAttack": 1196.25,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_421_crow:skchr_crow_2:9:active",
+        "finalAttack": 1232,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_4142_laios:skchr_laios_1:9:attack",
+        "finalAttack": 1657,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4142_laios:skchr_laios_2:9:active",
+        "finalAttack": 4387.5,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_121_lava:skcom_magic_rage[1]:6:active",
+        "finalAttack": 642,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_140_whitew:skchr_whitew_1:9:active",
+        "finalAttack": 1292,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_140_whitew:skchr_whitew_2:9:active",
+        "finalAttack": 1672,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_322_lmlee:skchr_lmlee_1:9:active",
+        "finalAttack": 1350,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_322_lmlee:skchr_lmlee_2:9:normal",
+        "finalAttack": 844,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_322_lmlee:skchr_lmlee_2:9:explosion",
+        "finalAttack": 2532,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_322_lmlee:skchr_lmlee_3:9:active",
+        "finalAttack": 1266,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_261_sddrag:skcom_quickattack[3]:9:active",
+        "finalAttack": 916,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_261_sddrag:skchr_sddrag_2:9:active",
+        "finalAttack": 1137,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_1:9:token",
+        "finalAttack": 823,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_1:9:owner",
+        "finalAttack": 762,
+        "physicalRate": 0.4532386712244719
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_2:9:token",
+        "finalAttack": 1827,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_2:9:owner",
+        "finalAttack": 2286,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_3:9:basic",
+        "finalAttack": 1646,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_2023_ling:skchr_ling_3:9:owner",
+        "finalAttack": 1016,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_194_leto:skcom_quickattack[3]:9:active",
+        "finalAttack": 1044,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_194_leto:skchr_leto_2:9:active",
+        "finalAttack": 1548,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_107_liskam:skchr_liskam_1:9:active",
+        "finalAttack": 470,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_107_liskam:skchr_liskam_2:9:active",
+        "finalAttack": 1410,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_4031_liesel:skchr_liesel_1:9:active",
+        "finalAttack": 1837.5,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4031_liesel:skchr_liesel_2:9:splash",
+        "finalAttack": 1575,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4031_liesel:skchr_liesel_2:9:dot",
+        "finalAttack": 306.25,
+        "physicalRate": 0.1661845911122798
+      },
+      {
+        "key": "char_4080_lin:skchr_lin_1:9:attack",
+        "finalAttack": 1470,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_4080_lin:skchr_lin_2:9:attack",
+        "finalAttack": 919,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_4080_lin:skchr_lin_3:9:attack",
+        "finalAttack": 2757,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4079_haini:skchr_haini_1:9:active",
+        "finalAttack": 1010,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4079_haini:skchr_haini_2:9:active",
+        "finalAttack": 757,
+        "physicalRate": 0.4531510211236743
+      },
+      {
+        "key": "char_4130_luton:skchr_luton_1:9:active",
+        "finalAttack": 1816.9999999999998,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4130_luton:skchr_luton_2:9:active",
+        "finalAttack": 790,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4014_lunacu:skchr_lunacu_1:9:active",
+        "finalAttack": 2148,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4014_lunacu:skchr_lunacu_2:9:active",
+        "finalAttack": 1074,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4117_ray:skchr_ray_1:9:active",
+        "finalAttack": 6436.799999999999,
+        "physicalRate": 0.6799894819879043
+      },
+      {
+        "key": "char_4117_ray:skchr_ray_2:9:active",
+        "finalAttack": 3146.4,
+        "physicalRate": 0.6594793584012622
+      },
+      {
+        "key": "char_4117_ray:skchr_ray_3:9:active",
+        "finalAttack": 4720.32,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_306_leizi:skcom_atk_up[3]:9:active",
+        "finalAttack": 1704,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_306_leizi:skchr_leizi_2:9:active",
+        "finalAttack": 2130,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_1:9:token",
+        "finalAttack": 529,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_1:9:owner",
+        "finalAttack": 486,
+        "physicalRate": 0.26575510561837146
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_2:9:token",
+        "finalAttack": 1496,
+        "physicalRate": 0.5791042159698484
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_2:9:owner",
+        "finalAttack": 874,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_3:9:token",
+        "finalAttack": 1998,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_3:9:cooperative",
+        "finalAttack": 1998,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_4195_radian:skchr_radian_3:9:owner",
+        "finalAttack": 1215,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1030_noirc2:skchr_noirc2_1:9:maximum",
+        "finalAttack": 1389,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_1030_noirc2:skchr_noirc2_2:9:active",
+        "finalAttack": 1378.8,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_373_lionhd:skcom_atk_up[3]:9:active",
+        "finalAttack": 1760,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_373_lionhd:skchr_lionhd_2:9:active",
+        "finalAttack": 2063.1,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_4011_lessng:skchr_lessng_1:9:active",
+        "finalAttack": 3274.1,
+        "physicalRate": 0.6624594618283811
+      },
+      {
+        "key": "char_4011_lessng:skchr_lessng_2:9:active",
+        "finalAttack": 1806,
+        "physicalRate": 0.62573406959418
+      },
+      {
+        "key": "char_4011_lessng:skchr_lessng_3:9:active",
+        "finalAttack": 1129,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_144_red:skchr_red_1:9:active",
+        "finalAttack": 1089,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_144_red:skchr_red_2:9:active",
+        "finalAttack": 1512.5,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4193_lemuen:skchr_lemuen_1:9:active",
+        "finalAttack": 3005.1,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_4193_lemuen:skchr_lemuen_2:9:active",
+        "finalAttack": 2341,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_4193_lemuen:skchr_lemuen_3:9:active",
+        "finalAttack": 6439.5,
+        "physicalRate": 0.6799894819879043
+      },
+      {
+        "key": "char_236_rope:skchr_rope_1:9:active",
+        "finalAttack": 1383.2,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_236_rope:skchr_rope_2:9:active",
+        "finalAttack": 1638,
+        "physicalRate": 0.6225786659654658
+      },
+      {
+        "key": "char_4133_logos:skchr_logos_1:9:attack",
+        "finalAttack": 1522,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_4133_logos:skchr_logos_2:9:attack",
+        "finalAttack": 570.75,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_4133_logos:skchr_logos_3:9:attack",
+        "finalAttack": 3044,
+        "physicalRate": 0.6583399070908932
+      },
+      {
+        "key": "char_197_poca:skcom_atk_up[3]:9:active",
+        "finalAttack": 2375,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_197_poca:skchr_poca_2:9:active",
+        "finalAttack": 2261,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_197_poca:skchr_poca_3:9:active",
+        "finalAttack": 1518,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_391_rosmon:skchr_rosmon_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_391_rosmon:skchr_rosmon_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.4532386712244719
+      },
+      {
+        "key": "char_391_rosmon:skchr_rosmon_3:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_4040_rockr:skcom_magic_rage[3]:9:active",
+        "finalAttack": 380,
+        "physicalRate": 0.19686212639144535
+      },
+      {
+        "key": "char_4040_rockr:skchr_rockr_2:9:normal",
+        "finalAttack": null,
+        "physicalRate": 0.1596984836532562
+      },
+      {
+        "key": "char_4040_rockr:skchr_rockr_2:9:overdrive",
+        "finalAttack": null,
+        "physicalRate": 0.2169339994740994
+      },
+      {
+        "key": "char_451_robin:skchr_robin_1:9:trap",
+        "finalAttack": 1935.5,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_451_robin:skchr_robin_1:9:normal",
+        "finalAttack": 553,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_451_robin:skchr_robin_2:9:trap",
+        "finalAttack": 2101.4,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_451_robin:skchr_robin_2:9:normal",
+        "finalAttack": 553,
+        "physicalRate": 0.3553335086335349
+      },
+      {
+        "key": "char_484_robrta:skchr_robrta_1:9:active",
+        "finalAttack": 855,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_243_waaifu:skchr_waaifu_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_496_wildmn:skchr_wildmn_1:9:active",
+        "finalAttack": 628,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_496_wildmn:skchr_wildmn_2:9:active",
+        "finalAttack": 1130,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_1011_lava2:skchr_lava2_1:9:active",
+        "finalAttack": 1065,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_1020_reed2:skcom_quickattack[3]:9:active",
+        "finalAttack": 870,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1020_reed2:skchr_reed2_2:9:active",
+        "finalAttack": 1440,
+        "physicalRate": 0.5790165658690507
+      },
+      {
+        "key": "char_1020_reed2:skchr_reed2_3:9:attack",
+        "finalAttack": 960,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1020_reed2:skchr_reed2_3:9:tick",
+        "finalAttack": 576,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_1020_reed2:skchr_reed2_3:9:explosion",
+        "finalAttack": 1344,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_1021_kroos2:skchr_kroos2_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1021_kroos2:skchr_kroos2_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_1023_ghost2:skchr_ghost2_1:9:active",
+        "finalAttack": 2042,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_1023_ghost2:skchr_ghost2_2:9:active",
+        "finalAttack": 1879,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_1023_ghost2:skchr_ghost2_3:9:active",
+        "finalAttack": 2941,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_1028_texas2:skchr_texas2_1:9:active",
+        "finalAttack": 1252,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1028_texas2:skchr_texas2_2:9:normal",
+        "finalAttack": 1153,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1028_texas2:skchr_texas2_3:9:normal",
+        "finalAttack": 790,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_1028_texas2:skchr_texas2_3:9:deploy",
+        "finalAttack": 1303.5,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1038_whitw2:skchr_whitw2_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.1639933385923394
+      },
+      {
+        "key": "char_1038_whitw2:skchr_whitw2_1:9:initial",
+        "finalAttack": 402,
+        "physicalRate": 0.2384959242703129
+      },
+      {
+        "key": "char_1038_whitw2:skchr_whitw2_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.16933999474099395
+      },
+      {
+        "key": "char_1038_whitw2:skchr_whitw2_3:9:active",
+        "finalAttack": 723,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4184_dolris:skchr_dolris_2:9:skill",
+        "finalAttack": 379,
+        "physicalRate": 0.19686212639144535
+      },
+      {
+        "key": "char_1044_hsgma2:skchr_hsgma2_1:9:normal",
+        "finalAttack": 1227,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1044_hsgma2:skchr_hsgma2_1:9:counter",
+        "finalAttack": 2147.25,
+        "physicalRate": 0.631431326146025
+      },
+      {
+        "key": "char_1044_hsgma2:skchr_hsgma2_2:9:strike",
+        "finalAttack": 649.8000000000001,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_1044_hsgma2:skchr_hsgma2_2:9:shield",
+        "finalAttack": 938.6,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1044_hsgma2:skchr_hsgma2_3:9:active",
+        "finalAttack": 2382,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_1043_leizi2:skchr_leizi2_1:9:active",
+        "finalAttack": 4444.245,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_1043_leizi2:skchr_leizi2_2:9:active",
+        "finalAttack": 1877.85,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_1043_leizi2:skchr_leizi2_3:9:normal",
+        "finalAttack": 3755.7,
+        "physicalRate": 0.6671049171706548
+      },
+      {
+        "key": "char_1043_leizi2:skchr_leizi2_3:9:current",
+        "finalAttack": 819,
+        "physicalRate": 0.4950477693049347
+      },
+      {
+        "key": "char_4183_mortis:skchr_mortis_1:9:active",
+        "finalAttack": 792,
+        "physicalRate": 0.45665702515557893
+      },
+      {
+        "key": "char_4183_mortis:skchr_mortis_2:9:active",
+        "finalAttack": 950.4,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1027_greyy2:skcom_quickattack[3]:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.38820229643264087
+      },
+      {
+        "key": "char_1027_greyy2:skchr_greyy2_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.33666403716364274
+      },
+      {
+        "key": "char_1041_angel2:skchr_angel2_1:9:shot",
+        "finalAttack": 2295,
+        "physicalRate": 0.6333596283635726
+      },
+      {
+        "key": "char_1041_angel2:skchr_angel2_2:9:shot",
+        "finalAttack": 2754,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_1041_angel2:skchr_angel2_3:9:shot",
+        "finalAttack": 1841.6000000000001,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_1041_angel2:skchr_angel2_3:9:delivery",
+        "finalAttack": 2877.5,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_1032_excu2:skchr_excu2_1:9:active",
+        "finalAttack": 1165,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1032_excu2:skchr_excu2_2:9:active",
+        "finalAttack": 1398,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_1032_excu2:skchr_excu2_3:9:normal",
+        "finalAttack": 2175,
+        "physicalRate": 0.633271978262775
+      },
+      {
+        "key": "char_1032_excu2:skchr_excu2_3:9:end",
+        "finalAttack": 5437.5,
+        "physicalRate": 0.6765711280567973
+      },
+      {
+        "key": "char_1046_sbell2:skchr_sbell2_1:9:attack",
+        "finalAttack": 4763.2,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_1046_sbell2:skchr_sbell2_2:9:attack",
+        "finalAttack": 3480.7999999999997,
+        "physicalRate": 0.6634236129371549
+      },
+      {
+        "key": "char_1046_sbell2:skchr_sbell2_3:9:attack",
+        "finalAttack": 4763.2,
+        "physicalRate": 0.6764834779559996
+      },
+      {
+        "key": "char_1050_chen3:skchr_chen3_1:9:active",
+        "finalAttack": 1794,
+        "physicalRate": 0
+      },
+      {
+        "key": "char_1050_chen3:skchr_chen3_2:9:slashes",
+        "finalAttack": 4176,
+        "physicalRate": 0
+      },
+      {
+        "key": "char_1050_chen3:skchr_chen3_2:9:normal",
+        "finalAttack": 3180,
+        "physicalRate": 0
+      },
+      {
+        "key": "char_1050_chen3:skchr_chen3_3:9:normal",
+        "finalAttack": 1827,
+        "physicalRate": 0
+      },
+      {
+        "key": "char_1024_hbisc2:skcom_atk_up[3]:9:active",
+        "finalAttack": 1142,
+        "physicalRate": 0.5673591024629678
+      },
+      {
+        "key": "char_1024_hbisc2:skchr_hbisc2_2:9:active",
+        "finalAttack": 970.6999999999999,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1051_headb2:skchr_headb2_1:9:active",
+        "finalAttack": 2335,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_1051_headb2:skchr_headb2_2:9:first",
+        "finalAttack": 2860,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_1051_headb2:skchr_headb2_2:9:later",
+        "finalAttack": 4040,
+        "physicalRate": 0.669997370496976
+      },
+      {
+        "key": "char_1051_headb2:skchr_headb2_3:9:hammer",
+        "finalAttack": 7178.4,
+        "physicalRate": 0.6847225874309756
+      },
+      {
+        "key": "char_4186_tmoris:skchr_tmoris_1:9:active",
+        "finalAttack": 587.3,
+        "physicalRate": 0.3577877114558682
+      },
+      {
+        "key": "char_4186_tmoris:skchr_tmoris_2:9:active",
+        "finalAttack": 839,
+        "physicalRate": 0.49601192041370845
+      },
+      {
+        "key": "char_1026_gvial2:skchr_gvial2_1:9:active",
+        "finalAttack": 1550,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_1026_gvial2:skchr_gvial2_2:9:active",
+        "finalAttack": 2366,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_1026_gvial2:skchr_gvial2_3:9:active",
+        "finalAttack": 2040,
+        "physicalRate": 0.6308177754404417
+      },
+      {
+        "key": "char_4182_oblvns:skchr_oblvns_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.255587693925848
+      },
+      {
+        "key": "char_4182_oblvns:skchr_oblvns_2:9:piano",
+        "finalAttack": 1318.4,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_4182_oblvns:skchr_oblvns_2:9:organ",
+        "finalAttack": 628,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_4182_oblvns:skchr_oblvns_3:9:piano",
+        "finalAttack": 1381.6000000000001,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4182_oblvns:skchr_oblvns_3:9:organ",
+        "finalAttack": 1381.6000000000001,
+        "physicalRate": 0.5787536155666579
+      },
+      {
+        "key": "char_4185_amoris:skchr_amoris_1:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.5347532649662547
+      },
+      {
+        "key": "char_4185_amoris:skchr_amoris_2:9:active",
+        "finalAttack": null,
+        "physicalRate": 0.4158997282846875
+      },
+      {
+        "key": "char_1013_chen2:skchr_chen2_1:9:active",
+        "finalAttack": 2559,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_1013_chen2:skchr_chen2_2:9:active",
+        "finalAttack": 1535,
+        "physicalRate": 0.6148654570952756
+      },
+      {
+        "key": "char_1013_chen2:skchr_chen2_3:9:active",
+        "finalAttack": 2559,
+        "physicalRate": 0.6410728372337628
+      },
+      {
+        "key": "char_1014_nearl2:skchr_nearl2_1:9:active",
+        "finalAttack": 1953,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_1014_nearl2:skchr_nearl2_2:9:active",
+        "finalAttack": 2987,
+        "physicalRate": 0.6546586028573933
+      },
+      {
+        "key": "char_1014_nearl2:skchr_nearl2_3:9:normal",
+        "finalAttack": 2757,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_1014_nearl2:skchr_nearl2_3:9:true",
+        "finalAttack": 2757,
+        "physicalRate": 0.6478218949951793
+      },
+      {
+        "key": "char_4067_lolxh:skchr_lolxh_1:9:changed",
+        "finalAttack": 728,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4067_lolxh:skchr_lolxh_1:9:initial",
+        "finalAttack": 728,
+        "physicalRate": 0.38697519502147426
+      },
+      {
+        "key": "char_4067_lolxh:skchr_lolxh_2:9:first",
+        "finalAttack": 1237,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1033_swire2:skchr_swire2_1:9:attack",
+        "finalAttack": 865,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1033_swire2:skchr_swire2_2:9:attack",
+        "finalAttack": 865,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1033_swire2:skchr_swire2_2:9:bomb",
+        "finalAttack": 1730,
+        "physicalRate": 0.6238057673766325
+      },
+      {
+        "key": "char_1033_swire2:skchr_swire2_3:9:attack",
+        "finalAttack": 865,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1033_swire2:skchr_swire2_3:9:coin",
+        "finalAttack": 1297.5,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1036_fang2:skchr_fang2_1:9:active",
+        "finalAttack": 1152,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1036_fang2:skchr_fang2_2:9:active",
+        "finalAttack": 1408,
+        "physicalRate": 0.5788412656674555
+      },
+      {
+        "key": "char_1045_svash2:skchr_svash2_2:9:owner",
+        "finalAttack": 2481.4,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_1045_svash2:skchr_svash2_3:9:owner",
+        "finalAttack": 1306,
+        "physicalRate": 0.5740205101235867
+      },
+      {
+        "key": "char_1047_halo2:skchr_halo2_1:9:hit",
+        "finalAttack": 1216,
+        "physicalRate": 0.5674467525637654
+      },
+      {
+        "key": "char_1047_halo2:skchr_halo2_2:9:direct",
+        "finalAttack": 881.6,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1047_halo2:skchr_halo2_2:9:link",
+        "finalAttack": 881.6,
+        "physicalRate": 0.49969322464720833
+      },
+      {
+        "key": "char_1047_halo2:skchr_halo2_3:9:single",
+        "finalAttack": 1033,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_1034_jesca2:skchr_jesca2_1:9:active",
+        "finalAttack": 989,
+        "physicalRate": 0.5042510298886844
+      },
+      {
+        "key": "char_1034_jesca2:skchr_jesca2_2:9:active",
+        "finalAttack": 1018,
+        "physicalRate": 0.5627136471206942
+      },
+      {
+        "key": "char_1034_jesca2:skchr_jesca2_3:9:normal",
+        "finalAttack": 2386,
+        "physicalRate": 0.6336225786659655
+      },
+      {
+        "key": "char_1034_jesca2:skchr_jesca2_3:9:shell",
+        "finalAttack": 5965,
+        "physicalRate": 0.6792882811815234
+      },
+      {
+        "key": "char_1040_blaze2:skchr_blaze2_1:9:AURA_TICK",
+        "finalAttack": 526.4,
+        "physicalRate": 0.3364887369620475
+      },
+      {
+        "key": "char_1040_blaze2:skchr_blaze2_1:9:ATTACK",
+        "finalAttack": 752,
+        "physicalRate": 0.4531510211236743
+      },
+      {
+        "key": "char_1040_blaze2:skchr_blaze2_2:9:AREA_TICK",
+        "finalAttack": 658,
+        "physicalRate": 0.3602419142782014
+      },
+      {
+        "key": "char_1040_blaze2:skchr_blaze2_2:9:ATTACK",
+        "finalAttack": 1880,
+        "physicalRate": 0.6276623718117276
+      },
+      {
+        "key": "char_1040_blaze2:skchr_blaze2_3:9:ATTACK",
+        "finalAttack": 1616,
+        "physicalRate": 0.6225786659654658
+      }
+    ],
+    "attackQuartiles": {
+      "includedStageCount": 786,
+      "excludedStageCount": 61,
+      "rows": [
+        {
+          "label": "下位25%",
+          "minAttack": 90.89999999999999,
+          "maxAttack": 839,
+          "stageCount": 197,
+          "meanPhysicalRate": 0.3594001173710487
+        },
+        {
+          "label": "25～50%",
+          "minAttack": 844,
+          "maxAttack": 1364,
+          "stageCount": 196,
+          "meanPhysicalRate": 0.5482831312909068
+        },
+        {
+          "label": "50～75%",
+          "minAttack": 1364.3999999999999,
+          "maxAttack": 2104,
+          "stageCount": 196,
+          "meanPhysicalRate": 0.6057681815823882
+        },
+        {
+          "label": "上位25%",
+          "minAttack": 2111.4,
+          "maxAttack": 9497.6,
+          "stageCount": 197,
+          "meanPhysicalRate": 0.6432578608125294
         }
       ]
     },

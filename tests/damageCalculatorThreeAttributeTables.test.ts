@@ -5,7 +5,7 @@ import { classifySkill } from '../src/lib/classifier.ts'
 import { getDamageCalculatorThreeStructures } from '../src/lib/damageCalculatorThree.ts'
 import { getDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { evaluateDamageThreeSkillRankRow } from '../src/lib/damageThreeSkillRankMatrix.ts'
-import { evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics } from '../src/lib/damageThreeSkillRankStatistics.ts'
+import { evaluateSkillRankStageSample, evaluateSkillRankStatisticsStage, summarizeSkillRankStatistics } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import { evaluateDamageThreeComparisonEntry, type DamageThreeComparisonOverrides } from '../src/lib/damageCalculatorThreeComparison.ts'
 import {
   evaluateAttackAttributeTables,
@@ -542,6 +542,9 @@ test('主攻撃の内訳にはウィシャデルS3の初撃と余震の軽減前
   assert.match(details[1].label, /余震/)
   close(details[0].attack, 5502.75)
   close(details[1].attack, 2751.375)
+  const sample = evaluateSkillRankStageSample(input('char_1035_wisdel', 3).entry, [{ resistance: 0, defense: 0 }], 'apply')
+  assert.equal(sample?.finalAttack, null)
+  assert.equal(sample?.cells[0].physical, result.rows[0].physical)
   close(result.rows[0].physical, details[0].attack! + details[1].attack!)
   assert.ok(result.reference.perAttack! > result.rows[0].physical!)
 })
@@ -554,6 +557,8 @@ test('旧形式のスルトS2も主攻撃の内訳に1ヒットの軽減前の�
   assert.equal(details[0].count, 1)
   assert.equal(details[0].expectedHitCount, 1)
   close(details[0].attack, result.reference.perAttack!)
+  const sample = evaluateSkillRankStageSample(input('char_350_surtr', 2).entry, [{ resistance: 0, defense: 0 }], 'apply')
+  assert.equal(sample?.finalAttack, details[0].attack)
 })
 
 test('ウィシャデルの通常攻撃はスキル補正を外し、初撃と余震を別々に軽減する', () => {

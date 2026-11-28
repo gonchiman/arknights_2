@@ -43,7 +43,7 @@ const render = (Component, view, rows, advantageUnit, resistance = 60) =>
   renderToStaticMarkup(createElement(Component, { view, rows, advantageUnit, resistance }))
 const labels = markup => [...markup.matchAll(/aria-label="([^"]+)"/g)].map(match => match[1])
 
-test('出現敵での比較は4つの分析を分け、各出力の形式をアドレスで区別する', async () => {
+test('出現敵での比較は分析内容と出力形式をアドレスで区別する', async () => {
   const { ENEMY_COMPARISON_TITLE, ENEMY_ANALYSES, getEnemyAnalysisSegments } =
     await server.ssrLoadModule('/src/components/enemyComparisonViews.ts')
   const { default: Page } = await server.ssrLoadModule('/src/components/DamageThreeSkillAttributeMatrixPage.tsx')
@@ -52,11 +52,12 @@ test('出現敵での比較は4つの分析を分け、各出力の形式をア�
   assert.deepEqual(tabs, ['主攻撃の属性変更', '実際のダメージ内訳', '術耐性別の統計', '出現敵での比較'])
   assert.equal(ENEMY_COMPARISON_TITLE, tabs.at(-1))
   assert.deepEqual(ENEMY_ANALYSES, [
-    ['advantage', '属性別の優勢率'], ['meanDamage', '平均ダメージ'],
+    ['advantage', '属性別の優勢率'], ['attackQuartiles', '最終攻撃力別の優勢率'], ['meanDamage', '平均ダメージ'],
     ['histogram', 'スキル別の物理優勢率分布'], ['operatorVotes', 'オペレーター別の票'],
   ])
   for (const [format, label] of [['table', '表'], ['chart', 'グラフ']]) {
     assert.deepEqual(getEnemyAnalysisSegments('advantage', format), ['属性別の優勢率', label])
+    assert.deepEqual(getEnemyAnalysisSegments('attackQuartiles', format), ['最終攻撃力別の優勢率', '表'])
     assert.deepEqual(getEnemyAnalysisSegments('meanDamage', format), ['平均ダメージ', label])
     assert.deepEqual(getEnemyAnalysisSegments('histogram', format), ['スキル別の物理優勢率分布', 'ヒストグラム'])
     assert.deepEqual(getEnemyAnalysisSegments('operatorVotes', format), ['オペレーター別の票'])
@@ -73,6 +74,37 @@ const meanDamageOptions = {
   aggregationVersion: 'v12', scope: 'main', comparisonPolicy: 'apply',
   filters: { kind: 'NORMAL', profession: 'ALL', damageType: 'ALL', rarity: 'ALL', query: 'スルト' },
 }
+
+test('最終攻撃力別の表画像は表示中の四分位と絞り込み条件を使い、空群と優勢率0%を区別する', async () => {
+  const { DamageThreeEnemyAttackQuartileTable } = await server.ssrLoadModule('/src/components/DamageThreeEnemyAdvantageViews.tsx')
+  const empty = { minAttack: null, maxAttack: null, stageCount: 0, meanPhysicalRate: null }
+  const rows = [
+    { label: '下位25%', minAttack: 900, maxAttack: 960, stageCount: 2, meanPhysicalRate: 0 },
+    { ...empty, label: '25～50%' }, { ...empty, label: '50～75%' },
+    { label: '上位25%', minAttack: 1050.5, maxAttack: 1100, stageCount: 2, meanPhysicalRate: 0.625 },
+  ]
+  const attackQuartiles = { includedStageCount: 4, excludedStageCount: 1, rows }
+  const all = { includedStageCount: 6, excludedStageCount: 2, rows: [{ ...rows[0], stageCount: 4 }, ...rows.slice(1)] }
+  const options = { ...meanDamageOptions, format: 'attackQuartiles', advantageUnit: 'skill', showBands: true,
+    breakdown: 'outlier', outlierScope: 'eliteBoss', statistics: { ...meanDamageOptions.statistics, attackQuartiles: all } }
+  const { view, snapshot } = createEnemyImage({ ...options, attackQuartiles })
+  assert.equal(view, 'table')
+  assert.equal(snapshot.title, '最終攻撃力別の優勢率')
+  for (const label of ['集計版 v12', 'メインストーリー', '段階単位', '属性限定効果を適用', '通常攻撃型', '検索「スルト」']) {
+    assert.ok(snapshot.conditions.includes(label) && snapshot.filenameConditions.includes(label), label)
+  }
+  for (const label of ['出現回数 120', '集計対象 4段階', '単一の最終攻撃力を特定できず除外 1段階']) {
+    assert.ok(snapshot.conditions.includes(label), label)
+  }
+  assert.doesNotMatch(snapshot.filenameConditions.join(' '), /スキル単位|防御力帯|外れ値/)
+  const table = renderToStaticMarkup(snapshot.table)
+  assert.equal(table, renderToStaticMarkup(createElement(DamageThreeEnemyAttackQuartileTable, { rows })))
+  assert.deepEqual([...table.matchAll(/<th scope="row">([^<]+)<\/th>/g)].map(match => match[1]), rows.map(row => row.label))
+  const cells = [...table.matchAll(/<td data-table-image-number="true">([^<]+)<\/td>/g)].map(match => match[1])
+  assert.deepEqual(cells, ['900', '960', '2', '0.0', '—', '—', '0', '—', '—', '—', '0', '—', '1,050.5', '1,100', '2', '62.5'])
+  assert.ok(createEnemyImage(options).snapshot.conditions.includes('集計対象 6段階'))
+  assert.equal(createEnemyImage({ ...options, attackQuartiles: { ...attackQuartiles, includedStageCount: 0 } }), null)
+})
 
 test('平均ダメージの表画像は比較可能な出現回数とスキル単位の条件を表示する', () => {
   const options = meanDamageOptions

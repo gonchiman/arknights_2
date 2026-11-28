@@ -6,7 +6,7 @@ import { loadSkillRecords } from '../src/lib/arknightsData.ts'
 import { getOrderedDamageThreeAttributeEntries } from '../src/lib/damageCalculatorThreeAttributeComparison.ts'
 import { getEnemySpawnSkillDataHash } from '../src/lib/damageThreeEnemySpawnInputs.ts'
 import { buildEnemySpawnPopulation, summarizeEnemySpawnAdvantage, summarizeOperatorVotes } from '../src/lib/damageThreeEnemySpawnAdvantage.ts'
-import { evaluateSkillRankStatisticsStage } from '../src/lib/damageThreeSkillRankStatistics.ts'
+import { evaluateSkillRankStageSample } from '../src/lib/damageThreeSkillRankStatistics.ts'
 import { createEnemyAggregationClient, getEnemyMainStoryScope } from '../src/lib/enemyAggregationData.ts'
 import { LOCAL_GAME_DATA_RUNTIME_FILES } from '../src/lib/localGameDataContract.ts'
 import { readActiveLocalDataSnapshot } from './refreshLocalGameData.mjs'
@@ -37,8 +37,8 @@ const entries = getOrderedDamageThreeAttributeEntries(skills)
 console.log(`${version.id}のメインストーリーを集計します（防御力・術耐性 ${population.pairs.length}組）。`)
 const stages = []
 for (const entry of entries) {
-  const cells = evaluateSkillRankStatisticsStage(entry, population.pairs, 'excludeAttributeEffects')
-  if (cells) stages.push({ skill: entry.skill, stageLabel: entry.stageLabel, cells })
+  const stage = evaluateSkillRankStageSample(entry, population.pairs, 'excludeAttributeEffects')
+  if (stage) stages.push(stage)
 }
 const { operators, ...statistics } = summarizeEnemySpawnAdvantage(population.pairs, stages)
 const { rows, skillCount } = statistics
