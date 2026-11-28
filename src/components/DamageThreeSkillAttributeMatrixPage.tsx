@@ -24,6 +24,7 @@ import { ComparisonTableImageDialog } from './ComparisonTableImageDialog'
 import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageThreeEnemyAttackQuartileTable, DamageThreeEnemyMeanDamageTable, EnemyAdvantageCategorySelector, ENEMY_MEAN_DAMAGE_TITLE } from './DamageThreeEnemyAdvantageViews'
 import { DamageThreeEnemyMeanDamageChart } from './DamageThreeEnemyMeanDamageChart'
+import { DamageThreeEnemySpawnComposition } from './DamageThreeEnemySpawnComposition'
 import { DamageThreeOperatorVotes, SkillVoteBreakdown, useOperatorVoteSelection } from './DamageThreeOperatorVotes'
 import { DamageThreeVoteList, type VoteListGroup } from './DamageThreeVoteList'
 import { DamageThreeSkillPhysicalRateHistogram } from './DamageThreeSkillPhysicalRateHistogram'
@@ -134,6 +135,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const outliersActive = enemyOverviewActive && advantageBreakdown === 'outlier'
   const enemyMeanActive = enemyActive && enemyAnalysis === 'meanDamage'
   const operatorVotesActive = enemyActive && enemyAnalysis === 'operatorVotes'
+  const spawnCompositionActive = enemyActive && enemyAnalysis === 'spawnComposition'
   const anyStatistics = statsActive || enemyActive
   const enemyPopulation = useMemo(() => scoped && !unavailable
     ? buildEnemySpawnPopulation(scoped.rows, scoped.counts) : null, [scoped, unavailable])
@@ -142,7 +144,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
     distributionActive ? { ...filters, kind: 'NORMAL' } : filters, [filters, distributionActive])
   const professionOptions = useMemo(() => getDamageThreeProfessionOptions(entries), [entries])
   const candidates = useMemo(() => filterDamageThreeSkillEntries(entries, activeFilters), [entries, activeFilters])
-  const matching = useOriginalDamageTypeFilter(candidates, filters.damageType)
+  const matching = useOriginalDamageTypeFilter(spawnCompositionActive ? EMPTY_ENTRIES : candidates, filters.damageType)
   const filtered = matching ?? EMPTY_ENTRIES
   const commonLevel = commonValue(filtered, entry => entry.structure.basicInfo.skillLevel)
   const canReset = (!distributionActive && filters.kind !== 'ALL') || filters.query !== '' || filters.profession !== 'ALL'
@@ -152,7 +154,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
-  const enemyReady = enemyActive && !loading && !!enemyPopulation && matching !== null && (filtered.length > 0 || outliersActive)
+  const enemyReady = enemyActive && !spawnCompositionActive && !loading && !!enemyPopulation && matching !== null && (filtered.length > 0 || outliersActive)
   const defaultEligible = enemyReady && scope === 'main' && (!canReset || operatorVotesActive || quartilesActive)
     && comparisonPolicy === 'excludeAttributeEffects'
   const defaultSummary = useEnemySpawnDefaultSummary(defaultEligible, rows, aggregation.version)
@@ -182,7 +184,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
         ...imageConditions,
       })
     : null
-  const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyAnalysis !== 'operatorVotes'
+  const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyAnalysis !== 'operatorVotes' && enemyAnalysis !== 'spawnComposition'
     ? createDamageThreeEnemyAdvantageImage({
         statistics: enemyStats, format: enemyAnalysis === 'advantage' ? enemyFormat : enemyAnalysis,
         breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, attackQuartiles, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
@@ -223,21 +225,23 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   return <PageLayout page={PAGE_ID} className="dc3-matrix" settings={<>
     <EnemyAggregationSelector state={aggregation} />
     <EnemyAggregationScopeSelector scope={scope} onChange={setScope} disabled={!data} />
-    {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}体</span>}
+    {distribution && <span className="dc3-matrix-population">出現回数 {NUMBER.format(distribution.total)}回</span>}
   </>}>
-    <DamageThreeSkillFilters filters={activeFilters} professionOptions={professionOptions} onChange={changeFilters}
-      allowAllKinds lockKind={distributionActive} damageTypeLabel="元の攻撃属性" canReset={canReset}
-      onReset={() => changeFilters(DEFAULT_FILTERS)} />
-    <section className="dc3-matrix-comparison-settings" aria-label={COMPARISON_CONDITIONS}>
-      <PageOutputHeader segments={[COMPARISON_CONDITIONS]}><h2>{COMPARISON_CONDITIONS}</h2></PageOutputHeader>
-      <div className="dc3-matrix-option-group dc3-matrix-comparison-policy">
-        <span>{ATTRIBUTE_EFFECTS_LABEL}</span>
-        <PageViewSwitch views={ADVANTAGE_POLICIES} selected={comparisonPolicy} label={ATTRIBUTE_EFFECTS_LABEL} onChange={next => {
-          setComparisonPolicy(next)
-          if (mode === 'virtual' && sort.resistance !== undefined) setPage(0)
-        }} />
-      </div>
-    </section>
+    {!spawnCompositionActive && <>
+      <DamageThreeSkillFilters filters={activeFilters} professionOptions={professionOptions} onChange={changeFilters}
+        allowAllKinds lockKind={distributionActive} damageTypeLabel="元の攻撃属性" canReset={canReset}
+        onReset={() => changeFilters(DEFAULT_FILTERS)} />
+      <section className="dc3-matrix-comparison-settings" aria-label={COMPARISON_CONDITIONS}>
+        <PageOutputHeader segments={[COMPARISON_CONDITIONS]}><h2>{COMPARISON_CONDITIONS}</h2></PageOutputHeader>
+        <div className="dc3-matrix-option-group dc3-matrix-comparison-policy">
+          <span>{ATTRIBUTE_EFFECTS_LABEL}</span>
+          <PageViewSwitch views={ADVANTAGE_POLICIES} selected={comparisonPolicy} label={ATTRIBUTE_EFFECTS_LABEL} onChange={next => {
+            setComparisonPolicy(next)
+            if (mode === 'virtual' && sort.resistance !== undefined) setPage(0)
+          }} />
+        </div>
+      </section>
+    </>}
     <PageOutputTabs {...tabs} tabs={MODES} onChange={next => {
       if (next !== mode && sort.resistance !== undefined) resetSort()
       setMode(next)
@@ -246,7 +250,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
         ...currentImage, location: [STANDARD_PAGE_TITLES[PAGE_ID], viewLabel(MODES, mode), ...format],
       })} />} />
     <AnalysisTabPanel {...tabs} tab={mode}>
-      <div className="dc3-matrix-conditions" role="group" aria-label="共通条件">
+      {!spawnCompositionActive && <div className="dc3-matrix-conditions" role="group" aria-label="共通条件">
         <span>敵1体</span><span>最大Lv</span><span>信頼100</span><span>潜在1</span><span>MODなし</span>
         {commonLevel && <span>{commonLevel}</span>}
         {commonUnit && <span>{commonUnit}あたり</span>}
@@ -257,13 +261,15 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
           }} />
           防御力・術耐性無視を適用
         </label>}
-      </div>
+      </div>}
       {enemyActive && <div className="dc3-matrix-option-group dc3-matrix-enemy-analysis">
         <span className="dc3-matrix-option-label">分析内容</span>
         <PageViewSwitch views={ENEMY_ANALYSES} selected={enemyAnalysis} onChange={setEnemyAnalysis} label="分析内容" />
       </div>}
       <EnemyDataContent loading={aggregation.loading} error={aggregation.error} onRetry={aggregation.retry}>
         {unavailable ? <p role="status">この集計版ではメインストーリーの出現回数を利用できません。</p>
+          : spawnCompositionActive && scoped ? <DamageThreeEnemySpawnComposition key={aggregation.selectedId + scope}
+              rows={scoped.rows} counts={scoped.counts} scope={scope} aggregationVersion={aggregation.selectedId} />
           : !distribution?.total ? <p role="status">{enemyActive ? '防御力と術耐性がそろった出現敵はありません。' : NO_CORRESPONDENCE_DATA}</p>
           : loading && !rows.length ? <p role="status">スキルを読み込んでいます…</p>
           : !rows.length ? <p role="alert">オペレーターデータを取得できません。</p>

@@ -1,0 +1,65 @@
+.spawn-composition-chart {
+  --spawn-columns: minmax(0, 27fr) minmax(0, 63fr) 8ch 7ch;
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  container-type: inline-size;
+}
+
+.spawn-composition-chart ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spawn-composition-chart li,
+.spawn-composition-chart-head,
+.spawn-composition-chart-foot {
+  display: grid;
+  grid-template-columns: var(--spawn-columns);
+  column-gap: 12px;
+}
+
+.spawn-composition-chart li {
+  align-items: center;
+  min-height: 34px;
+  padding-block: 3px;
+}
+
+.spawn-composition-chart-head,
+.spawn-composition-chart-foot {
+  color: var(--text-muted);
+}
+
+.spawn-composition-chart-head { margin-bottom: 4px; text-align: right; }
+.spawn-composition-chart-head span { font-size: 12px; }
+.spawn-composition-chart-head > :first-child { grid-column: 3; }
+.spawn-composition-chart-number { text-align: right; white-space: nowrap; }
+.spawn-composition-chart-label { overflow-wrap: anywhere; }
+.spawn-composition-chart-lane {
+  display: flex;
+  align-items: center;
+  min-height: 18px;
+  border-left: 1px solid var(--border-strong);
+}
+.spawn-composition-chart-lane > span { height: 16px; background: var(--link); }
+.spawn-composition-chart-ticks {
+  position: relative;
+  grid-column: 2;
+  height: 21px;
+  border-top: 1px solid var(--border-strong);
+}
+.spawn-composition-chart-ticks span { position: absolute; top: 3px; transform: translateX(-50%); font-size: 11px; }
+.spawn-composition-chart-ticks span:first-child { transform: none; }
+.spawn-composition-chart-ticks span:last-child { transform: translateX(-100%); }
+.spawn-composition-chart-image { display: grid; align-content: center; }
+@container (max-width: 460px) {
+  .spawn-composition-chart li,
+  .spawn-composition-chart-head,
+  .spawn-composition-chart-foot { grid-template-columns: minmax(0, 1fr) 8ch 6ch; column-gap: 8px; }
+  .spawn-composition-chart-head > :first-child { grid-column: 2; }
+  .spawn-composition-chart-label { grid-column: 1 / -1; }
+  .spawn-composition-chart-ticks { grid-column: 1; }
+  .spawn-composition-chart li { row-gap: 2px; padding-block: 5px; }
+}

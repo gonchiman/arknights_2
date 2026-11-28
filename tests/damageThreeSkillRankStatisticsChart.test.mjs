@@ -54,6 +54,7 @@ test('出現敵での比較は分析内容と出力形式をアドレスで区�
   assert.deepEqual(ENEMY_ANALYSES, [
     ['advantage', '属性別の優勢率'], ['attackQuartiles', '最終攻撃力別の優勢率'], ['meanDamage', '平均ダメージ'],
     ['histogram', 'スキル別の物理優勢率分布'], ['operatorVotes', 'オペレーター別の票'],
+    ['spawnComposition', '出現回数の内訳'],
   ])
   for (const [format, label] of [['table', '表'], ['chart', 'グラフ']]) {
     assert.deepEqual(getEnemyAnalysisSegments('advantage', format), ['属性別の優勢率', label])
@@ -61,6 +62,7 @@ test('出現敵での比較は分析内容と出力形式をアドレスで区�
     assert.deepEqual(getEnemyAnalysisSegments('meanDamage', format), ['平均ダメージ', label])
     assert.deepEqual(getEnemyAnalysisSegments('histogram', format), ['スキル別の物理優勢率分布', 'ヒストグラム'])
     assert.deepEqual(getEnemyAnalysisSegments('operatorVotes', format), ['オペレーター別の票'])
+    assert.deepEqual(getEnemyAnalysisSegments('spawnComposition', format), ['出現回数の内訳'])
   }
 })
 
