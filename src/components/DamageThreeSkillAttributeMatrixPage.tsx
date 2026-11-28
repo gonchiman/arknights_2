@@ -5,7 +5,7 @@ import type { AdvantageUnit } from '../lib/damageThreeSkillRankStatistics'
 import { ADVANTAGE_POLICIES, ADVANTAGE_UNITS, NO_CORRESPONDENCE_DATA } from '../lib/damageThreeAdvantageChart'
 import { filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues } from '../lib/damageThreeSkillFilters'
 import { getEnemyMainStoryScope } from '../lib/enemyAggregationData'
-import { buildEnemySpawnPopulation } from '../lib/damageThreeEnemySpawnAdvantage'
+import { buildEnemySpawnPopulation, type EnemyOutlierScope } from '../lib/damageThreeEnemySpawnAdvantage'
 import { projectEnemyOperatorVoteSummaries } from '../lib/damageThreeEnemySpawnVotesProjection'
 import { STANDARD_PAGE_TITLES } from '../lib/navigation'
 import { buildEnemyDefenseResistanceBands, type EnemyResistanceThreshold } from '../lib/enemyDefenseResistance'
@@ -15,7 +15,10 @@ import { AnalysisTabPanel } from './AnalysisTabs'
 import { createDamageThreeStatisticsChartImage } from './createDamageThreeStatisticsChartImage'
 import { createDamageThreeEnemyAdvantageImage, type EnemyAdvantageImage } from './createDamageThreeEnemyAdvantageImage'
 import { ENEMY_ANALYSES, ENEMY_COMPARISON_TITLE, getEnemyAnalysisSegments, type EnemyAnalysis } from './enemyComparisonViews'
-import { ENEMY_ADVANTAGE_BREAKDOWNS, getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown } from './enemyAdvantageBreakdown'
+import {
+  ENEMY_ADVANTAGE_BREAKDOWNS, ENEMY_OUTLIER_SCOPES, formatEnemyOutlierFences,
+  getEnemyAdvantageDisplayRows, getVisibleEnemyAdvantageRows, type EnemyAdvantageBreakdown,
+} from './enemyAdvantageBreakdown'
 import { ComparisonTableImageDialog } from './ComparisonTableImageDialog'
 import { DamageCalculatorThreeAttributeChartImageDialog } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeEnemyAdvantageChart, DamageThreeEnemyAdvantageTable, DamageThreeEnemyMeanDamageTable, EnemyAdvantageCategorySelector, ENEMY_MEAN_DAMAGE_TITLE } from './DamageThreeEnemyAdvantageViews'
@@ -99,12 +102,15 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const [advantageUnit, setAdvantageUnit] = useState<AdvantageUnit>('skill')
   const [statisticFormat, setStatisticFormat] = useState<TableChartView>('table')
   const [enemyAnalysis, setEnemyAnalysis] = useState<EnemyAnalysis>('advantage')
+  const [advantageBreakdown, setAdvantageBreakdown] = useState<EnemyAdvantageBreakdown>('all')
+  const [outlierScope, setOutlierScope] = useState<EnemyOutlierScope>('all')
   const advantageView = useState<TableChartView>('chart')
+  const outlierView = useState<TableChartView>('table')
   const meanDamageView = useState<TableChartView>('table')
-  const [enemyFormat, setEnemyFormat] = enemyAnalysis === 'meanDamage' ? meanDamageView : advantageView
+  const [enemyFormat, setEnemyFormat] = enemyAnalysis === 'meanDamage' ? meanDamageView
+    : advantageBreakdown === 'outlier' ? outlierView : advantageView
   const operatorVoteSelection = useOperatorVoteSelection()
   const [voteListGroup, setVoteListGroup] = useState<VoteListGroup>('operator')
-  const [advantageBreakdown, setAdvantageBreakdown] = useState<EnemyAdvantageBreakdown>('all')
   const [hiddenCategoriesByBreakdown, setHiddenCategoriesByBreakdown] = useState<Partial<Record<EnemyAdvantageBreakdown, string[]>>>({})
   const [showMeanDamageBands, setShowMeanDamageBands] = useState(false)
   const [imageSnapshot, setImageSnapshot] = useState<(EnemyAdvantageImage & { location: string[] }) | null>(null)
@@ -123,6 +129,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const statsActive = mode === 'statistics'
   const enemyActive = mode === 'enemies'
   const enemyOverviewActive = enemyActive && enemyAnalysis === 'advantage'
+  const outliersActive = enemyOverviewActive && advantageBreakdown === 'outlier'
   const enemyMeanActive = enemyActive && enemyAnalysis === 'meanDamage'
   const operatorVotesActive = enemyActive && enemyAnalysis === 'operatorVotes'
   const anyStatistics = statsActive || enemyActive
@@ -143,7 +150,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const actualPolicy = actualApplyPenetration ? 'apply' : 'excludePenetration'
   const effectPolicy = mode === 'actual' ? actualPolicy : comparisonPolicy
   const statistics = useDamageThreeSkillRankStatistics(statsActive, filtered, distribution?.resistanceThresholds, comparisonPolicy)
-  const enemyReady = enemyActive && !loading && !!enemyPopulation && filtered.length > 0
+  const enemyReady = enemyActive && !loading && !!enemyPopulation && matching !== null && (filtered.length > 0 || outliersActive)
   const defaultEligible = enemyReady && scope === 'main' && (!canReset || operatorVotesActive)
     && comparisonPolicy === 'excludeAttributeEffects'
   const defaultSummary = useEnemySpawnDefaultSummary(defaultEligible, rows, aggregation.version)
@@ -156,7 +163,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const voteList = defaultSummary === 'checking' ? null : savedVoteList ?? liveVoteList
   const enemyStats = defaultSummary === 'checking' ? null : defaultSummary ?? liveEnemyStats
   const advantageRows = enemyOverviewActive && enemyStats
-    ? getEnemyAdvantageDisplayRows(enemyStats, advantageBreakdown, activeFilters.profession, activeFilters.rarity) : []
+    ? getEnemyAdvantageDisplayRows(enemyStats, advantageBreakdown, activeFilters.profession, activeFilters.rarity, outlierScope) : []
   const hiddenChartCategories = hiddenCategoriesByBreakdown[advantageBreakdown] ?? []
   const visibleAdvantageRows = getVisibleEnemyAdvantageRows(advantageRows, hiddenChartCategories)
   const meanDamageRows = enemyStats && enemyMeanActive ? (showMeanDamageBands ? enemyStats.rows : enemyStats.rows.slice(0, 1)) : []
@@ -170,7 +177,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
   const currentImage: EnemyAdvantageImage | null = enemyActive && enemyStats && enemyAnalysis !== 'operatorVotes'
     ? createDamageThreeEnemyAdvantageImage({
         statistics: enemyStats, format: enemyAnalysis === 'advantage' ? enemyFormat : enemyAnalysis,
-        breakdown: advantageBreakdown, hiddenChartCategories, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
+        breakdown: advantageBreakdown, outlierScope, hiddenChartCategories, showBands: showMeanDamageBands, advantageUnit, meanDamageFormat: enemyFormat,
         ...imageConditions,
       })
     : rankImage && { view: 'chart', snapshot: rankImage }
@@ -289,9 +296,13 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                 <span className="dc3-matrix-option-label">表示形式</span>
                 <PageViewSwitch views={TABLE_CHART_VIEWS} selected={statisticFormat} onChange={setStatisticFormat} label="表示形式" />
               </div>}
-              {enemyOverviewActive && <div className="dc3-matrix-option-group">
+              {enemyOverviewActive && <div className="dc3-matrix-option-group dc3-matrix-breakdown">
                 <span className="dc3-matrix-option-label">内訳</span>
                 <PageViewSwitch views={ENEMY_ADVANTAGE_BREAKDOWNS} selected={advantageBreakdown} onChange={setAdvantageBreakdown} label="内訳" />
+              </div>}
+              {outliersActive && <div className="dc3-matrix-option-group">
+                <span className="dc3-matrix-option-label">対象敵</span>
+                <PageViewSwitch views={ENEMY_OUTLIER_SCOPES} selected={outlierScope} onChange={setOutlierScope} label="対象敵" />
               </div>}
               {enemyOverviewActive && enemyFormat === 'chart' && advantageBreakdown !== 'all' && advantageRows.length > 0 &&
                 <EnemyAdvantageCategorySelector rows={advantageRows} hidden={hiddenChartCategories}
@@ -313,16 +324,20 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                           population={enemyPopulation} imageConditions={imageConditions} selection={operatorVoteSelection} onClose={close} />
                       : <DamageThreeOperatorVotes operator={operator} entries={filtered} population={enemyPopulation}
                           imageConditions={imageConditions} selection={operatorVoteSelection} />} />
-                : !filtered.length ? <p role="status">該当するスキルはありません。</p>
+                : !filtered.length && !outliersActive ? <p role="status">該当するスキルはありません。</p>
                 : !enemyPopulation || !enemyStats ? <p role="status">出現敵ごとの主攻撃ダメージを集計中…</p>
-                : !enemyStats.skillCount ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>
+                : !enemyStats.skillCount && !outliersActive ? <p role="status">物理・術の両方を比較できるスキルはありません。</p>
                 : <>
                     {enemyMeanActive && <div className="dc3-matrix-table-heading"><h2>{ENEMY_MEAN_DAMAGE_TITLE}</h2></div>}
-                    <div className="dc3-matrix-conditions">
+                    {outliersActive ? <div className="dc3-matrix-conditions">
+                      {formatEnemyOutlierFences(enemyStats.outliers)}
+                      <span>全敵で有効 {advantageUnit === 'skill'
+                        ? `${NUMBER.format(enemyStats.skillCount)}スキル` : `${NUMBER.format(enemyStats.stageCount)}段階`}</span>
+                    </div> : <div className="dc3-matrix-conditions">
                       <span>対象敵 {NUMBER.format(enemyPopulation.enemyCount)}種類</span>
                       <span>有効スキル数 {NUMBER.format(enemyStats.skillCount)}</span>
                       {enemyOverviewActive && <span>有効段階数 {NUMBER.format(enemyStats.stageCount)}</span>}
-                    </div>
+                    </div>}
                     {enemyAnalysis === 'histogram' ? <DamageThreeSkillPhysicalRateHistogram bins={enemyStats.skillPhysicalRateBins} />
                       : enemyOverviewActive && enemyFormat === 'chart' ? <DamageThreeEnemyAdvantageChart rows={visibleAdvantageRows} unit={advantageUnit} breakdown={advantageBreakdown} />
                       : enemyMeanActive && enemyFormat === 'chart' ? <DamageThreeEnemyMeanDamageChart rows={meanDamageRows} />

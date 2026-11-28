@@ -8,8 +8,8 @@ import type { NamedSkillRankStageSample } from '../src/lib/damageThreeSkillRankS
 import type { EnemyRecord } from '../src/types/enemy.ts'
 import type { EnemyHistogramCounts } from '../src/lib/enemyHistogramCounts.ts'
 
-function enemy(id: string, defense: number | null, magicResistance: number | null): EnemyRecord {
-  return { id, stats: { defense, magicResistance } } as EnemyRecord
+function enemy(id: string, defense: number | null, magicResistance: number | null, levelType: EnemyRecord['levelType'] = 'NORMAL'): EnemyRecord {
+  return { id, levelType, stats: { defense, magicResistance } } as EnemyRecord
 }
 
 function sample(operatorId: string, cells: NamedSkillRankStageSample['cells'], stageLabel = '通常', skillIndex = 1): NamedSkillRankStageSample {
@@ -19,12 +19,13 @@ function sample(operatorId: string, cells: NamedSkillRankStageSample['cells'], s
 }
 
 test('同じ敵の2値を保ち、同一組だけをまとめて欠測・出現なしを分ける', () => {
-  const rows = [enemy('A', 0, 30), enemy('B', 0, 30), enemy('C', 300, 0),
+  const rows = [enemy('A', 0, 30), enemy('B', 0, 30, 'ELITE'), enemy('C', 300, 0, 'BOSS'),
     enemy('D', 0, null), enemy('E', null, 0), enemy('F', 400, 50)]
   const counts = { enemies: Object.fromEntries([2, 3, 1.5, 1, 4, 0].map((spawnCount, i) =>
     [rows[i].id, { spawnCount, mapCount: 1 }])) } as EnemyHistogramCounts
   assert.deepEqual(buildEnemySpawnPopulation(rows, counts), {
-    pairs: [{ defense: 0, resistance: 30, spawnCount: 5 }, { defense: 300, resistance: 0, spawnCount: 1.5 }],
+    pairs: [{ defense: 0, resistance: 30, spawnCount: 5, eliteBossSpawnCount: 3 },
+      { defense: 300, resistance: 0, spawnCount: 1.5, eliteBossSpawnCount: 1.5 }],
     spawnCount: 6.5, enemyCount: 3, missingSpawnCount: 5,
   })
   assert.deepEqual(buildEnemySpawnPopulation(rows, null), {
@@ -74,6 +75,45 @@ test('職業別とレアリティ別の票は各カテゴリで個別に集計�
       assert.deepEqual(row.stage, expected.rows[0].stage)
     }
   }
+})
+
+test('外れ値別の閾値を全敵で固定し、境界値・欠測段階・一部エリートの組を両集計単位で区別する', () => {
+  const pairs = [
+    { defense: 0, resistance: 0, spawnCount: 20, eliteBossSpawnCount: 0 },
+    { defense: 100, resistance: 20, spawnCount: 20, eliteBossSpawnCount: 1 },
+    { defense: 250, resistance: 50, spawnCount: 1, eliteBossSpawnCount: 0 },
+    { defense: 251, resistance: 50, spawnCount: 2, eliteBossSpawnCount: 1.5 },
+    { defense: 250, resistance: 51, spawnCount: 1.5, eliteBossSpawnCount: 0 },
+    { defense: 251, resistance: 51, spawnCount: 1, eliteBossSpawnCount: 1 },
+  ]
+  const physical = { physical: 2, arts: 1 }, arts = { physical: 1, arts: 2 }
+  const tie = { physical: 1, arts: 1 }, missing = { physical: null, arts: 1 }
+  const stages = [sample('A', [physical, physical, arts, tie, missing, arts]),
+    sample('A', [arts, missing, arts, physical, missing, arts]), sample('B', [tie, tie, arts, physical, missing, tie])]
+  const { outliers } = summarizeEnemySpawnAdvantage(pairs, stages)
+  assert.deepEqual([outliers.defenseFence, outliers.resistanceFence], [250, 50])
+  assert.deepEqual(outliers.all.map(row => row.spawnCount), [45.5, 1, 2, 1.5, 41])
+  assert.deepEqual(outliers.eliteBoss.map(row => row.spawnCount), [3.5, 1, 1.5, 0, 1])
+  for (const scope of ['all', 'eliteBoss'] as const) {
+    const rows = outliers[scope]
+    const groupIndices = [[0, 1, 2, 3, 4, 5], [5], [3], [4], [0, 1, 2]]
+    rows.forEach((row, index) => {
+      assert.equal(row.spawnShare, row.spawnCount / rows[0].spawnCount)
+      const indices = groupIndices[index].filter(i => scope === 'all' || pairs[i].eliteBossSpawnCount > 0)
+      const subset = indices.map(i => ({ ...pairs[i], spawnCount: scope === 'all' ? pairs[i].spawnCount : pairs[i].eliteBossSpawnCount }))
+      const selectedStages = stages.map(stage => ({ ...stage, cells: indices.map(i => stage.cells[i]) }))
+      const expected = summarizeEnemySpawnAdvantage(subset, selectedStages).rows[0]
+      assert.deepEqual(row.skill, expected.skill)
+      assert.deepEqual(row.stage, expected.stage)
+    })
+  }
+  // No comparable skill for group ③; its fractional spawn count still contributes to the composition.
+  assert.equal(outliers.all[3].skill.count, 0)
+  const empty = summarizeEnemySpawnAdvantage([], []).outliers
+  assert.deepEqual([empty.defenseFence, empty.resistanceFence], [null, null])
+  assert.ok([...empty.all, ...empty.eliteBoss].every(row => row.spawnShare === null && row.skill.count === 0))
+  const withoutSkills = summarizeEnemySpawnAdvantage(pairs, []).outliers
+  assert.deepEqual(withoutSkills.eliteBoss.map(row => row.spawnCount), outliers.eliteBoss.map(row => row.spawnCount))
 })
 
 test('物理優勢率は下限を含む10ポイント幅で数え、100%も最終階級に含める', () => {
@@ -200,6 +240,9 @@ test('敵データv12のメインストーリーで対象数・組数・防御�
   const population = buildEnemySpawnPopulation(data.rows, data.counts)
   assert.deepEqual([population.enemyCount, population.spawnCount, population.missingSpawnCount, population.pairs.length],
     [272, 11409, 201, 136])
-  assert.deepEqual(summarizeEnemySpawnAdvantage(population.pairs, []).rows.map(row => row.spawnCount),
-    [11409, 7384, 2834, 669, 522])
+  const statistics = summarizeEnemySpawnAdvantage(population.pairs, [])
+  assert.deepEqual(statistics.rows.map(row => row.spawnCount), [11409, 7384, 2834, 669, 522])
+  assert.deepEqual([statistics.outliers.defenseFence, statistics.outliers.resistanceFence], [422.5, 75])
+  assert.deepEqual(statistics.outliers.all.map(row => row.spawnCount), [11409, 114, 1143, 0, 10152])
+  assert.deepEqual(statistics.outliers.eliteBoss.map(row => row.spawnCount), [1756, 51, 924, 0, 781])
 })

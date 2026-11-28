@@ -2,6 +2,16 @@ import { resolve } from 'node:path'
 import { normalizePath } from 'vite'
 import { getEnemySpawnCalculationHash } from './lib/enemySpawnCalculationHash.mjs'
 
+const finiteOrNull = value => value === null || Number.isFinite(value)
+const hasVoteCounts = votes => ['count', 'physicalWins', 'ties', 'artsWins'].every(key => Number.isFinite(votes?.[key]))
+
+function hasOutlierSummary(outliers) {
+  if (!finiteOrNull(outliers?.defenseFence) || !finiteOrNull(outliers?.resistanceFence)) return false
+  return [outliers.all, outliers.eliteBoss].every(rows => Array.isArray(rows) && rows.length === 5
+    && rows.every(row => typeof row?.label === 'string' && Number.isFinite(row.spawnCount)
+      && finiteOrNull(row.spawnShare) && hasVoteCounts(row.skill) && hasVoteCounts(row.stage)))
+}
+
 /** A saved summary can only be served with the calculator that produced it. */
 export function enemySpawnDefaultPlugin() {
   let root, command, artifact
@@ -23,7 +33,8 @@ export function enemySpawnDefaultPlugin() {
       })
       const saved = JSON.parse(source)
       if (currentHash === saved.calculationSha256 && Array.isArray(saved.statistics?.professionRows)
-        && Array.isArray(saved.statistics?.rarityRows) && Array.isArray(saved.statistics?.operatorVotes)) return
+        && Array.isArray(saved.statistics?.rarityRows) && Array.isArray(saved.statistics?.operatorVotes)
+        && hasOutlierSummary(saved.statistics.outliers)) return
       const message = 'DC3の事前集計を npm run generate:dc3-enemy-default で更新してください。'
       if (command === 'build') this.error(message)
       this.warn(message)

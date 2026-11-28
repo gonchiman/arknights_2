@@ -34,23 +34,35 @@ export function DamageThreeEnemyMeanDamageTable({ rows }: { rows: readonly Enemy
 }
 
 export function DamageThreeEnemyAdvantageTable({ rows, unit, breakdown }: EnemyAdvantageViewProps) {
-  const categoryLabel = { all: '区分', defense: '防御力帯', profession: '職業', rarity: 'レアリティ' }[breakdown]
+  const categoryLabel = { all: '区分', defense: '防御力帯', profession: '職業', rarity: 'レアリティ', outlier: '上側外れ値' }[breakdown]
+  const isOutlier = breakdown === 'outlier'
   return <table className="damage-two-table dc3-statistics-table dc3-enemy-advantage-table" aria-label="出現敵での優勢率">
-    <colgroup><col /><col />{ADVANTAGE_OUTCOMES.map(({ key }) => <col key={key} />)}</colgroup>
-    <thead><tr>
+    <colgroup><col /></colgroup><colgroup><col />{isOutlier && <col />}</colgroup>
+    <colgroup>{ADVANTAGE_OUTCOMES.map(({ key }) => <col key={key} />)}</colgroup>
+    <thead>{isOutlier ? <>
+      <tr><th scope="col" rowSpan={2}>{categoryLabel}</th><th scope="colgroup" colSpan={2}>敵の出現</th>
+        <th scope="colgroup" colSpan={ADVANTAGE_OUTCOMES.length}>{ADVANTAGE_LEGEND} (%)</th></tr>
+      <tr><th scope="col">出現回数</th><th scope="col">出現割合 (%)</th>
+        {ADVANTAGE_OUTCOMES.map(({ key, label }) => <th scope="col" key={key}>{label}</th>)}</tr>
+    </> : <tr>
       <th scope="col">{categoryLabel}</th><th scope="col">{getEnemyAdvantageCountLabel(breakdown, unit)}</th>
       {ADVANTAGE_OUTCOMES.map(({ key, label }) => <th scope="col" key={key}>{label} (%)</th>)}
-    </tr></thead>
+    </tr>}</thead>
     <tbody>{rows.map(row => {
       const votes = row[unit]
       return <tr key={row.label}>
         <th scope="row">{row.label}</th><td data-table-image-number>{INTEGER.format(getEnemyAdvantageRowCount(row, unit))}</td>
+        {'spawnShare' in row && <td data-table-image-number>{formatSpawnShare(row.spawnShare)}</td>}
         {ADVANTAGE_OUTCOMES.map(({ key }) => <td key={key} data-table-image-number>
           {formatAdvantagePercentage(votes[key], votes.count)}
         </td>)}
       </tr>
     })}</tbody>
   </table>
+}
+
+function formatSpawnShare(share: number | null) {
+  return share === null ? '—' : (share * 100).toFixed(1)
 }
 
 export function getEnemyAdvantagePlotHeight(rowCount: number) {
@@ -67,6 +79,7 @@ interface VotePlotRow {
   label: string
   note?: string
   votes: WeightedVotes
+  emptyLabel?: string
 }
 
 function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
@@ -77,12 +90,12 @@ function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
   const rowHeight = height / Math.max(rows.length, 1)
   return <svg className="dc3-enemy-advantage-plot" width={width ?? '100%'} height={height}
     style={minWidth ? { minWidth } : undefined} aria-label={title} role="img">
-    <desc>{rows.map(({ label, note, votes }) => {
+    <desc>{rows.map(({ label, note, votes, emptyLabel = '対象なし' }) => {
       const details = votes.count > 0 ? ADVANTAGE_OUTCOMES.map(({ key, label }) =>
-        `${label} ${formatAdvantagePercentage(votes[key], votes.count)}%`).join('、') : '対象なし'
+        `${label} ${formatAdvantagePercentage(votes[key], votes.count)}%`).join('、') : emptyLabel
       return [label, note, details].filter(Boolean).join('、')
     }).join('。')}</desc>
-    {rows.map(({ key, label, note, votes }, index) => {
+    {rows.map(({ key, label, note, votes, emptyLabel = '対象なし' }, index) => {
       const center = (index + 0.5) * rowHeight
       let offset = 0
       return <g key={key} data-band={key} aria-hidden="true">
@@ -100,7 +113,7 @@ function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
             <rect x={labelX} y={center + 21} width={8} height={8} fill={color} />
             <text x={labelX} dx={13} y={center + 29}>{label} {formatAdvantagePercentage(votes[key], votes.count)}%</text>
           </g>
-        }) : <text y={center + 9}>対象なし</text>}
+        }) : <text y={center + 9}>{emptyLabel}</text>}
       </g>
     })}
   </svg>
@@ -108,11 +121,17 @@ function VoteSharePlot({ rows, title, width, height, minWidth }: PlotSize & {
 
 export function DamageThreeEnemyAdvantagePlot({ rows, unit, breakdown, ...size }: EnemyAdvantageViewProps & PlotSize) {
   const countLabel = getEnemyAdvantageCountLabel(breakdown, unit)
-  const bands = rows.map(row => ({
-    key: row.label, label: breakdown === 'defense' && row.label !== '全体' ? `防御力 ${row.label}` : row.label,
-    note: `${countLabel} ${INTEGER.format(getEnemyAdvantageRowCount(row, unit))}`, votes: row[unit],
-  }))
-  return <VoteSharePlot {...size} rows={bands} title="出現回数で重み付けした属性別の優勢率" />
+  const bands = rows.map(row => {
+    const count = getEnemyAdvantageRowCount(row, unit)
+    let note = `${countLabel} ${INTEGER.format(count)}`
+    if ('spawnShare' in row) note += ` · 出現割合 ${row.spawnShare === null ? '—' : formatSpawnShare(row.spawnShare) + '%'}`
+    return {
+      key: row.label, label: breakdown === 'defense' && row.label !== '全体' ? `防御力 ${row.label}` : row.label,
+      note, votes: row[unit], emptyLabel: breakdown === 'outlier' && count > 0 ? '比較票なし' : undefined,
+    }
+  })
+  const minWidth = breakdown === 'outlier' && size.width === undefined ? '32em' : undefined
+  return <VoteSharePlot {...size} rows={bands} minWidth={minWidth} title="出現回数で重み付けした属性別の優勢率" />
 }
 
 export function OperatorSkillVotesPlot({ operator, ...size }: { operator: EnemyOperatorVoteSummary } & PlotSize) {
@@ -158,8 +177,11 @@ export function EnemyAdvantageCategorySelector({ rows, hidden, onChange }: {
 
 export function DamageThreeEnemyAdvantageChart(props: EnemyAdvantageViewProps) {
   if (!props.rows.length) return <p role="status">表示カテゴリを選択してください。</p>
+  const plot = <DamageThreeEnemyAdvantagePlot {...props} height={getEnemyAdvantagePlotHeight(props.rows.length)} />
   return <figure className="dc3-stat-chart" aria-label="出現敵での優勢率">
     <figcaption className="dc3-stat-chart-caption"><strong>{ADVANTAGE_LEGEND}</strong></figcaption>
-    <DamageThreeEnemyAdvantagePlot {...props} height={getEnemyAdvantagePlotHeight(props.rows.length)} />
+    {props.breakdown === 'outlier'
+      ? <div className="dc3-skill-votes-plot-scroll" role="region" aria-label="外れ値別の優勢率グラフ" tabIndex={0}>{plot}</div>
+      : plot}
   </figure>
 }
