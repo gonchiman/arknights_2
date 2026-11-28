@@ -9,6 +9,7 @@
 | 作業開始時 | [共通ルールの運用](instructions/shared-rules.md) |
 | 機能開発でファイルを編集する前、開発サーバーを起動・再起動するとき、配信元を確認するとき、`main` の作業フォルダを切り替えるとき | [機能開発の作業フォルダと開発サーバー](instructions/local-development.md) |
 | AGENTS.mdまたはその参照先の指示ファイルを作成・修正・分割するとき | [指示ファイルの管理方針](instructions/agents-writing.md) |
+| 機能・タブ・ページの追加を提案・設計・実装するとき、既存機能を移植するとき、またはナビゲーションを再編するとき | [アプリの階層とページの分け方](instructions/app-structure.md) |
 | このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [既存機能・UIの調査と再利用](instructions/implementation-reuse.md) |
 | 画面の見た目・情報配置・操作が変わる実装案や修正案を提示するとき | [UI案の画面見本](instructions/ui-proposals.md) |
 | このサイトの機能・UIの追加や修正について、案を提示するとき、設計するとき、または実装するとき | [UIの補足テキスト方針](instructions/ui-text.md) |
