@@ -12,6 +12,7 @@ import './DamageCalculatorThreeAttributeChartImageDialog.css'
 export interface DamageCalculatorThreeAttributeChartImageSnapshot {
   title: string
   defaultAspect?: ChartImageAspectSettings
+  outputWidth?: number
   axisTitle?: string
   footerNote?: string
   className?: string
@@ -48,10 +49,12 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
   const layout = useAlternateLayout ? alternateLayout : undefined
   const aspect = chosenAspect ?? layout?.defaultAspect ?? snapshot.defaultAspect ?? AUTO_ASPECT
   const parsedAspect = aspect.preset === 'auto' ? null : parseTableImageAspect(aspect.width, aspect.height)
-  const invalidAspect = aspect.preset !== 'auto' && !parsedAspect
+  let aspectError = aspect.preset !== 'auto' && !parsedAspect
+    ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。' : undefined
   const aspectRatio = parsedAspect ? parsedAspect.width / parsedAspect.height : undefined
   const picker = getChartImageSavePicker()
   const image = layout?.snapshot ?? snapshot
+  const output = image.outputWidth && aspectRatio ? { width: image.outputWidth, aspectRatio } : undefined
   const filename = createChartImageFilename(image.title, image.filenameParts)
   const frameProps: ChartImageFrameProps = {
     title: image.title,
@@ -65,9 +68,14 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
     exactAspect: parsedAspect ?? undefined,
     children: image.chart,
   }
+  const initialSize = getChartImageLayout(frameProps)
+  if (output) {
+    try { getChartImageRasterSize(initialSize, output) }
+    catch { aspectError = 'この縦横比では画像の大きさが上限を超えます。' }
+  }
 
   async function saveImage(selectedFilename: string, chooseLocation: boolean) {
-    if (invalidAspect || saveInProgress.current) return
+    if (aspectError || saveInProgress.current) return
     saveInProgress.current = true
     setSaving(true)
     setSaveError(false)
@@ -77,7 +85,8 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
       await saveComparisonChartImage({
         chart: <ChartImageFrame {...frameProps} />,
         filename: selectedFilename,
-        width: getChartImageLayout(frameProps).width,
+        width: initialSize.width,
+        output,
         writeBlob: destination.type === 'file' ? destination.write : undefined,
       })
       onClose()
@@ -95,7 +104,7 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
     getDefaultFilename={ratio => withChartImageAspect(filename, ratio)}
     aspect={aspect}
     aspectPresets={IMAGE_ASPECT_PRESETS}
-    aspectError={invalidAspect ? '幅と高さは1〜100の整数、縦横比は1:10〜10:1で指定してください。' : undefined}
+    aspectError={aspectError}
     onAspectChange={next => { setAspect(next); setSaveError(false) }}
     canChooseLocation={Boolean(picker)}
     saving={saving}
@@ -115,8 +124,8 @@ export function DamageCalculatorThreeAttributeChartImageDialog({ snapshot, alter
         <option value="alternate">{alternateLayout.label}</option>
       </select>
     </label>}
-    preview={!invalidAspect && <ChartFrameImagePreview
-      key={`${filename}:${aspectRatio ?? 'auto'}`} {...frameProps} />}
+    preview={!aspectError && <ChartFrameImagePreview
+      key={`${filename}:${aspectRatio ?? 'auto'}`} {...frameProps} output={output} />}
   />
 }
 

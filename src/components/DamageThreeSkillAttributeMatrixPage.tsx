@@ -331,6 +331,7 @@ export default function DamageThreeSkillAttributeMatrixPage({ rows, loading }: {
                     {enemyMeanActive && <div className="dc3-matrix-table-heading"><h2>{ENEMY_MEAN_DAMAGE_TITLE}</h2></div>}
                     {outliersActive ? <div className="dc3-matrix-conditions">
                       {formatEnemyOutlierFences(enemyStats.outliers)}
+                      {enemyFormat === 'chart' && <span>対象敵の出現回数 {NUMBER.format(enemyStats.outliers[outlierScope][0].spawnCount)}回</span>}
                       <span>全敵で有効 {advantageUnit === 'skill'
                         ? `${NUMBER.format(enemyStats.skillCount)}スキル` : `${NUMBER.format(enemyStats.stageCount)}段階`}</span>
                     </div> : <div className="dc3-matrix-conditions">
