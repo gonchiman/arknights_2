@@ -16,6 +16,7 @@ import {
   filterDamageCalculatorThreeCoverage,
   type DamageCalculatorThreeCoverageFilters,
 } from '../lib/damageCalculatorThreeCoverageFilters'
+import { DC3_COVERAGE_ITEM, DC3_HOME_ITEM, HOME_LINK } from '../lib/navigation'
 import { getProfessionLabel, PROFESSION_ORDER } from '../lib/operatorFilters'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
@@ -27,6 +28,7 @@ import { DamageCalculatorThreeCoverageVersionComparison } from './DamageCalculat
 import { DamageCalculatorThreeModuleCoverage } from './DamageCalculatorThreeModuleCoverage'
 import { GoldenglowDetailModal } from './GoldenglowDetailModal'
 import { OperatorDetailLink, type OpenOperatorDetail } from './OperatorDetailLink'
+import { PageBreadcrumbs } from './PageBreadcrumbs'
 import './SkillDirectory.css'
 import './SkillCoarseClassificationPage.css'
 import './SkillEffectModal.css'
@@ -153,7 +155,10 @@ export function DamageCalculatorThreeCoveragePage({ rows, loading, onOpenOperato
 
   return (
     <section className="damage-three-coverage-page">
-      <header className="page-intro"><h1>DC3 実装範囲</h1></header>
+      <div className="page-heading-with-breadcrumbs">
+        <PageBreadcrumbs parents={[HOME_LINK, DC3_HOME_ITEM]} current={DC3_COVERAGE_ITEM.label} />
+        <header className="page-intro"><h1>DC3 実装範囲</h1></header>
+      </div>
       <AnalysisTabs tabs={COVERAGE_TABS} activeTab={activeTab} onChange={tab => {
         setActiveTab(tab)
         if (tab === 'compare') setComparisonVisited(true)
