@@ -324,6 +324,7 @@ test('外れ値別の画面と画像は選択対象の出現割合を保持し�
   const props = { rows, unit: 'skill', breakdown: 'outlier' }
   const table = renderToStaticMarkup(createElement(DamageThreeEnemyAdvantageTable, props))
   const savedTable = createEnemyImage(options).snapshot
+  assert.deepEqual(savedTable.defaultOutput, { width: 1920, aspect: { preset: '16:9', width: '16', height: '9' } })
   assert.equal(renderToStaticMarkup(savedTable.table), table)
   assert.match(table, /出現割合 \(%\)/)
   assert.match(table, />2<\/td><td[^>]*>40\.0<\/td>(?:<td[^>]*>—<\/td>){3}/)

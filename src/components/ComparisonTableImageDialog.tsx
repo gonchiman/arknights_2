@@ -11,13 +11,14 @@ export interface ComparisonTableImageSnapshot {
   title: string
   conditions: readonly string[]
   filenameConditions?: readonly string[]
+  defaultOutput?: { width: number; aspect: ChartImageAspectSettings }
   table: ReactNode
 }
 
 const IMAGE_WIDTH = 720
 const IMAGE_ASPECT_PRESETS = ['16:9', '4:3', '1:1', '2:1', '9:16'] as const
 
-export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth, helpMode = 'popover', parentLocation }: {
+export function ComparisonTableImageDialog({ snapshot, onClose, options, selectionError, fixedOutputWidth = snapshot.defaultOutput?.width, helpMode = 'popover', parentLocation }: {
   parentLocation?: readonly string[]
   snapshot: ComparisonTableImageSnapshot
   onClose: () => void
@@ -26,8 +27,8 @@ export function ComparisonTableImageDialog({ snapshot, onClose, options, selecti
   fixedOutputWidth?: number
   helpMode?: 'inline' | 'popover' | 'none'
 }) {
-  const [aspect, setAspect] = useState<ChartImageAspectSettings>({ preset: 'auto', width: '16', height: '9' })
-  const [fixOutputWidth, setFixOutputWidth] = useState(false)
+  const [aspect, setAspect] = useState<ChartImageAspectSettings>(snapshot.defaultOutput?.aspect ?? { preset: 'auto', width: '16', height: '9' })
+  const [fixOutputWidth, setFixOutputWidth] = useState(snapshot.defaultOutput !== undefined)
   const [readyLayout, setReadyLayout] = useState<{
     snapshot: ComparisonTableImageSnapshot; key: string
   } | null>(null)

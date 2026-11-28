@@ -97,6 +97,7 @@ export function createDamageThreeEnemyAdvantageImage({
   if (format === 'table') {
     return { view: 'table', snapshot: {
       title, conditions, filenameConditions: ['表', ...filenameParts],
+      defaultOutput: { width: 1920, aspect: { preset: '16:9', width: '16', height: '9' } },
       table: <DamageThreeEnemyAdvantageTable rows={rows} unit={unit} breakdown={mode} />,
     } }
   }
