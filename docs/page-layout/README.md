@@ -4,6 +4,8 @@
 
 ## 新しいページを追加するとき
 
+新しい機能を置くページは、先に[アプリの階層とページの分け方](../../instructions/app-structure.md)に沿って決める。以下は、そのページ内での設定と結果の配置に使う。
+
 設計時に、設定と結果のどのまとまりをチャットで個別に指すかを[アドレスコピーの仕様](../element-location-copy/README.md)に沿って決める。以下の出力部品を選ぶ前に、`settings` に置くセクションも含めて確認する。
 
 1. [ルートの定義](../../src/lib/routes.ts)にページを追加し、[ナビゲーションの定義](../../src/lib/navigation.ts)の `STANDARD_PAGE_TITLES` にルートの `view` と表示名を登録する。メニューに載せる場合は、その表示名をメニュー項目の `label` にも使う。
@@ -13,7 +15,7 @@
 | 出力の形 | 使う部品 |
 | --- | --- |
 | 結果が1つ | `PageOutputHeader` と結果を並べる。見出しや表示切替は左、画像保存・アドレスコピーは右に置く。ページ名だけで対象が分かり、保存操作もなければ `<PageOutputHeader />` で足りる。 |
-| 結果が複数 | `PageOutputTabs` にタブの定義と選択状態を渡す。下線付きタブと右端のコピーが一緒に表示される。各結果は同じ `idPrefix` と `activeTab` の [AnalysisTabPanel](../../src/components/AnalysisTabs.tsx) に置く。 |
+| 同じ目的の複数の結果をタブで切り替える | `PageOutputTabs` にタブの定義と選択状態を渡す。下線付きタブと右端のコピーが一緒に表示される。各結果は同じ `idPrefix` と `activeTab` の [AnalysisTabPanel](../../src/components/AnalysisTabs.tsx) に置く。 |
 | 同じ結果を表・グラフなどに切り替える | [PageViewSwitch](../../src/components/PageViewSwitch.tsx) を結果の上に置く。選択中の表示名を `PageOutputTabs` の `format` に渡す。単一出力では `PageOutputHeader` の `segments` に渡す。 |
 
 本文幅・中央寄せ・設定行の折り返しとコピー位置は [PageLayout.css](../../src/components/PageLayout.css) が定義する。本文の上限は960px。狭い画面では共通のページ余白の内側に収まり、ヘッドバーは画面幅を使う。アドレスの書式や既存要素への適用範囲は[アドレスコピーの仕様](../element-location-copy/README.md)に従う。
