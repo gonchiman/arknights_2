@@ -4,7 +4,7 @@ import type { ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
 import type { ChartImageAlternateLayout, DamageCalculatorThreeAttributeChartImageSnapshot } from './DamageCalculatorThreeAttributeChartImageDialog'
 import { DamageThreeAdvantageImageLegend } from './DamageThreeAdvantageChartImage'
 import { DamageThreeEnemyAdvantageLabeledPlot, ENEMY_ADVANTAGE_LABELED_PLOT_HEIGHT } from './DamageThreeEnemyAdvantageLabeledPlot'
-import { DamageThreeEnemyAdvantagePlot, DamageThreeEnemyAdvantageTable, DamageThreeEnemyMeanDamageTable, ENEMY_MEAN_DAMAGE_TITLE, getEnemyAdvantagePlotHeight } from './DamageThreeEnemyAdvantageViews'
+import { DamageThreeEnemyAdvantagePlot, DamageThreeEnemyAdvantageTable, DamageThreeEnemyMeanDamageTable, ENEMY_MEAN_DAMAGE_TITLE, ENEMY_OUTLIER_PLOT_TITLE, getEnemyAdvantagePlotHeight } from './DamageThreeEnemyAdvantageViews'
 import {
   DamageThreeEnemyMeanDamageLegend, DamageThreeEnemyMeanDamageOverallPlot, DamageThreeEnemyMeanDamagePlot,
   ENEMY_MEAN_DAMAGE_AXIS, ENEMY_MEAN_DAMAGE_OVERALL_HEIGHT, getEnemyMeanDamagePlotHeight,
@@ -62,8 +62,8 @@ export function createDamageThreeEnemyAdvantageImage({
     ? [...source, '外れ値別', ...target, formatEnemyOutlierFences(statistics.outliers, true), ...comparisonSettings]
     : [...source, breakdownLabel, ...comparisonSettings]
   const count = unit === 'skill' ? `${statistics.skillCount.toLocaleString('ja-JP')}スキル` : `${statistics.stageCount.toLocaleString('ja-JP')}段階`
-  const conditions = [...source, breakdownLabel, ...target, ...comparisonSettings, spawnCount,
-    outlierRows && outlierScope !== 'all' ? `全敵で有効 ${count}` : count]
+  const comparisonCount = outlierRows && outlierScope !== 'all' ? `全敵で有効 ${count}` : count
+  const conditions = [...source, breakdownLabel, ...target, ...comparisonSettings, spawnCount, comparisonCount]
   if (outlierRows) conditions.push(formatEnemyOutlierFences(statistics.outliers))
   const title = format === 'meanDamage' ? ENEMY_MEAN_DAMAGE_TITLE : '出現敵での優勢率'
 
@@ -103,15 +103,24 @@ export function createDamageThreeEnemyAdvantageImage({
   }
   const visibleRows = getVisibleEnemyAdvantageRows(rows, hiddenChartCategories)
   if (!visibleRows.length) return null
-  const selection = visibleRows.length === rows.length ? [] : [`表示 ${visibleRows.map(row => row.label).join('・')}`]
+  const selection = visibleRows.length === rows.length ? [] : [
+    `表示 ${visibleRows.map(row => outlierRows ? row.label.split(' ')[0] : row.label).join('・')}`,
+  ]
   const snapshot: DamageCalculatorThreeAttributeChartImageSnapshot = {
     title, conditions: [...conditions, ...selection],
-    filenameParts: outlierRows ? ['グラフ', ...filenameParts, ...selection] : ['グラフ', ...selection, ...filenameParts],
+    filenameParts: ['グラフ', ...selection, ...filenameParts],
     axisTitle: '出現回数で重み付けした優勢率（%）',
-    naturalChartHeight: getEnemyAdvantagePlotHeight(visibleRows.length),
+    naturalChartHeight: getEnemyAdvantagePlotHeight(visibleRows.length, mode),
     legend: <DamageThreeAdvantageImageLegend />,
     chart: size => <DamageThreeEnemyAdvantagePlot rows={visibleRows} unit={unit} breakdown={mode} {...size} />,
   }
+  if (outlierRows) return { view: 'chart', snapshot: {
+    ...snapshot, title: ENEMY_OUTLIER_PLOT_TITLE, axisTitle: '', legend: null,
+    className: 'dc3-outlier-chart-image',
+    conditions: [scopeLabel, ...target, spawnCount, comparisonCount],
+    footerNote: [formatEnemyOutlierFences(statistics.outliers), '出現回数で重み付け', ...comparisonSettings, versionLabel].join('・'),
+    defaultAspect: { preset: '16:9', width: '16', height: '9' }, outputWidth: 1920,
+  } }
   if (mode !== 'all') return { view: 'chart', snapshot }
 
   return { view: 'chart', snapshot, alternateLayout: {

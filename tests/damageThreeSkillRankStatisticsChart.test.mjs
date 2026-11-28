@@ -332,10 +332,16 @@ test('外れ値別の画面と画像は選択対象の出現割合を保持し�
   const savedChart = createEnemyImage({ ...options, format: 'chart', hiddenChartCategories: ['全体'] }).snapshot
   const chart = renderToStaticMarkup(savedChart.chart({ height: savedChart.naturalChartHeight }))
   assert.match(chart, /② 防御力のみ、出現回数 2 · 出現割合 40\.0%、比較票なし/)
-  assert.match(chart, /③ 術耐性のみ、出現回数 0 · 出現割合 0\.0%、対象なし/)
+  assert.match(chart, /③ 術耐性のみ、出現回数 0 · 出現割合 0\.0%、該当する出現なし/)
+  assert.match(chart, /data-series="spawn"[^>]*width="40%"/)
+  assert.match(chart, />比較票なし<\/text>/)
+  assert.match(chart, />該当する出現なし<\/text>/)
+  assert.doesNotMatch(chart, /data-series="(?:physical|tie|arts)"|NaN|Infinity/)
+  const fence = '上側外れ値の基準（全敵） 防御力 422.5超・術耐性 75超'
+  assert.ok(savedTable.conditions.includes(fence))
+  assert.ok(savedChart.footerNote.includes(fence))
   for (const snapshot of [savedTable, savedChart]) {
     assert.ok(snapshot.conditions.includes('出現回数 5'))
-    assert.ok(snapshot.conditions.includes('上側外れ値の基準（全敵） 防御力 422.5超・術耐性 75超'))
     const filename = snapshot.filenameConditions ?? snapshot.filenameParts
     assert.ok(filename.includes('エリート＋ボス') && filename.includes('防御力 422.5超・術耐性 75超'))
   }
@@ -344,6 +350,44 @@ test('外れ値別の画面と画像は選択対象の出現割合を保持し�
   const emptyTable = createEnemyImage({ ...options, statistics: empty }).snapshot
   assert.ok(emptyTable.conditions.includes('出現回数 0'))
   assert.match(renderToStaticMarkup(emptyTable.table), />0<\/td>(?:<td[^>]*>—<\/td>){4}/)
+  const emptyChart = createEnemyImage({ ...options, format: 'chart', statistics: empty }).snapshot
+  assert.doesNotMatch(renderToStaticMarkup(emptyChart.chart({ height: emptyChart.naturalChartHeight })), /data-series="spawn"|NaN|Infinity/)
+})
+
+test('外れ値別グラフは同じ行に対象敵の出現割合と区分内の得票率を描く', async () => {
+  const { default: { statistics } } = await server.ssrLoadModule('/src/data/damageThreeEnemySpawnDefault.json')
+  const { DamageThreeEnemyAdvantageChart } = await server.ssrLoadModule('/src/components/DamageThreeEnemyAdvantageViews.tsx')
+  const { DamageCalculatorThreeAttributeChartImageDialog } =
+    await server.ssrLoadModule('/src/components/DamageCalculatorThreeAttributeChartImageDialog.tsx')
+  for (const scope of ['all', 'eliteBoss']) {
+    const rows = statistics.outliers[scope]
+    const options = { ...meanDamageOptions, statistics, format: 'chart', breakdown: 'outlier', outlierScope: scope }
+    const initial = createEnemyImage(options).snapshot
+    assert.equal(initial.outputWidth, 1920)
+    assert.equal(initial.defaultAspect.preset, '16:9')
+    const dialog = renderToStaticMarkup(createElement(DamageCalculatorThreeAttributeChartImageDialog, {
+      snapshot: initial, onClose() {},
+    }))
+    assert.match(dialog, /1,920 × 1,080 px/)
+    const draw = snapshot => renderToStaticMarkup(snapshot.chart({ height: snapshot.naturalChartHeight }))
+    const rowLabels = markup => [...markup.matchAll(/data-band="([^"]+)"/g)].map(match => match[1])
+    assert.deepEqual(rowLabels(draw(initial)), rows.map(row => row.label))
+    const withoutOverall = createEnemyImage({ ...options, hiddenChartCategories: ['全体'] }).snapshot
+    assert.deepEqual(rowLabels(draw(withoutOverall)), rows.slice(1).map(row => row.label))
+
+    const row = rows[1]
+    const hiddenChartCategories = rows.filter(other => other !== row).map(other => other.label)
+    for (const unit of ['skill', 'stage']) {
+      const snapshot = createEnemyImage({ ...options, advantageUnit: unit, hiddenChartCategories }).snapshot
+      const chart = draw(snapshot)
+      const screen = renderToStaticMarkup(createElement(DamageThreeEnemyAdvantageChart, { rows: [row], unit, breakdown: 'outlier' }))
+      assert.ok(screen.includes(chart))
+      assert.deepEqual(rowLabels(chart), [row.label])
+      const widthOf = series => Number(chart.match(new RegExp('data-series="' + series + '"[^>]*width="([\\d.]+)%"'))[1])
+      assert.ok(Math.abs(widthOf('spawn') - 100 * row.spawnCount / rows[0].spawnCount) < 1e-6)
+      assert.ok(Math.abs(widthOf('arts') - 100 * row[unit].artsWins / row[unit].count) < 1e-6)
+    }
+  }
 })
 
 test('優勢率のグラフ画像は選んだ行だけを元の順序で保存し、表と他の分析は全行を使う', async () => {
