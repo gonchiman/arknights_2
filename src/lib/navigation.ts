@@ -16,6 +16,7 @@ export type NavigationPage = 'home' | 'operators' | 'operator-pca' | 'operator-w
   | 'skill-dps-analysis'
   | 'skill-numeric-statistics'
   | 'physical-arts-lab'
+  | 'dc3-home'
   | 'archive'
 
 export type NavigationSection = 'analysis' | 'operator-analysis' | 'information'
@@ -35,13 +36,30 @@ export type NavigationGroup = {
 }
 
 export const HOME_LINK = { label: 'ホーム', href: '#/' } as const
+export const DC3_SKILL_COMPARISON_ITEM: NavigationItem = {
+  id: 'damage-three-comparison',
+  href: '#/damage-3/comparison',
+  label: 'スキル比較',
+  description: '',
+  section: 'analysis',
+}
+
+export const DC3_COVERAGE_ITEM: NavigationItem = {
+  id: 'damage-three-coverage',
+  href: '#/damage-3/coverage',
+  label: '実装範囲',
+  description: '',
+  section: 'analysis',
+}
+
 export const STANDARD_PAGE_TITLES = {
   home: HOME_LINK.label,
   'physical-arts-lab': '物理・術比較ラボ',
+  'dc3-home': 'DC3',
   archive: '保管庫',
   'operator-wiki-views': 'オペレーター別 Wiki 集計',
   'bar-chart-workbench': '棒グラフ作成',
-  'damage-three-comparison': 'DC3 スキル比較',
+  'damage-three-comparison': `DC3 ${DC3_SKILL_COMPARISON_ITEM.label}`,
   'damage-three-power-by-year': '火力水準の比較',
   'skill-dps-analysis': 'スキルDPS分析',
   'skill-numeric-statistics': 'スキル数値分析',
@@ -228,6 +246,16 @@ export const PHYSICAL_ARTS_LAB_ITEM: NavigationItem = {
 
 export const PHYSICAL_ARTS_LAB_ITEMS: readonly NavigationItem[] = [ATTRIBUTE_EFFECTS_ITEM]
 
+export const DC3_HOME_ITEM: NavigationItem = {
+  id: 'dc3-home',
+  href: '#/dc3',
+  label: STANDARD_PAGE_TITLES['dc3-home'],
+  description: '',
+  section: 'analysis',
+}
+
+export const DC3_NAV_ITEMS: readonly NavigationItem[] = [DC3_SKILL_COMPARISON_ITEM, DC3_COVERAGE_ITEM]
+
 const ARCHIVE_ITEM: NavigationItem = {
   id: 'archive',
   href: '#/archive',
@@ -238,7 +266,7 @@ const ARCHIVE_ITEM: NavigationItem = {
 
 export const PRIMARY_NAV_GROUPS: readonly NavigationGroup[] = [
   { label: 'ラボ', items: [PHYSICAL_ARTS_LAB_ITEM] },
-  { label: '', items: [ARCHIVE_ITEM] },
+  { label: '', items: [DC3_HOME_ITEM, ARCHIVE_ITEM] },
 ]
 
 const OUTPUT_ITEMS: readonly NavigationItem[] = [
@@ -435,20 +463,6 @@ const DAMAGE_ITEMS: readonly NavigationItem[] = [
     section: 'analysis',
   },
   {
-    id: 'damage-three-coverage',
-    href: '#/damage-3/coverage',
-    label: 'DC3 実装範囲',
-    description: '',
-    section: 'analysis',
-  },
-  {
-    id: 'damage-three-comparison',
-    href: '#/damage-3/comparison',
-    label: STANDARD_PAGE_TITLES['damage-three-comparison'],
-    description: '',
-    section: 'analysis',
-  },
-  {
     id: 'damage-three-attribute-comparison',
     href: '#/damage-3/attribute-comparison',
     label: 'DC3 属性比較',
@@ -621,5 +635,6 @@ function collectNavigationItems(items: readonly NavigationItem[]): NavigationIte
 export const APP_NAV_ITEMS: readonly NavigationItem[] = collectNavigationItems([
   ...PRIMARY_NAV_GROUPS.flatMap(group => group.items),
   ...PHYSICAL_ARTS_LAB_ITEMS,
+  ...DC3_NAV_ITEMS.map(item => ({ ...item, label: `${DC3_HOME_ITEM.label} ${item.label}` })),
   ...ARCHIVE_NAV_GROUPS.flatMap(group => group.items),
 ])

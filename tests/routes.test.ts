@@ -135,6 +135,7 @@ test('主要ページと保管庫の全リンクが該当するページへ解�
     new Map(APP_NAV_ITEMS.map(item => [item.id, parseHashRoute(item.href).view])),
     new Map([
       ['physical-arts-lab', 'physical-arts-lab'],
+      ['dc3-home', 'dc3-home'],
       ['archive', 'archive'],
       ['bar-chart-workbench', 'bar-chart-workbench'],
       ['operators', 'operators'],
@@ -477,10 +478,9 @@ test('Damage Calculator 3は計算機2の隣から独立したURLで開く', () 
   }
 })
 
-test('DC3 実装範囲は計算機3の隣から独立したページとして開く', () => {
+test('DC3 実装範囲は従来のURLで独立したページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/damage-3/coverage'), { view: 'damage-three-coverage' })
-  const calculatorIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three')
-  assert.deepEqual(APP_NAV_ITEMS[calculatorIndex + 1], {
+  assert.deepEqual(APP_NAV_ITEMS.find(item => item.id === 'damage-three-coverage'), {
     id: 'damage-three-coverage', href: '#/damage-3/coverage', label: 'DC3 実装範囲',
     description: '', section: 'analysis',
   })
@@ -504,10 +504,9 @@ test('DC3の共有URLは選択なしと符号化されたスキル・レベル�
   })
 })
 
-test('DC3 スキル比較は実装範囲の隣から独立したページとして開く', () => {
+test('DC3 スキル比較は従来のURLで独立したページとして開く', () => {
   assert.deepEqual(parseHashRoute('#/damage-3/comparison'), { view: 'damage-three-comparison' })
-  const coverageIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three-coverage')
-  assert.deepEqual(APP_NAV_ITEMS[coverageIndex + 1], {
+  assert.deepEqual(APP_NAV_ITEMS.find(item => item.id === 'damage-three-comparison'), {
     id: 'damage-three-comparison', href: '#/damage-3/comparison', label: 'DC3 スキル比較',
     description: '', section: 'analysis',
   })
@@ -526,8 +525,7 @@ test('DC3属性比較は専用ページと選択を保持するURLを持ち、�
   assert.deepEqual(parseHashRoute(`${hash}&skillIndex=1`), { view: 'damage-three-attribute-comparison' })
   assert.deepEqual(parseHashRoute(`${base}?operatorId=x`), { view: 'damage-three-attribute-comparison' })
   assert.deepEqual(parseHashRoute(`${base}/extra`), { view: 'operators' })
-  const comparisonIndex = APP_NAV_ITEMS.findIndex(item => item.id === 'damage-three-comparison')
-  assert.deepEqual(APP_NAV_ITEMS[comparisonIndex + 1], {
+  assert.deepEqual(APP_NAV_ITEMS.find(item => item.id === 'damage-three-attribute-comparison'), {
     id: 'damage-three-attribute-comparison', href: base, label: 'DC3 属性比較', description: '', section: 'analysis',
   })
 })

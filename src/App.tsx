@@ -3,6 +3,7 @@ import { AppSidebar } from './components/AppSidebar'
 import { HomePage } from './components/HomePage'
 import { ArchivePage } from './components/ArchivePage'
 import { PhysicalArtsLabPage } from './components/PhysicalArtsLabPage'
+import { Dc3HomePage } from './components/Dc3HomePage'
 import { DamageCalculator } from './components/DamageCalculator'
 import { DamageCalculatorTwo } from './components/DamageCalculatorTwo'
 import { DamageCalculatorThree } from './components/DamageCalculatorThree'
@@ -101,7 +102,7 @@ const SkillHierarchicalPage = lazy(() => import('./components/SkillHierarchicalP
 type BaseAppRoute = Exclude<AppRoute, { view: 'operator-detail' }>
 
 function isDirectoryPage(view: AppRoute['view']) {
-  return view === 'home' || view === 'archive' || view === 'physical-arts-lab'
+  return view === 'home' || view === 'archive' || view === 'physical-arts-lab' || view === 'dc3-home'
 }
 
 interface OperatorDirectoryPosition {
@@ -353,6 +354,8 @@ export default function App() {
           <HomePage />
         ) : displayedRoute.view === 'physical-arts-lab' ? (
           <PhysicalArtsLabPage />
+        ) : displayedRoute.view === 'dc3-home' ? (
+          <Dc3HomePage />
         ) : displayedRoute.view === 'archive' ? (
           <ArchivePage />
         ) : displayedRoute.view === 'operator-pca' ? (

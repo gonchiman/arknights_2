@@ -17,11 +17,13 @@ import {
 import {
   DAMAGE_TYPE_LABELS, filterDamageThreeSkillEntries, getDamageThreeProfessionOptions, type DamageThreeSkillFilterValues,
 } from '../lib/damageThreeSkillFilters'
+import { DC3_HOME_ITEM, DC3_SKILL_COMPARISON_ITEM, HOME_LINK } from '../lib/navigation'
 import { lockPageScroll } from '../lib/pageScrollLock'
 import { createDamageCalculatorThreeHash } from '../lib/routes'
 import type { SkillRecord } from '../types/skill'
 import { DamageThreeSkillFilters } from './DamageThreeSkillFilters'
 import { OperatorDetailLink } from './OperatorDetailLink'
+import { PageBreadcrumbs } from './PageBreadcrumbs'
 import { PageLayout, PageOutputHeader } from './PageLayout'
 import { SkillEffectModal } from './SkillEffectModal'
 import { SkillInformationTable } from './SkillInformationTable'
@@ -278,6 +280,7 @@ export default function DamageCalculatorThreeComparisonPage({ rows, loading }: P
 
   return <PageLayout page="damage-three-comparison" className="dc3-comparison-page"
     settings={<>
+      <PageBreadcrumbs parents={[HOME_LINK, DC3_HOME_ITEM]} current={DC3_SKILL_COMPARISON_ITEM.label} />
       <DamageThreeSkillFilters filters={filters} onChange={updateFilters} onReset={resetFilters}
         canReset={hasFilters} professionOptions={professionOptions} />
       <section className="dc3-comparison-settings-group">
