@@ -42,6 +42,7 @@ export const STANDARD_PAGE_TITLES = {
   'skill-numeric-statistics': 'スキル数値分析',
   'enemies-2': '敵データベース2',
   'enemy-defense-resistance': '防御力と術耐性の対応',
+  'main-enemy-spawns': 'メインストーリーの出現敵一覧',
   'enemy-rating-pairs': '防御力と術耐性の組み合わせ',
   'td-maps': 'TDマップ詳細',
   'damage-three-skill-attribute-matrix': 'スキル別の物理・術ダメージ',
@@ -482,7 +483,7 @@ export const APP_NAV_ITEMS: readonly NavigationItem[] = [
   {
     id: 'main-enemy-spawns',
     href: '#/analysis/enemies/main-spawns',
-    label: 'メインストーリーの出現敵一覧',
+    label: STANDARD_PAGE_TITLES['main-enemy-spawns'],
     description: '',
     section: 'analysis',
   },

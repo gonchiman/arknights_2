@@ -1,8 +1,8 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type FormEvent, type Ref } from 'react'
 import {
-  findMainStorySpawnJump, getMainStorySpawnRankMetric, getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
+  findMainStorySpawnJump, getMainStorySpawnChapterRows, getMainStorySpawnRankMetric, getMainStorySpawnRows, loadMainStorySpawnLists, loadMainStorySpawnStages,
   MAIN_STORY_SPAWN_AGGREGATION_VERSION,
-  type MainStorySpawnList, type MainStorySpawnRow, type MainStorySpawnSort,
+  type MainStorySpawnChapterSort, type MainStorySpawnList, type MainStorySpawnRow, type MainStorySpawnSort,
   type MainStorySpawnSortKey, type MainStorySpawnStage,
 } from '../lib/mainStoryEnemySpawns'
 import { MAIN_STORY_SPAWN_IMAGE_ROW_MIN_HEIGHT } from '../lib/mainStorySpawnImageRange'
@@ -12,11 +12,19 @@ import {
 import { EnemyDataContent } from './EnemyPageShared'
 import { MainStorySpawnImageDialog, type MainStorySpawnImageSelection } from './MainStorySpawnImageDialog'
 import { PageBreadcrumbs } from './PageBreadcrumbs'
+import { STANDARD_PAGE_TITLES } from '../lib/navigation'
+import { AnalysisTabPanel } from './AnalysisTabs'
+import { PageLayout, PageOutputTabs } from './PageLayout'
+import { OutputImageSaveButton } from './OutputImageSaveButton'
+import { ComparisonTableImageDialog, type ComparisonTableImageSnapshot } from './ComparisonTableImageDialog'
+import { createMainStoryChapterSpawnImage } from './mainStoryChapterSpawnImage'
+import { MainStoryChapterSpawnTable, chapterSortLabels } from './MainStoryChapterSpawnTable'
 import './DamageCalculator.css'
 import './EnemyAnalysis.css'
 import './MainStoryEnemySpawnsPage.css'
 
-const TITLE = 'メインストーリーの出現敵一覧'
+const TITLE = STANDARD_PAGE_TITLES['main-enemy-spawns']
+const TABS = [['list', '出現一覧'], ['chapters', '章別の出現回数']] as const
 const DATA_CONDITIONS = [`集計版 ${MAIN_STORY_SPAWN_AGGREGATION_VERSION}`, '通常環境', '基礎ステータス']
 const PAGE_SIZE = 25
 const NUMBER_FORMAT = new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 6 })
@@ -57,6 +65,10 @@ function getStatusRowsInRange(statuses: readonly MainStorySpawnList[], offset: n
 }
 
 export function MainStoryEnemySpawnsPage() {
+  const [tab, setTab] = useState<typeof TABS[number][0]>('list')
+  const [chapterSort, setChapterSort] = useState<MainStorySpawnChapterSort>({ key: 'chapter', direction: 'asc' })
+  const [chapterImage, setChapterImage] = useState<ComparisonTableImageSnapshot | null>(null)
+  const tabProps = { idPrefix: 'main-story-spawns', activeTab: tab }
   const [stageAttempt, setStageAttempt] = useState(0)
   const [stageLoad, setStageLoad] = useState<LoadResult<MainStorySpawnStage[]> | null>(null)
   const [listAttempt, setListAttempt] = useState(0)
@@ -101,8 +113,9 @@ export function MainStoryEnemySpawnsPage() {
   const chapters = useMemo(() => [...new Set(stages.map(item => item.chapter))], [stages])
   const chapterStages = useMemo(() => chapter === '' ? stages : stages.filter(item => item.chapter === Number(chapter)),
     [chapter, stages])
-  const scope = useMemo(() => stageId === '' ? chapterStages : chapterStages.filter(item => item.id === stageId),
+  const detailScope = useMemo(() => stageId === '' ? chapterStages : chapterStages.filter(item => item.id === stageId),
     [chapterStages, stageId])
+  const scope = tab === 'chapters' ? stages : detailScope
 
   useEffect(() => {
     if (scope.length === 0) return
@@ -116,7 +129,11 @@ export function MainStoryEnemySpawnsPage() {
   }, [scope, listAttempt])
 
   const currentListLoad = listLoad?.stages === scope && listLoad.attempt === listAttempt ? listLoad : null
-  const lists = currentListLoad?.data ?? NO_LISTS
+  const loadedLists = currentListLoad?.data ?? NO_LISTS
+  const lists = tab === 'list' ? loadedLists : NO_LISTS
+  const chapterRows = useMemo(() => tab === 'chapters' ? getMainStorySpawnChapterRows(loadedLists, query, chapterSort) : [],
+    [tab, loadedLists, query, chapterSort])
+  const chapterCount = chapterRows.reduce((sum, row) => sum + row.count, 0)
   const offset = page * PAGE_SIZE
   const { rows, rowCount, confirmedCount, rankedRowCount } = useMemo(
     () => getMainStorySpawnRows(lists, query, view, offset, PAGE_SIZE, sort), [lists, query, view, offset, sort],
@@ -256,14 +273,51 @@ export function MainStoryEnemySpawnsPage() {
     })
   }
 
-  return <section className="calculator-page enemy-analysis-route main-story-spawns-page">
+  function openChapterImage() {
+    if (!chapterRows.length) return
+    setChapterImage(createMainStoryChapterSpawnImage({
+      table: <MainStoryChapterSpawnTable rows={chapterRows} />, query, scopeLabel: '全章',
+      sortLabel: `${chapterSortLabels[chapterSort.key]} ${chapterSort.direction === 'asc' ? '昇順' : '降順'}`,
+      confirmedCount: chapterCount, stageCount: stages.length,
+      partialStageCount: chapterRows.reduce((sum, row) => sum + row.partialStageCount, 0),
+    }))
+  }
+
+  const enemySearch = <label><span>敵名</span><input type="search" placeholder="敵名を検索" value={query} onChange={event => {
+    setQuery(event.target.value)
+    changePage(0)
+  }} /></label>
+
+  return <PageLayout page="main-enemy-spawns" className="enemy-analysis-route main-story-spawns-page">
     <PageBreadcrumbs parents={[{ label: '敵データベース', href: '#/enemies' }]} current={TITLE} />
-    <header className="page-intro main-story-spawns-intro">
-      <h1>{TITLE}</h1>
-      <span>{DATA_CONDITIONS.join('・')}</span>
-    </header>
+    <div className="main-story-spawns-intro">{DATA_CONDITIONS.join('・')}</div>
+    <PageOutputTabs {...tabProps} tabs={TABS} onChange={setTab} label="出現敵の集計"
+      actions={tab === 'chapters'
+        ? chapterRows.length > 0 && <OutputImageSaveButton onClick={openChapterImage} />
+        : tableRowCount > 0 && <OutputImageSaveButton onClick={openImage} />} />
     <EnemyDataContent loading={currentStageLoad === null} error={currentStageLoad?.error ?? null}
       onRetry={() => setStageAttempt(previous => previous + 1)}>
+      {tab === 'chapters' ? <AnalysisTabPanel {...tabProps} tab="chapters">
+        <div className="main-story-chapter-controls">
+          <div className="main-story-spawns-filters">{enemySearch}</div>
+          {currentListLoad?.data && <output className="main-story-spawns-total" aria-live="polite">
+            確認済み {formatNumber(chapterCount)}回
+          </output>}
+        </div>
+        <EnemyDataContent loading={loading} error={currentListLoad?.error ?? null}
+          onRetry={() => setListAttempt(previous => previous + 1)}>
+          <div className="table-wrap main-story-spawns-table-wrap" role="region" tabIndex={0} aria-label="章別の出現回数の表">
+            <MainStoryChapterSpawnTable rows={chapterRows} sorting={{ sort: chapterSort, onSort: key => {
+              setChapterSort(previous => ({
+                key, direction: previous.key === key ? (previous.direction === 'asc' ? 'desc' : 'asc')
+                  : key === 'chapter' ? 'asc' : 'desc',
+              }))
+            } }} />
+          </div>
+          {chapterRows.some(row => row.partialStageCount > 0) &&
+            <p className="main-story-chapter-note">一部集計のステージを含む章では、出現回数は確認できた下限です。</p>}
+        </EnemyDataContent>
+      </AnalysisTabPanel> : <AnalysisTabPanel {...tabProps} tab="list">
       <section className="main-story-spawns-panel" aria-label="出現敵一覧">
         <div className="main-story-spawns-filters">
           <label><span>章</span><select value={chapter} onChange={event => changeChapter(event.target.value)}>
@@ -277,10 +331,7 @@ export function MainStoryEnemySpawnsPage() {
             <option value="">全ステージ</option>
             {chapterStages.map(item => <option key={item.id} value={item.id}>{item.code} {item.name}</option>)}
           </select></label>
-          <label><span>敵名</span><input type="search" placeholder="敵名を検索" value={query} onChange={event => {
-            setQuery(event.target.value)
-            changePage(0)
-          }} /></label>
+          {enemySearch}
         </div>
         <div className="main-story-spawns-toolbar">
           <div className="main-story-spawns-views" role="group" aria-label="一覧の表示">
@@ -293,8 +344,6 @@ export function MainStoryEnemySpawnsPage() {
               {unconfirmed > 0 && <span>{STAGE_STATUS.unconfirmed} {formatNumber(unconfirmed)}ステージ</span>}
               {unavailable > 0 && <span>{STAGE_STATUS.unavailable} {formatNumber(unavailable)}ステージ</span>}
             </output>}
-            <button type="button" className="button secondary" aria-haspopup="dialog"
-              disabled={!currentListLoad?.data || tableRowCount === 0} onClick={openImage}>画像を保存</button>
           </div>
         </div>
         <div aria-busy={loading}>
@@ -340,9 +389,12 @@ export function MainStoryEnemySpawnsPage() {
           </EnemyDataContent>
         </div>
       </section>
+      </AnalysisTabPanel>}
     </EnemyDataContent>
+    {chapterImage && <ComparisonTableImageDialog snapshot={chapterImage} parentLocation={[TITLE, TABS[1][1]]}
+      onClose={() => setChapterImage(null)} />}
     {imageSelection && <MainStorySpawnImageDialog selection={imageSelection} onClose={() => setImageSelection(null)} />}
-  </section>
+  </PageLayout>
 }
 
 function MainStorySpawnTable({ view, rows, statusRows, startRowNumber, rankLabel, sorting,

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { gunzipSync } from 'node:zlib'
 import { buildEnemyRecords } from '../src/lib/enemyData.ts'
-import { buildMainStorySpawnList, findMainStorySpawnJump, getMainStorySpawnRows, getMainStorySpawnStages, loadMainStorySpawnLists, loadMainStorySpawnStages } from '../src/lib/mainStoryEnemySpawns.ts'
+import { buildMainStorySpawnList, findMainStorySpawnJump, getMainStorySpawnChapterRows, getMainStorySpawnRows, getMainStorySpawnStages, loadMainStorySpawnLists, loadMainStorySpawnStages } from '../src/lib/mainStoryEnemySpawns.ts'
 import { getMapDetail, parseMapDetailShard, parseMapIndex } from '../src/lib/mapDatabase.ts'
 import type { MapDetailShard } from '../src/types/map.ts'
 
@@ -71,6 +71,26 @@ test('分岐が未確定な11-7では判定済みの50体を表示し、ステ�
   const units = getMainStorySpawnRows([list], '', 'units')
   assert.equal(units.confirmedCount, 50)
   assert.equal(units.rowCount, 50)
+})
+
+test('章別の敵名検索で出現グループを合算し、対象ステージや0回の章を残す', () => {
+  const [first, second, partial] = [listFor('0-1'), listFor('1-7'), listFor('11-7')]
+  const noData = { stage: fixture('0-2').stage, status: 'unavailable' as const, groups: [] }
+  const lists = [partial, second, first, noData]
+  const rows = getMainStorySpawnChapterRows(lists, ' ｵﾘｼﾞﾑｼ ')
+  assert.deepEqual(rows, [
+    { chapter: 0, count: 10, stageCount: 2, partialStageCount: 1 },
+    { chapter: 1, count: 23, stageCount: 1, partialStageCount: 0 },
+    { chapter: 11, count: 0, stageCount: 1, partialStageCount: 1 },
+  ])
+  assert.equal(rows.reduce((sum, row) => sum + row.count, 0), getMainStorySpawnRows(lists, ' ｵﾘｼﾞﾑｼ ', 'counts').confirmedCount)
+  assert.deepEqual(getMainStorySpawnChapterRows(lists, '該当なし'), [])
+  assert.deepEqual(getMainStorySpawnChapterRows([noData], '  '), [{ chapter: 0, count: 0, stageCount: 1, partialStageCount: 1 }])
+
+  const tied = [{ ...first, stage: { ...first.stage, chapter: 9 } }, second, first]
+  assert.deepEqual(getMainStorySpawnChapterRows(tied, '', { key: 'count', direction: 'desc' }).map(row => row.chapter), [1, 0, 9])
+  assert.deepEqual(getMainStorySpawnChapterRows(tied, '', { key: 'count', direction: 'asc' }).map(row => row.chapter), [0, 9, 1])
+  assert.deepEqual(getMainStorySpawnChapterRows(tied, '', { key: 'chapter', direction: 'desc' }).map(row => row.chapter), [9, 1, 0])
 })
 
 test('12-7の出現ユニットから民間人を除いて敵の30体を表示する', () => {
@@ -145,6 +165,13 @@ test('全章の出現体数と術耐性順位を集計版v12に揃え、同値�
   assert.ok(stages.some(stage => stage.code === '17-2'))
 
   const lists = await loadMainStorySpawnLists(stages)
+  const chapterRows = getMainStorySpawnChapterRows(lists, '')
+  assert.deepEqual(chapterRows.map(row => row.chapter), Array.from({ length: 18 }, (_, i) => i))
+  assert.deepEqual(chapterRows.map(row => row.count), [
+    323, 531, 473, 502, 491, 598, 692, 818, 844, 762, 627, 716, 638, 517, 996, 784, 705, 593,
+  ])
+  assert.equal(chapterRows.reduce((sum, row) => sum + row.stageCount, 0), 268)
+  assert.equal(chapterRows.reduce((sum, row) => sum + row.partialStageCount, 0), 35)
   const appearances = new Map<string, number>()
   for (const { stage, status, groups } of lists) {
     const archived = archivedStages.get(stage.id)
